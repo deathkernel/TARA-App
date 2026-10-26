@@ -81,6 +81,7 @@ class OllamaModelCatalog:
 
         installed = self._installed_models()
         service_available = installed is not None
+        running = self._running_models() if service_available else None
         return {
             "status": "success" if service_available else "unavailable",
             "provider": "ollama",
@@ -90,6 +91,10 @@ class OllamaModelCatalog:
                     "specialist": module_id,
                     "model": model,
                     "installed": model in installed if installed is not None else None,
+                    "running": model in running if running is not None else None,
+                    "memory_bytes": running.get(model, {}).get("size") if running is not None else None,
+                    "vram_bytes": running.get(model, {}).get("size_vram") if running is not None else None,
+                    "expires_at": running.get(model, {}).get("expires_at") if running is not None else None,
                 }
                 for module_id, model in sorted(self.profiles.items())
             ],
@@ -219,22 +224,7 @@ class OllamaModelCatalog:
             self._pull_state = {**self._pull_state, **values}
 
     def _installed_models(self) -> set[str] | None:
-        request = Request(
-            self.base_url + "/api/tags",
-            headers={"Accept": "application/json"},
-            method="GET",
-        )
-        try:
-            with build_opener(ProxyHandler({}), _NoRedirect()).open(request, timeout=2) as response:
-                raw = response.read(_MAX_RESPONSE_BYTES + 1)
-        except (HTTPError, URLError, TimeoutError, OSError):
-            return None
-        if len(raw) > _MAX_RESPONSE_BYTES:
-            return None
-        try:
-            payload = json.loads(raw.decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError):
-            return None
+        payload = self._fetch_json("/api/tags")
         models = payload.get("models") if isinstance(payload, Mapping) else None
         if not isinstance(models, list):
             return None
@@ -247,3 +237,47 @@ class OllamaModelCatalog:
                 if isinstance(name, str):
                     installed.add(name)
         return installed
+
+    def _running_models(self) -> dict[str, dict[str, Any]] | None:
+        payload = self._fetch_json("/api/ps")
+        models = payload.get("models") if isinstance(payload, Mapping) else None
+        if not isinstance(models, list):
+            return None
+        running: dict[str, dict[str, Any]] = {}
+        for model in models:
+            if not isinstance(model, Mapping):
+                continue
+            names = [model.get(key) for key in ("name", "model")]
+            for name in names:
+                if not isinstance(name, str):
+                    continue
+                details: dict[str, Any] = {}
+                for key in ("size", "size_vram"):
+                    value = model.get(key)
+                    if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
+                        details[key] = value
+                expires_at = model.get("expires_at")
+                if isinstance(expires_at, str) and len(expires_at) <= 64:
+                    details["expires_at"] = expires_at
+                running[name] = details
+        return running
+
+    def _fetch_json(self, path: str) -> Any:
+        if self.base_url is None:
+            return None
+        request = Request(
+            self.base_url + path,
+            headers={"Accept": "application/json"},
+            method="GET",
+        )
+        try:
+            with build_opener(ProxyHandler({}), _NoRedirect()).open(request, timeout=2) as response:
+                raw = response.read(_MAX_RESPONSE_BYTES + 1)
+        except (HTTPError, URLError, TimeoutError, OSError):
+            return None
+        if len(raw) > _MAX_RESPONSE_BYTES:
+            return None
+        try:
+            return json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            return None
