@@ -16,6 +16,7 @@ from uuid import uuid4
 
 from tara_app.adapters import RouterClient
 from tara_app.contracts import AdapterHealth, Capability, ModuleRequest, ModuleResult, RouteDecision
+from tara_app.ollama_models import OllamaModelCatalog
 from tara_app.registry import CapabilityRegistry
 
 
@@ -66,9 +67,16 @@ class PendingApproval:
 class Orchestrator:
     """Uses Router proposals and registered module adapters; it never auto-approves."""
 
-    def __init__(self, registry: CapabilityRegistry, router: RouterClient) -> None:
+    def __init__(
+        self,
+        registry: CapabilityRegistry,
+        router: RouterClient,
+        *,
+        model_catalog: OllamaModelCatalog | None = None,
+    ) -> None:
         self.registry = registry
         self.router = router
+        self.model_catalog = model_catalog
         self._conversation_history: OrderedDict[str, list[dict[str, str]]] = OrderedDict()
         self._history_lock = RLock()
         self._pending_approvals: OrderedDict[str, PendingApproval] = OrderedDict()
