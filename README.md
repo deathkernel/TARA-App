@@ -102,7 +102,7 @@ TARA-App keeps Chat and Code as separate specialists and selects a local Ollama 
 | Creative | `llama3.2:3b` | Local writing |
 | Vision | `gemma3:4b` | Image understanding |
 
-Chat and Creative are separate capabilities even though they currently share the same model weights. The Ollama service is local-only. TARA-App passes each configured model and endpoint to its specialist adapter. A user can click Install in the local model panel to pull a configured profile; downloads are never automatic. The panel reports loaded memory and VRAM and can unload a running model to free memory while keeping its installed files. Model removal and resource scheduling controls are not implemented yet.
+Chat and Creative are separate capabilities even though they currently share the same model weights. The Ollama service is local-only. TARA-App passes each configured model and endpoint to its specialist adapter. A user can click Install in the local model panel to pull a configured profile; downloads are never automatic. The panel reports loaded memory and VRAM, can unload a running model, and can remove an installed model after a confirmation that lists shared profiles. Unload keeps installed files; removal deletes them from this device and the model can be installed again. Machine-wide resource scheduling controls are not implemented yet.
 
 Install Ollama separately and start its local service. You can pull a model from the app's Models panel or use the CLI commands below:
 
@@ -134,7 +134,7 @@ A result should include `schema_version`, `request_id`, `ok`, `status`, structur
 
 ## Local development
 
-TARA-App now has a local browser interface, TOML-based specialist registration, a local Ollama readiness panel with user-triggered installs, loaded-memory/VRAM reporting and unload control, bounded image/audio/CSV handoff, a one-time session-bound approval step, read-only TARA-Handler diagnostics, and allowlisted GitHub issue creation through TARA-Action after approval. Model removal, machine-wide resource monitoring and scheduling, and additional Action tools remain future work.
+TARA-App now has a local browser interface, TOML-based specialist registration, a local Ollama readiness panel with user-triggered installs and confirmed removal, loaded-memory/VRAM reporting and unload control, bounded image/audio/CSV handoff, a one-time session-bound approval step, read-only TARA-Handler diagnostics, and allowlisted GitHub issue creation through TARA-Action after approval. Machine-wide resource monitoring and scheduling, and additional Action tools remain future work.
 
 Suggested sibling checkout:
 

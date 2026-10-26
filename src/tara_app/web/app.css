@@ -45,9 +45,10 @@ button, textarea { font: inherit; }
 .model-state.available { color: #7bd5a2; }
 .model-state.missing { color: #e8c27e; }
 .model-state.unavailable { color: #f0a0a0; }
-.model-install-button, .model-unload-button { padding: 5px 9px; border: 1px solid #665637; border-radius: 8px; background: #302919; color: #e8c27e; cursor: pointer; }
-.model-install-button:hover, .model-unload-button:hover { border-color: #a8894e; }
+.model-install-button, .model-unload-button, .model-remove-button { padding: 5px 9px; border: 1px solid #665637; border-radius: 8px; background: #302919; color: #e8c27e; cursor: pointer; }
+.model-install-button:hover, .model-unload-button:hover, .model-remove-button:hover { border-color: #a8894e; }
 .model-unload-button { border-color: #454852; background: #26282e; color: #c4c6ce; }
+.model-remove-button { border-color: #704343; background: #2d1e20; color: #e9aaaa; }
 .model-pull-progress { grid-column: 1 / -1; color: var(--muted); font-size: 10px; }
 .model-list progress { grid-column: 1 / -1; width: 100%; height: 7px; accent-color: var(--accent); }
 .conversation { display: flex; flex: 1; flex-direction: column; min-height: 0; overflow: auto; scrollbar-color: #41434c transparent; }

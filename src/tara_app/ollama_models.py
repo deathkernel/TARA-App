@@ -34,6 +34,7 @@ class OllamaModelCatalog:
     def __init__(self, profiles: Mapping[str, str] | None = None, base_url: str | None = None) -> None:
         self.profiles = dict(profiles or {})
         self.base_url = base_url
+        self._lifecycle_lock = Lock()
         self._pull_lock = Lock()
         self._pull_state: dict[str, Any] = {"status": "idle"}
         if not self.profiles:
@@ -108,7 +109,7 @@ class OllamaModelCatalog:
         if self.base_url is None:
             raise RuntimeError("local Ollama is not configured")
 
-        with self._pull_lock:
+        with self._lifecycle_lock, self._pull_lock:
             if self._pull_state.get("status") in _ACTIVE_PULL_STATES:
                 raise RuntimeError("another local model download is already running")
             model = self.profiles[specialist]
@@ -130,11 +131,17 @@ class OllamaModelCatalog:
             return dict(self._pull_state)
 
     def unload_model(self, specialist: Any) -> dict[str, str]:
+        with self._lifecycle_lock:
+            return self._unload_model_locked(specialist)
+
+    def _unload_model_locked(self, specialist: Any) -> dict[str, str]:
         """Unload a configured running model from memory without deleting its files."""
         if not isinstance(specialist, str) or specialist not in self.profiles:
             raise ValueError("specialist is not a configured local model profile")
         if self.base_url is None:
             raise RuntimeError("local Ollama is not configured")
+        if self.pull_status().get("status") in _ACTIVE_PULL_STATES:
+            raise RuntimeError("wait for the active local model download before unloading")
 
         model = self.profiles[specialist]
         running = self._running_models()
@@ -166,6 +173,54 @@ class OllamaModelCatalog:
         if not isinstance(payload, Mapping) or payload.get("done") is not True:
             raise RuntimeError("local Ollama did not confirm the model unload")
         return {"status": "unloaded", "specialist": specialist, "model": model}
+
+    def remove_model(self, specialist: Any) -> dict[str, str]:
+        with self._lifecycle_lock:
+            return self._remove_model_locked(specialist)
+
+    def _remove_model_locked(self, specialist: Any) -> dict[str, str]:
+        """Remove a configured, installed model after it has been unloaded."""
+        if not isinstance(specialist, str) or specialist not in self.profiles:
+            raise ValueError("specialist is not a configured local model profile")
+        if self.base_url is None:
+            raise RuntimeError("local Ollama is not configured")
+        if self.pull_status().get("status") in _ACTIVE_PULL_STATES:
+            raise RuntimeError("wait for the active local model download before removing files")
+
+        model = self.profiles[specialist]
+        installed = self._installed_models()
+        if installed is None:
+            raise RuntimeError("local Ollama installed-model status is unavailable")
+        if model not in installed:
+            return {"status": "not_installed", "specialist": specialist, "model": model}
+        running = self._running_models()
+        if running is None:
+            raise RuntimeError("local Ollama running-model status is unavailable")
+        if model in running:
+            raise RuntimeError("unload the configured model before removing its files")
+
+        request = Request(
+            self.base_url + "/api/delete",
+            data=json.dumps({"model": model}, separators=(",", ":")).encode("utf-8"),
+            headers={"Content-Type": "application/json", "Accept": "application/json"},
+            method="DELETE",
+        )
+        try:
+            with build_opener(ProxyHandler({}), _NoRedirect()).open(request, timeout=30) as response:
+                raw = response.read(_MAX_RESPONSE_BYTES + 1)
+                status_code = response.status
+        except (HTTPError, URLError, TimeoutError, OSError) as exc:
+            raise RuntimeError("local Ollama could not remove the configured model") from exc
+        if status_code not in {200, 204} or len(raw) > _MAX_RESPONSE_BYTES:
+            raise RuntimeError("local Ollama returned an invalid model-removal response")
+        if raw:
+            try:
+                payload = json.loads(raw.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                raise RuntimeError("local Ollama returned an invalid model-removal response") from exc
+            if not isinstance(payload, Mapping) or payload.get("status") not in (None, "success"):
+                raise RuntimeError("local Ollama did not confirm model removal")
+        return {"status": "removed", "specialist": specialist, "model": model}
 
     def _pull_model(self, specialist: str, model: str) -> None:
         base_url = self.base_url

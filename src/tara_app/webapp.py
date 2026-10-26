@@ -69,7 +69,7 @@ class _Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         endpoint = urlsplit(self.path).path
-        if endpoint not in {"/api/chat", "/api/approve", "/api/cancel", "/api/models/pull", "/api/models/unload"}:
+        if endpoint not in {"/api/chat", "/api/approve", "/api/cancel", "/api/models/pull", "/api/models/unload", "/api/models/remove"}:
             self._json(404, {"status": "unavailable", "error": "endpoint not found"})
             return
         if not self._local_origin():
@@ -93,14 +93,14 @@ class _Handler(BaseHTTPRequestHandler):
             return
         if endpoint == "/api/chat":
             fields = {"question", "session_id", "attachments"}
-        elif endpoint in {"/api/models/pull", "/api/models/unload"}:
+        elif endpoint in {"/api/models/pull", "/api/models/unload", "/api/models/remove"}:
             fields = {"specialist"}
         else:
             fields = {"approval_id", "session_id"}
         if not isinstance(payload, dict) or set(payload) - fields:
             self._json(400, {"status": "invalid_request", "error": "request fields are invalid"})
             return
-        if endpoint in {"/api/models/pull", "/api/models/unload"}:
+        if endpoint in {"/api/models/pull", "/api/models/unload", "/api/models/remove"}:
             if set(payload) != {"specialist"}:
                 self._json(400, {"status": "invalid_request", "error": "specialist is required"})
                 return
@@ -111,8 +111,10 @@ class _Handler(BaseHTTPRequestHandler):
             try:
                 if endpoint == "/api/models/pull":
                     result = catalog.start_pull(payload["specialist"])
-                else:
+                elif endpoint == "/api/models/unload":
                     result = catalog.unload_model(payload["specialist"])
+                else:
+                    result = catalog.remove_model(payload["specialist"])
             except ValueError:
                 self._json(400, {"status": "invalid_request", "error": "specialist is not a configured local model"})
                 return

@@ -411,6 +411,21 @@
           install.setAttribute("aria-label", "Install " + String(model.model || "configured model"));
           install.addEventListener("click", () => startModelPull(String(model.specialist || "")));
           item.append(install);
+        } else if (model.installed === true && model.running === false && payload.service_available === true && !pullActive && !send.disabled) {
+          const remove = document.createElement("button");
+          remove.type = "button";
+          remove.className = "model-remove-button";
+          remove.textContent = "Remove";
+          remove.setAttribute("aria-label", "Remove " + String(model.model || "configured model") + " from this device");
+          const affectedSpecialists = (Array.isArray(payload.models) ? payload.models : [])
+            .filter(profile => profile.model === model.model)
+            .map(profile => String(profile.specialist || "specialist"));
+          remove.addEventListener("click", () => removeModel(
+            String(model.specialist || ""),
+            String(model.model || "configured model"),
+            affectedSpecialists
+          ));
+          item.append(remove);
         }
         modelList.append(item);
       }
@@ -457,6 +472,33 @@
       modelServiceStatus.textContent = message;
     } catch (error) {
       modelServiceStatus.textContent = error.message || "Could not unload local model.";
+    }
+  }
+
+  async function removeModel(specialist, modelName, affectedSpecialists) {
+    const sharedProfiles = affectedSpecialists.length > 1
+      ? " This also makes it unavailable for: " + affectedSpecialists.join(", ") + "."
+      : "";
+    const confirmed = window.confirm(
+      "Remove " + modelName + " from this device? It can be installed again later." + sharedProfiles
+    );
+    if (!confirmed) return;
+    modelServiceStatus.textContent = "Removing local model files...";
+    try {
+      const response = await fetch("/api/models/remove", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ specialist })
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Could not remove model");
+      const message = payload.status === "removed"
+        ? modelName + " removed from this device."
+        : modelName + " was already absent.";
+      await refreshModelStatus();
+      modelServiceStatus.textContent = message;
+    } catch (error) {
+      modelServiceStatus.textContent = error.message || "Could not remove local model.";
     }
   }
 
