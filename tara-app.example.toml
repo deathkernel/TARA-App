@@ -9,6 +9,7 @@ base_url = "http://127.0.0.1:11434"
 [ollama.models]
 chat = "llama3.2:3b"
 code = "qwen2.5-coder:3b"
+vision = "gemma3:4b"
 
 [router]
 command = ["{python}", "-m", "tara_router"]
@@ -35,3 +36,16 @@ command = ["{python}", "-m", "tara_research"]
 working_directory = "."
 timeout_seconds = 30
 allow_remote = true # Sends the research query to Crossref and Wikipedia; no API key or paid model is used.
+
+[[modules]]
+id = "data"
+command = ["{python}", "-m", "tara_data"]
+working_directory = "."
+timeout_seconds = 30
+
+[[modules]]
+id = "vision"
+command = ["{python}", "-m", "tara_vision"]
+working_directory = "."
+timeout_seconds = 180
+environment = ["TARA_VISION_MODEL", "TARA_VISION_OLLAMA_URL"]
