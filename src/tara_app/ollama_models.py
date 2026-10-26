@@ -125,9 +125,19 @@ class OllamaModelCatalog:
             return dict(self._pull_state)
 
     def _pull_model(self, specialist: str, model: str) -> None:
+        base_url = self.base_url
+        if base_url is None:
+            self._set_pull_state(
+                status="failed",
+                specialist=specialist,
+                model=model,
+                message="Local Ollama is not configured.",
+                error="local_model_provider_unavailable",
+            )
+            return
         self._set_pull_state(status="pulling", message="Connecting to local Ollama")
         request = Request(
-            self.base_url + "/api/pull",
+            base_url + "/api/pull",
             data=json.dumps({"model": model, "stream": True}, separators=(",", ":")).encode("utf-8"),
             headers={"Content-Type": "application/json", "Accept": "application/x-ndjson"},
             method="POST",
