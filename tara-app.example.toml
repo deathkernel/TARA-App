@@ -9,6 +9,7 @@ base_url = "http://127.0.0.1:11434"
 
 [ollama.models]
 chat = "llama3.2:3b"
+code = "qwen2.5-coder:3b"
 creative = "llama3.2:3b"
 vision = "gemma3:4b"
 
