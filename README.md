@@ -112,7 +112,7 @@ A result should include `schema_version`, `request_id`, `ok`, `status`, structur
 
 ## Local development
 
-TARA-App now has a local browser interface, TOML-based specialist registration, bounded image/audio/CSV handoff, a one-time session-bound approval step, and read-only TARA-Handler diagnostics. Model download/lifecycle control, resource monitoring, and TARA-Action tool integrations remain future work.
+TARA-App now has a local browser interface, TOML-based specialist registration, bounded image/audio/CSV handoff, a one-time session-bound approval step, read-only TARA-Handler diagnostics, and allowlisted GitHub issue creation through TARA-Action after approval. Model download/lifecycle control, resource monitoring, and additional Action tools remain future work.
 
 Suggested sibling checkout:
 
@@ -123,12 +123,12 @@ git clone https://github.com/deathkernel/TARA-Code.git
 git clone https://github.com/deathkernel/TARA-Handler.git
 ```
 
-Install the app and selected specialist packages in one Python 3.11+ environment. Copy tara-app.example.toml to tara-app.toml, then adjust checkout directories and provider settings. Research and Voice are disabled until allow_remote = true is explicitly set in that local file. Build TARA-Handler with CMake and point its configured command at the native handler executable.
+Install the app and selected specialist packages in one Python 3.11+ environment. Copy tara-app.example.toml to tara-app.toml, then adjust checkout directories and provider settings. Research, Voice, and GitHub Action dispatch are disabled until allow_remote = true is explicitly set in that local file. Action also needs a repository allowlist, a scoped token, and one-time App approval. Build TARA-Handler with CMake and point its configured command at the native handler executable.
 
 Start the local interface from the TARA-App checkout:
 
 ```powershell
-python -m pip install -e . -e ../TARA-Router -e ../TARA-CHAT -e ../TARA-Code -e ../TARA-Security -e ../TARA-Planner -e ../TARA-Research -e ../TARA-Memory -e ../TARA-Vision -e ../TARA-Data -e ../TARA-Creative -e ../TARA-Voice
+python -m pip install -e . -e ../TARA-Router -e ../TARA-CHAT -e ../TARA-Code -e ../TARA-Security -e ../TARA-Planner -e ../TARA-Research -e ../TARA-Memory -e ../TARA-Vision -e ../TARA-Data -e ../TARA-Creative -e ../TARA-Voice -e ../TARA-Action
 Copy-Item tara-app.example.toml tara-app.toml
 tara-app --config tara-app.toml
 ```

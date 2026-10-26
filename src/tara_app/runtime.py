@@ -35,9 +35,10 @@ _POLICIES: dict[str, tuple[Capability, ...]] = {
         Capability("voice", "transcribe", "Transcribe user supplied audio", True),
         Capability("voice", "speak", "Synthesize speech from text", True),
     ),
+    "action": (Capability("action", "execute", "Create an allowlisted GitHub issue after explicit approval", False, True),),
     "handler": (Capability("handler", "diagnose", "Inspect the local developer environment", True),),
 }
-_REMOTE_MODULES = frozenset({"research", "voice"})
+_REMOTE_MODULES = frozenset({"research", "voice", "action"})
 
 
 class RuntimeConfigurationError(ValueError):

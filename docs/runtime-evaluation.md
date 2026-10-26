@@ -30,6 +30,6 @@ Sources: [TorchNeuron overview](https://awsdocs-neuron.readthedocs-hosted.com/en
 
 - TARA-App owns provider selection and capability routing; specialist repositories stay independently installable.
 - Provider backends require an explicit configuration, compatible hardware/runtime, health checks, and offline contract coverage before they appear as available capabilities.
-- Remote provider modules stay disabled until the local app configuration opts in. A configured credential alone does not turn on remote Research or Voice dispatch.
+- Research, Voice, and Action modules stay disabled until the local app configuration opts in. Action writes also require an allowlisted repository and a separate one-time user approval.
 - Any future code execution uses a dedicated, reviewed sandbox contract. A developer's Copilot sandbox setup is not silently reused as TARA's execution guarantee.
 

@@ -348,10 +348,27 @@ class Orchestrator:
             return f"Store the note under key '{inputs.get('key', '')}' in local memory."
         if module == "memory" and action == "forget":
             return f"Delete the local memory entry named '{inputs.get('key', '')}'."
+        if module == "action" and action == "execute" and inputs.get("operation") == "github.issue.create":
+            return f"Create a GitHub issue in {inputs.get('repository')} titled '{inputs.get('title')}'."
         return f"Run {module}.{action} once."
 
     @staticmethod
     def _add_approval_inputs(inputs: dict[str, Any], module: str, action: str, question: str, request_id: str) -> None:
+        if module == "action" and action == "execute":
+            match = re.fullmatch(
+                r"\s*(?:create|open)\s+(?:a\s+)?(?:github\s+)?issue\s+in\s+([A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100})\s*(?::|with title\s+|titled\s+)(.+?)\s*",
+                question,
+                flags=re.IGNORECASE | re.DOTALL,
+            )
+            if match is None:
+                raise ValueError("GitHub issue request must include an allowlisted repository and title")
+            repository, details = match.group(1), match.group(2).strip()
+            sections = re.split(r"\n\s*\n(?:body|description)\s*:\s*", details, maxsplit=1, flags=re.IGNORECASE)
+            title, body = sections[0].strip(), sections[1].strip() if len(sections) == 2 else ""
+            if not title or len(title) > 256 or len(body) > 10_000:
+                raise ValueError("GitHub issue title or body exceeds the configured limit")
+            inputs.update({"operation": "github.issue.create", "repository": repository, "title": title, "body": body})
+            return
         if module != "memory":
             return
         if action == "store":

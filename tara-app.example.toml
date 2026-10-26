@@ -41,6 +41,13 @@ allow_remote = false # Set true only if questions may be sent to Tavily.
 environment = ["TARA_TAVILY_API_KEY"]
 
 [[modules]]
+id = "action"
+command = ["{python}", "-m", "tara_action"]
+working_directory = "../TARA-Action"
+allow_remote = false # Set true only to enable allowlisted GitHub issue creation.
+environment = ["GITHUB_TOKEN", "TARA_ACTION_GITHUB_REPOSITORIES"]
+
+[[modules]]
 id = "memory"
 command = ["{python}", "-m", "tara_memory"]
 working_directory = "../TARA-Memory"
