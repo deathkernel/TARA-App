@@ -36,7 +36,7 @@ button, textarea { font: inherit; }
 .model-panel-header h2 { margin: 0; font-size: 14px; }
 .model-panel-header p { margin: 2px 0 0; color: var(--muted); font-size: 11px; }
 .model-list { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
-.model-list li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 10px; background: #202229; }
+.model-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 12px; padding: 8px 10px; border-radius: 10px; background: #202229; }
 .model-profile { display: grid; min-width: 0; }
 .model-profile strong { font-size: 12px; text-transform: capitalize; }
 .model-profile span { color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
@@ -44,6 +44,10 @@ button, textarea { font: inherit; }
 .model-state.available { color: #7bd5a2; }
 .model-state.missing { color: #e8c27e; }
 .model-state.unavailable { color: #f0a0a0; }
+.model-install-button { padding: 5px 9px; border: 1px solid #665637; border-radius: 8px; background: #302919; color: #e8c27e; cursor: pointer; }
+.model-install-button:hover { border-color: #a8894e; }
+.model-pull-progress { grid-column: 1 / -1; color: var(--muted); font-size: 10px; }
+.model-list progress { grid-column: 1 / -1; width: 100%; height: 7px; accent-color: var(--accent); }
 .conversation { display: flex; flex: 1; flex-direction: column; min-height: 0; overflow: auto; scrollbar-color: #41434c transparent; }
 .welcome { margin: auto; max-width: 570px; padding: 48px 0; text-align: center; }
 .welcome-icon { display: grid; width: 52px; height: 52px; margin: 0 auto 18px; place-items: center; border: 1px solid #423852; border-radius: 18px; background: #211c2b; color: var(--accent); font-size: 23px; }
