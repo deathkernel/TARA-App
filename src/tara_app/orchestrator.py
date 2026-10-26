@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 from collections import OrderedDict
 from dataclasses import dataclass
 from threading import RLock
@@ -72,12 +74,13 @@ class Orchestrator:
         except ValueError:
             return self._outcome(operation_id, "invalid_request", None, "invalid_request", "attachment metadata is invalid")
 
+        route_attachments = [{key: value for key, value in item.items() if key in {"media_type", "name"}} for item in safe_attachments]
         route_input = {
             "schema_version": "1.0",
             "request_id": operation_id,
             "question": question,
             "available_capabilities": list(self.registry.capability_ids()),
-            "attachments": safe_attachments,
+            "attachments": route_attachments,
         }
         try:
             decision = self.router.route(route_input)
@@ -110,6 +113,10 @@ class Orchestrator:
             return self._outcome(operation_id, "unavailable", decision, "adapter_unavailable", "Selected specialist is unavailable")
 
         inputs: dict[str, Any] = {"question": question, "attachments": safe_attachments}
+        try:
+            self._add_specialist_attachment_inputs(inputs, decision.module, decision.action, safe_attachments)
+        except ValueError:
+            return self._outcome(operation_id, "invalid_request", decision, "invalid_attachment_content", "attachment content is invalid for the selected specialist")
         if decision.module == "chat" and decision.action == "respond":
             with self._history_lock:
                 inputs["history"] = [dict(turn) for turn in self._conversation_history.get(session_id, [])]
@@ -173,7 +180,7 @@ class Orchestrator:
             raise ValueError("attachments are invalid")
         safe: list[dict[str, str]] = []
         for item in attachments:
-            if not isinstance(item, Mapping) or set(item) - {"media_type", "name"}:
+            if not isinstance(item, Mapping) or set(item) - {"media_type", "name", "content_base64"}:
                 raise ValueError("attachment metadata is invalid")
             media_type = item.get("media_type", "")
             name = item.get("name", "")
@@ -181,8 +188,45 @@ class Orchestrator:
                 raise ValueError("attachment media_type is invalid")
             if not isinstance(name, str) or len(name) > 255:
                 raise ValueError("attachment name is invalid")
-            safe.append({"media_type": media_type, "name": name})
+            normalized = {"media_type": media_type, "name": name}
+            content = item.get("content_base64")
+            if content is not None:
+                if not isinstance(content, str) or not content or len(content) > 700_000:
+                    raise ValueError("attachment content is invalid")
+                try:
+                    decoded = base64.b64decode(content, validate=True)
+                except (ValueError, binascii.Error) as exc:
+                    raise ValueError("attachment content is invalid") from exc
+                if not decoded or len(decoded) > 512_000:
+                    raise ValueError("attachment content is outside the size limit")
+                normalized["content_base64"] = base64.b64encode(decoded).decode("ascii")
+            safe.append(normalized)
         return safe
+
+    @staticmethod
+    def _add_specialist_attachment_inputs(
+        inputs: dict[str, Any],
+        module: str,
+        action: str,
+        attachments: Sequence[Mapping[str, str]],
+    ) -> None:
+        if module == "vision" and action == "analyze":
+            images = [item["content_base64"] for item in attachments if item.get("media_type", "").casefold().startswith("image/") and item.get("content_base64")]
+            if images:
+                inputs["images"] = images[:4]
+        elif module == "voice" and action == "transcribe":
+            audio = next((item for item in attachments if item.get("media_type", "").casefold().startswith("audio/") and item.get("content_base64")), None)
+            if audio is not None:
+                inputs["audio_base64"] = audio["content_base64"]
+                inputs["media_type"] = audio["media_type"]
+        elif module == "data" and action == "analyze":
+            csv_file = next((item for item in attachments if item.get("media_type", "").casefold() == "text/csv" or item.get("name", "").casefold().endswith(".csv")), None)
+            if csv_file is not None and csv_file.get("content_base64"):
+                try:
+                    text = base64.b64decode(csv_file["content_base64"], validate=True).decode("utf-8-sig")
+                except (ValueError, binascii.Error, UnicodeDecodeError) as exc:
+                    raise ValueError("CSV attachment is invalid") from exc
+                inputs["csv_text"] = text
 
     @staticmethod
     def _outcome(

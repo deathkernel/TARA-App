@@ -108,7 +108,7 @@ A result should include `schema_version`, `request_id`, `ok`, `status`, structur
 
 ## Local development
 
-The first runtime foundation now includes typed module contracts, a capability registry, a restricted stdio Router client, and fail-closed orchestration. The UI and live specialist integrations are still pending.
+TARA-App now has a local browser interface, TOML-based specialist registration, bounded file handoff for images/audio/CSV, and fail-closed routing. Model downloading, lifecycle control, resource monitoring, and approval confirmation remain future milestones.
 
 Suggested sibling checkout:
 
@@ -119,4 +119,14 @@ git clone https://github.com/deathkernel/TARA-Code.git
 git clone https://github.com/deathkernel/TARA-Handler.git
 ```
 
-Use each component repository's own setup instructions to build/test it. Sibling binaries, models, and dependencies are not installed automatically.
+Install the app and selected specialist packages in one Python 3.11+ environment. Copy tara-app.example.toml to tara-app.toml, then adjust checkout directories and provider settings. Research and Voice are disabled until allow_remote = true is explicitly set in that local file.
+
+Start the local interface from the TARA-App checkout:
+
+```powershell
+python -m pip install -e . -e ../TARA-Router -e ../TARA-CHAT -e ../TARA-Code -e ../TARA-Security -e ../TARA-Planner -e ../TARA-Research -e ../TARA-Memory -e ../TARA-Vision -e ../TARA-Data -e ../TARA-Creative -e ../TARA-Voice
+Copy-Item tara-app.example.toml tara-app.toml
+tara-app --config tara-app.toml
+```
+
+Open the loopback address printed by the launcher. The app binds only to 127.0.0.1. Specialist health and provider readiness depend on each module's own configuration.

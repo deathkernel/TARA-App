@@ -10,5 +10,11 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = []
 
+[project.scripts]
+tara-app = "tara_app.cli:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+tara_app = ["web/*.html", "web/*.css", "web/*.js"]
