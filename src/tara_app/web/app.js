@@ -41,7 +41,8 @@
   } catch {
     conversations = [];
   }
-  let sessionId = localStorage.getItem(sessionKey);
+  let sessionId = "";
+  try { sessionId = localStorage.getItem(sessionKey) || ""; } catch {}
   if (!sessionId || !conversations.some(item => item.id === sessionId)) {
     sessionId = crypto.randomUUID();
     conversations.unshift({ id: sessionId, title: "New chat", updatedAt: Date.now(), messages: [] });
@@ -92,7 +93,14 @@
     renderConversationList();
   }
 
+  function setConversationNavigationDisabled(disabled) {
+    const newChat = document.querySelector("#new-chat");
+    if (newChat) newChat.disabled = disabled;
+    if (conversationList) conversationList.querySelectorAll("button").forEach(button => { button.disabled = disabled; });
+  }
+
   function selectConversation(id) {
+    if (send.disabled) return;
     const item = conversations.find(entry => entry.id === id);
     if (!item) return;
     sessionId = item.id;
@@ -105,6 +113,7 @@
   }
 
   function newConversation() {
+    if (send.disabled) return;
     sessionId = crypto.randomUUID();
     conversations.unshift({ id: sessionId, title: "New chat", updatedAt: Date.now(), messages: [] });
     conversations = conversations.slice(0, 12);
@@ -119,6 +128,7 @@
   }
 
   function deleteConversation(id) {
+    if (send.disabled) return;
     conversations = conversations.filter(item => item.id !== id);
     saveConversations();
     if (sessionId === id) {
@@ -648,6 +658,7 @@
     question.value = "";
     question.style.height = "auto";
     send.disabled = true;
+    setConversationNavigationDisabled(true);
     const files = selectedFiles.splice(0);
     updateFiles();
     const waiting = addMessage("answer", "TARA is selecting a specialist and preparing its local model if needed...", false);
@@ -666,6 +677,7 @@
       addMessage("answer", `TARA could not complete the request: ${error.message || "local server unavailable"}`);
     } finally {
       send.disabled = false;
+      setConversationNavigationDisabled(false);
       question.focus();
     }
   }
