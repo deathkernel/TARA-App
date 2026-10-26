@@ -141,10 +141,14 @@ class Orchestrator:
         if not isinstance(health, AdapterHealth) or health.status != "healthy":
             return self._outcome(operation_id, "unavailable", decision, "adapter_unavailable", "Selected specialist is unavailable")
 
-        module_attachments = route_attachments if decision.module == "security" else safe_attachments
+        module_attachments = self._specialist_attachments(
+            decision.module, decision.action, safe_attachments
+        )
         inputs: dict[str, Any] = {"question": question, "attachments": module_attachments}
         try:
-            self._add_specialist_attachment_inputs(inputs, decision.module, decision.action, safe_attachments)
+            self._add_specialist_attachment_inputs(
+                inputs, decision.module, decision.action, module_attachments
+            )
         except ValueError:
             return self._outcome(operation_id, "invalid_request", decision, "invalid_attachment_content", "attachment content is invalid for the selected specialist")
         if decision.module == "chat" and decision.action == "respond":
@@ -214,9 +218,14 @@ class Orchestrator:
                 return self._outcome(operation_id, "unavailable", decision, "approved_target_health_failed", "The assessed specialist is unavailable")
             if not isinstance(target_health, AdapterHealth) or target_health.status != "healthy":
                 return self._outcome(operation_id, "unavailable", decision, "approved_target_unavailable", "The assessed specialist is unavailable")
-            target_inputs = {"question": question, "attachments": safe_attachments}
+            target_attachments = self._specialist_attachments(
+                decision.intended_module, decision.intended_action, safe_attachments
+            )
+            target_inputs = {"question": question, "attachments": target_attachments}
             try:
-                self._add_specialist_attachment_inputs(target_inputs, decision.intended_module, decision.intended_action, safe_attachments)
+                self._add_specialist_attachment_inputs(
+                    target_inputs, decision.intended_module, decision.intended_action, target_attachments
+                )
                 self._add_approval_inputs(target_inputs, decision.intended_module, decision.intended_action, question, operation_id)
             except ValueError:
                 return self._outcome(operation_id, "invalid_request", decision, "approval_input_invalid", "The requested operation needs valid structured input")
@@ -433,29 +442,117 @@ class Orchestrator:
         return safe
 
     @staticmethod
+    def _specialist_attachments(
+        module: str,
+        action: str,
+        attachments: Sequence[Mapping[str, str]],
+    ) -> list[dict[str, str]]:
+        def metadata(items: Sequence[Mapping[str, str]]) -> list[dict[str, str]]:
+            return [{"media_type": item["media_type"], "name": item["name"]} for item in items]
+
+        if module == "security":
+            return metadata(attachments)
+        if module == "code" and action == "plan":
+            return [
+                dict(item)
+                for item in attachments
+                if item.get("content_base64")
+                and item.get("name", "").casefold().endswith((
+            ".py",
+            ".pyi",
+            ".js",
+            ".mjs",
+            ".cjs",
+            ".ts",
+            ".tsx",
+            ".jsx",
+            ".java",
+            ".go",
+            ".rs",
+            ".c",
+            ".h",
+            ".cc",
+            ".hh",
+            ".hpp",
+            ".cpp",
+            ".cxx",
+            ".cs",
+            ".rb",
+            ".php",
+            ".sh",
+            ".bash",
+            ".zsh",
+            ".ps1",
+            ".sql",
+            ".swift",
+            ".kt",
+            ".kts",
+            ".dart",
+            ".scala",
+            ".lua",
+            ".pl",
+            ".r"
+        ))
+            ]
+        if module == "vision" and action == "analyze":
+            images = [
+                item for item in attachments
+                if item.get("media_type", "").casefold().startswith("image/")
+                and item.get("content_base64")
+            ][:4]
+            return [dict(item) for item in images]
+        if module == "voice" and action == "transcribe":
+            audio = [
+                item for item in attachments
+                if item.get("media_type", "").casefold().startswith("audio/")
+                and item.get("content_base64")
+            ][:1]
+            return [dict(item) for item in audio]
+        if module == "data" and action == "analyze":
+            csv_files = [
+                item for item in attachments
+                if (
+                    item.get("media_type", "").casefold() == "text/csv"
+                    or item.get("name", "").casefold().endswith(".csv")
+                )
+                and item.get("content_base64")
+            ][:1]
+            return [dict(item) for item in csv_files]
+        return []
+
+    @staticmethod
     def _add_specialist_attachment_inputs(
         inputs: dict[str, Any],
         module: str,
         action: str,
         attachments: Sequence[Mapping[str, str]],
     ) -> None:
+        if module == "code" and action == "plan":
+            # Source code stays in the Code adapter's explicitly attached context.
+            return
         if module == "vision" and action == "analyze":
-            images = [item["content_base64"] for item in attachments if item.get("media_type", "").casefold().startswith("image/") and item.get("content_base64")]
+            images = [item["content_base64"] for item in attachments if item.get("content_base64")]
             if images:
                 inputs["images"] = images[:4]
         elif module == "voice" and action == "transcribe":
-            audio = next((item for item in attachments if item.get("media_type", "").casefold().startswith("audio/") and item.get("content_base64")), None)
+            audio = next((item for item in attachments if item.get("content_base64")), None)
             if audio is not None:
+                # The media type is selected from the matching attachment metadata.
                 inputs["audio_base64"] = audio["content_base64"]
-                inputs["media_type"] = audio["media_type"]
+                inputs["media_type"] = audio.get("media_type", "application/octet-stream")
         elif module == "data" and action == "analyze":
-            csv_file = next((item for item in attachments if item.get("media_type", "").casefold() == "text/csv" or item.get("name", "").casefold().endswith(".csv")), None)
-            if csv_file is not None and csv_file.get("content_base64"):
+            csv_file = next((item for item in attachments if item.get("content_base64")), None)
+            if csv_file is not None:
                 try:
                     text = base64.b64decode(csv_file["content_base64"], validate=True).decode("utf-8-sig")
                 except (ValueError, binascii.Error, UnicodeDecodeError) as exc:
                     raise ValueError("CSV attachment is invalid") from exc
                 inputs["csv_text"] = text
+        if module in {"vision", "voice", "data"}:
+            inputs["attachments"] = [
+                {"media_type": item["media_type"], "name": item["name"]}
+                for item in attachments
+            ]
 
     @staticmethod
     def _outcome(

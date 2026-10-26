@@ -134,7 +134,7 @@ A result should include `schema_version`, `request_id`, `ok`, `status`, structur
 
 ## Local development
 
-TARA-App now has a local browser interface, TOML-based specialist registration, a local Ollama readiness panel with user-triggered installs and confirmed removal, loaded-memory/VRAM reporting and unload control, bounded image/audio/CSV handoff, a one-time session-bound approval step, read-only TARA-Handler diagnostics, and allowlisted GitHub issue creation through TARA-Action after approval. Machine-wide resource monitoring and scheduling, and additional Action tools remain future work.
+TARA-App now has a local browser interface, TOML-based specialist registration, a local Ollama readiness panel with user-triggered installs and confirmed removal, loaded-memory/VRAM reporting and unload control, bounded, specialist-scoped image/audio/CSV/source-code handoff, a one-time session-bound approval step, read-only TARA-Handler diagnostics, and allowlisted GitHub issue creation through TARA-Action after approval. Machine-wide resource monitoring and scheduling, and additional Action tools remain future work.
 
 ## Check out the current integration branches
 

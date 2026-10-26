@@ -54,10 +54,16 @@
   }
 
   fileInput.addEventListener("change", () => {
-    const allowed = file => file.type.startsWith("image/") || file.type.startsWith("audio/") || file.type === "text/csv" || file.name.toLowerCase().endsWith(".csv");
+    const codeExtensions = new Set([".py", ".pyi", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".java", ".go", ".rs", ".c", ".h", ".cc", ".hh", ".hpp", ".cpp", ".cxx", ".cs", ".rb", ".php", ".sh", ".bash", ".zsh", ".ps1", ".sql", ".swift", ".kt", ".kts", ".dart", ".scala", ".lua", ".pl", ".r"]);
+    const allowed = file => {
+      const name = file.name.toLowerCase();
+      return file.type.startsWith("image/") || file.type.startsWith("audio/") ||
+        file.type === "text/csv" || name.endsWith(".csv") ||
+        codeExtensions.has(name.slice(name.lastIndexOf(".")));
+    };
     const additions = Array.from(fileInput.files || []);
     const rejected = additions.filter(file => !allowed(file) || file.size > 512_000);
-    if (rejected.length) addMessage("answer", "Attach images, audio, or CSV files up to 512 KB each.");
+    if (rejected.length) addMessage("answer", "Attach images, audio, CSV, or source-code files up to 512 KB each.");
     let totalBytes = selectedFiles.reduce((total, file) => total + file.size, 0);
     for (const file of additions.filter(allowed).filter(file => file.size <= 512_000)) {
       if (selectedFiles.length >= 4) break;
@@ -99,7 +105,9 @@
     const steps = Array.isArray(data.steps) ? data.steps : (Array.isArray(data.plan?.steps) ? data.plan.steps : null);
     if (steps) {
       const summary = data.plan?.summary || data.goal || "TARA-Code plan";
-      return summary + "\n" + steps.length + " reviewable step" + (steps.length === 1 ? "" : "s") + ".";
+      const planText = summary + "\n" + steps.length + " reviewable step" + (steps.length === 1 ? "" : "s") + ".";
+      const warnings = Array.isArray(data.plan?.warnings) ? data.plan.warnings.filter(item => typeof item === "string" && item) : [];
+      return warnings.length ? planText + "\n\nNotes:\n" + warnings.join("\n") : planText;
     }
     for (const key of ["text", "summary", "description", "transcript"]) {
       if (typeof data[key] === "string" && data[key]) return data[key];
