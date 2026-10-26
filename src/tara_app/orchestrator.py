@@ -164,6 +164,7 @@ class Orchestrator:
             module=decision.module,
             action=decision.action,
             inputs=inputs,
+            timeout_seconds=getattr(adapter, "timeout_seconds", 30),
             workspace_root=workspace_root,
         )
         try:
