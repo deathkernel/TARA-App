@@ -17,7 +17,19 @@
           <p>Your assistant, routed to the right specialist</p>
         </div>
         <span class="local-badge"><span></span> Local app</span>
+        <button id="models-toggle" class="models-button" type="button" aria-expanded="false" aria-controls="model-panel">Models</button>
       </header>
+
+      <section id="model-panel" class="model-panel" hidden aria-live="polite" aria-label="Local Ollama models">
+        <div class="model-panel-header">
+          <div>
+            <h2>Local models</h2>
+            <p id="model-service-status">Check which configured models are ready on this device.</p>
+          </div>
+          <button id="models-refresh" type="button">Refresh</button>
+        </div>
+        <ul id="model-list" class="model-list"></ul>
+      </section>
 
       <section class="conversation" aria-live="polite" aria-label="Conversation">
         <article class="welcome" id="welcome">
