@@ -33,6 +33,8 @@ environment = ["TARA_LLM_BACKEND", "TARA_LLAMA_MODEL", "OLLAMA_HOST", "TARA_POWE
 id = "code"
 command = ["{python}", "-m", "tara_code.app_adapter"]
 working_directory = "../TARA-Code"
+# Local model inference may need time to warm up on CPU-only systems.
+timeout_seconds = 180
 
 [[modules]]
 id = "security"
