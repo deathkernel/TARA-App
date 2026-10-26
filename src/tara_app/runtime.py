@@ -8,6 +8,7 @@ import sys
 import tomllib
 from pathlib import Path
 from typing import Any, Mapping
+from urllib.parse import urlsplit
 
 from tara_app.contracts import Capability
 from tara_app.handler_adapter import HandlerProcessAdapter
@@ -39,6 +40,16 @@ _POLICIES: dict[str, tuple[Capability, ...]] = {
     "handler": (Capability("handler", "diagnose", "Inspect the local developer environment", True),),
 }
 _REMOTE_MODULES = frozenset({"research", "voice", "action"})
+_OLLAMA_DEFAULT_MODELS = {
+    "chat": "llama3.2:3b",
+    "creative": "llama3.2:3b",
+    "vision": "gemma3:4b",
+}
+_OLLAMA_MODULE_ENV = {
+    "chat": ("TARA_LLAMA_MODEL", "OLLAMA_HOST"),
+    "creative": ("TARA_CREATIVE_MODEL", "TARA_CREATIVE_OLLAMA_URL"),
+    "vision": ("TARA_VISION_MODEL", "TARA_VISION_OLLAMA_URL"),
+}
 
 
 class RuntimeConfigurationError(ValueError):
@@ -59,10 +70,11 @@ def create_application(config_path: str | Path) -> Orchestrator:
             config = tomllib.load(stream)
     except (OSError, tomllib.TOMLDecodeError) as exc:
         raise RuntimeConfigurationError("configuration file could not be read") from exc
-    if set(config) - {"router", "modules"}:
+    if set(config) - {"router", "modules", "ollama"}:
         raise RuntimeConfigurationError("configuration contains unsupported top-level settings")
 
     root = config_file.parent
+    ollama_settings = _ollama_settings(config.get("ollama"))
     router_config = _table(config.get("router"), "router")
     if set(router_config) - {"command", "working_directory", "timeout_seconds", "max_response_bytes"}:
         raise RuntimeConfigurationError("router contains unsupported settings")
@@ -94,6 +106,7 @@ def create_application(config_path: str | Path) -> Orchestrator:
         if not isinstance(env_names, list) or any(not isinstance(name, str) or not _ENV_NAME.fullmatch(name) for name in env_names):
             raise RuntimeConfigurationError(f"modules[{index}].environment must contain environment variable names")
         module_environment = {name: os.environ[name] for name in env_names if name in os.environ}
+        module_environment.update(ollama_settings.get(module_id, {}))
         adapter_args = {
             "working_directory": _directory(root, item.get("working_directory")),
             "timeout_seconds": _integer(item.get("timeout_seconds", 30), f"modules[{index}].timeout_seconds", 1, 600),
@@ -116,6 +129,53 @@ def create_application(config_path: str | Path) -> Orchestrator:
             )
         registry.register(adapter)
     return Orchestrator(registry, router)
+
+
+def _ollama_settings(value: Any) -> dict[str, dict[str, str]]:
+    if value is None:
+        return {}
+    config = _table(value, "ollama")
+    if set(config) - {"base_url", "models"}:
+        raise RuntimeConfigurationError("ollama contains unsupported settings")
+    base_url = config.get("base_url", "http://127.0.0.1:11434")
+    if not isinstance(base_url, str) or not base_url.strip() or len(base_url) > 2048:
+        raise RuntimeConfigurationError("ollama.base_url must be a bounded local URL")
+    base_url = base_url.strip().rstrip("/")
+    try:
+        parsed = urlsplit(base_url)
+        port = parsed.port
+    except ValueError as exc:
+        raise RuntimeConfigurationError("ollama.base_url is invalid") from exc
+    if (
+        parsed.scheme not in {"http", "https"}
+        or parsed.hostname not in {"localhost", "127.0.0.1", "::1"}
+        or parsed.username
+        or parsed.password
+        or parsed.path not in {"", "/"}
+        or parsed.query
+        or parsed.fragment
+        or (port is not None and not 1 <= port <= 65535)
+    ):
+        raise RuntimeConfigurationError("ollama.base_url must target a local Ollama origin")
+
+    models = _table(config.get("models", {}), "ollama.models")
+    if set(models) - set(_OLLAMA_DEFAULT_MODELS):
+        raise RuntimeConfigurationError("ollama.models contains an unsupported specialist")
+    settings: dict[str, dict[str, str]] = {}
+    for module_id, default_model in _OLLAMA_DEFAULT_MODELS.items():
+        model = models.get(module_id, default_model)
+        if (
+            not isinstance(model, str)
+            or not model.strip()
+            or len(model) > 200
+            or any(char.isspace() or ord(char) < 32 for char in model)
+        ):
+            raise RuntimeConfigurationError(f"ollama.models.{module_id} must be a bounded model identifier")
+        model_env, url_env = _OLLAMA_MODULE_ENV[module_id]
+        settings[module_id] = {model_env: model.strip(), url_env: base_url}
+        if module_id == "chat":
+            settings[module_id]["TARA_LLM_BACKEND"] = "ollama"
+    return settings
 
 
 def _table(value: Any, label: str) -> Mapping[str, Any]:
