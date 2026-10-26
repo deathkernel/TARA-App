@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import json
+import os
+import shutil
+import subprocess
+import time
 from collections.abc import Mapping
 from threading import Lock, Thread
 from typing import Any
@@ -37,6 +41,7 @@ class OllamaModelCatalog:
         self._lifecycle_lock = Lock()
         self._pull_lock = Lock()
         self._pull_state: dict[str, Any] = {"status": "idle"}
+        self._managed_server: subprocess.Popen[bytes] | None = None
         if not self.profiles:
             if self.base_url is not None:
                 raise ValueError("base_url cannot be set without configured Ollama profiles")
@@ -69,6 +74,62 @@ class OllamaModelCatalog:
             for module, model in self.profiles.items()
         ):
             raise ValueError("Ollama profile names are invalid")
+
+    def ensure_service_started(self, *, timeout_seconds: float = 30.0) -> bool:
+        """Reuse local Ollama or start it for this TARA-App process.
+
+        Returns True only when this instance launched the service. The app
+        never stops an Ollama process that was already running independently.
+        """
+        if not self.profiles or self.base_url is None:
+            return False
+        if self._installed_models() is not None:
+            return False
+
+        executable = shutil.which("ollama")
+        if executable is None:
+            raise RuntimeError("Ollama is not available. Install it and make the ollama command available on PATH.")
+
+        creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
+        try:
+            process = subprocess.Popen(
+                [executable, "serve"],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=creationflags,
+                start_new_session=os.name != "nt",
+            )
+        except OSError as exc:
+            raise RuntimeError("TARA-App could not start the local Ollama service") from exc
+
+        self._managed_server = process
+        deadline = time.monotonic() + timeout_seconds
+        while time.monotonic() < deadline:
+            if self._installed_models() is not None:
+                return True
+            if process.poll() is not None:
+                self.close()
+                raise RuntimeError("The Ollama service exited before it became ready")
+            time.sleep(0.25)
+
+        self.close()
+        raise RuntimeError("Ollama did not become ready within the startup timeout")
+
+    def close(self) -> None:
+        """Stop only an Ollama process that this TARA-App instance started."""
+        process = self._managed_server
+        self._managed_server = None
+        if process is None or process.poll() is not None:
+            return
+        try:
+            process.terminate()
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=5)
+        except OSError:
+            return
 
     def status(self) -> dict[str, Any]:
         if not self.profiles or self.base_url is None:
