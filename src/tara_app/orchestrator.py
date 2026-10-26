@@ -124,6 +124,8 @@ class Orchestrator:
             inputs["intended_module"] = decision.intended_module
         if decision.intended_action:
             inputs["intended_action"] = decision.intended_action
+        if decision.module == "voice" and decision.action == "speak":
+            inputs["text"] = question
         if decision.policy_tags:
             inputs["policy_tags"] = list(decision.policy_tags)
         module_request = ModuleRequest(
@@ -179,6 +181,7 @@ class Orchestrator:
         if not isinstance(attachments, Sequence) or isinstance(attachments, (str, bytes)) or len(attachments) > 20:
             raise ValueError("attachments are invalid")
         safe: list[dict[str, str]] = []
+        total_content_bytes = 0
         for item in attachments:
             if not isinstance(item, Mapping) or set(item) - {"media_type", "name", "content_base64"}:
                 raise ValueError("attachment metadata is invalid")
@@ -199,6 +202,9 @@ class Orchestrator:
                     raise ValueError("attachment content is invalid") from exc
                 if not decoded or len(decoded) > 512_000:
                     raise ValueError("attachment content is outside the size limit")
+                total_content_bytes += len(decoded)
+                if total_content_bytes > 512_000:
+                    raise ValueError("combined attachment content exceeds the size limit")
                 normalized["content_base64"] = base64.b64encode(decoded).decode("ascii")
             safe.append(normalized)
         return safe

@@ -6,6 +6,7 @@
   const fileInput = document.querySelector("#files");
   const fileList = document.querySelector("#file-list");
   const send = document.querySelector("#send");
+  const audioUrls = [];
   let selectedFiles = [];
   const sessionKey = "tara-app-session";
   let sessionId = sessionStorage.getItem(sessionKey);
@@ -51,9 +52,15 @@
     const additions = Array.from(fileInput.files || []);
     const rejected = additions.filter(file => !allowed(file) || file.size > 512_000);
     if (rejected.length) addMessage("answer", "Attach images, audio, or CSV files up to 512 KB each.");
+    let totalBytes = selectedFiles.reduce((total, file) => total + file.size, 0);
     for (const file of additions.filter(allowed).filter(file => file.size <= 512_000)) {
       if (selectedFiles.length >= 4) break;
+      if (totalBytes + file.size > 512_000) {
+        addMessage("answer", "The combined attachment limit is 512 KB per message.");
+        continue;
+      }
       selectedFiles.push(file);
+      totalBytes += file.size;
     }
     updateFiles();
     fileInput.value = "";
@@ -97,12 +104,31 @@
     text.className = "answer-content";
     text.textContent = resultText(payload);
     bubble.append(text);
+    const audioData = payload?.result?.data?.audio_base64;
+    const mediaType = payload?.result?.data?.media_type;
+    if (typeof audioData === "string" && mediaType === "audio/mpeg") {
+      const binary = atob(audioData);
+      const bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+      const url = URL.createObjectURL(new Blob([bytes], { type: mediaType }));
+      audioUrls.push(url);
+      const player = document.createElement("audio");
+      player.controls = true;
+      player.src = url;
+      player.setAttribute("aria-label", "TARA generated speech");
+      player.style.display = "block";
+      player.style.maxWidth = "100%";
+      player.style.marginTop = "12px";
+      bubble.append(player);
+    }
     const details = document.createElement("details");
     details.className = "details";
     const summary = document.createElement("summary");
     summary.textContent = route.reason ? `Why this route: ${route.reason}` : "Route details";
     const pre = document.createElement("pre");
-    pre.textContent = JSON.stringify(payload, null, 2);
+    const safePayload = JSON.parse(JSON.stringify(payload));
+    if (safePayload?.result?.data?.audio_base64) safePayload.result.data.audio_base64 = "[audio bytes omitted]";
+    pre.textContent = JSON.stringify(safePayload, null, 2);
     details.append(summary, pre);
     article.append(routeLine, bubble, details);
     messages.append(article);
@@ -158,5 +184,6 @@
     question.focus();
     question.dispatchEvent(new Event("input"));
   }));
+  window.addEventListener("beforeunload", () => audioUrls.forEach(url => URL.revokeObjectURL(url)));
 })();
 
