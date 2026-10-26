@@ -43,7 +43,7 @@
         <article class="welcome" id="welcome">
           <div class="welcome-icon" aria-hidden="true">*</div>
           <h2>What can I help with?</h2>
-          <p>Ask a question. TARA-App will choose Chat, Code, Research, Data, Vision, Voice, or another configured specialist.</p>
+          <p>Chat and Code use local Ollama models. Research looks up sources through Crossref and Wikipedia public APIs. TARA-App routes each request to the matching specialist.</p>
           <div class="examples">
             <button type="button" data-prompt="Explain this concept in simple terms">Explain a concept</button>
             <button type="button" data-prompt="Help me debug this code">Work on code</button>
@@ -61,7 +61,7 @@
           <textarea id="question" rows="1" maxlength="20000" placeholder="Message TARA..." aria-label="Message TARA"></textarea>
         </div>
         <button id="send" class="send-button" type="submit" aria-label="Send message">Send</button>
-        <p class="composer-note">Specialists run only when configured. Side effects are never automatic.</p>
+        <p class="composer-note">Chat and Code stay local. Research sends your query to free public sources. Side effects are never automatic.</p>
       </form>
       <footer>Chat and Code are separate specialists | TARA-App routes each request</footer>
     </main>
