@@ -102,7 +102,7 @@ TARA-App keeps Chat and Code as separate specialists and selects a local Ollama 
 | Creative | `llama3.2:3b` | Local writing |
 | Vision | `gemma3:4b` | Image understanding |
 
-Chat and Creative are separate capabilities even though they currently share the same model weights. The Ollama service is local-only. TARA-App passes each configured model and endpoint to its specialist adapter. A user can click Install in the local model panel to pull a configured profile; downloads are never automatic. Removal, unload, and resource lifecycle controls are not implemented yet.
+Chat and Creative are separate capabilities even though they currently share the same model weights. The Ollama service is local-only. TARA-App passes each configured model and endpoint to its specialist adapter. A user can click Install in the local model panel to pull a configured profile; downloads are never automatic. The panel reports loaded memory and VRAM and can unload a running model to free memory while keeping its installed files. Model removal and resource scheduling controls are not implemented yet.
 
 Install Ollama separately and start its local service. You can pull a model from the app's Models panel or use the CLI commands below:
 
