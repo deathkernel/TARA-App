@@ -13,6 +13,7 @@ from urllib.parse import urlsplit
 from tara_app.contracts import Capability
 from tara_app.handler_adapter import HandlerProcessAdapter
 from tara_app.module_client import StdioModuleAdapter
+from tara_app.ollama_models import OllamaModelCatalog
 from tara_app.orchestrator import Orchestrator
 from tara_app.registry import CapabilityRegistry
 from tara_app.router_client import StdioRouterClient
@@ -130,7 +131,17 @@ def create_application(config_path: str | Path) -> Orchestrator:
                 **adapter_args,
             )
         registry.register(adapter)
-    return Orchestrator(registry, router)
+    profiles: dict[str, str] = {}
+    base_url: str | None = None
+    for module_id, (model_env, url_env) in _OLLAMA_MODULE_ENV.items():
+        module_settings = ollama_settings.get(module_id, {})
+        model = module_settings.get(model_env)
+        module_url = module_settings.get(url_env)
+        if model and module_url:
+            profiles[module_id] = model
+            base_url = module_url
+    model_catalog = OllamaModelCatalog(profiles, base_url) if profiles else OllamaModelCatalog()
+    return Orchestrator(registry, router, model_catalog=model_catalog)
 
 
 def _ollama_settings(value: Any) -> dict[str, dict[str, str]]:
