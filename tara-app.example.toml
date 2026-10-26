@@ -4,7 +4,7 @@
 
 # TARA-App starts or reuses the local Ollama service; models are not preloaded.
 # The Router selects a specialist and its configured model for each request.
-# Install model weights explicitly from the app's local Models panel.
+# Missing weights download only when that profile is first selected; Models can preinstall.
 [ollama]
 base_url = "http://127.0.0.1:11434"
 
