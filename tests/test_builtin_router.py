@@ -32,9 +32,10 @@ class BuiltinRouterTests(unittest.TestCase):
         self.assertEqual((decision.module, decision.action), ("research", "answer"))
 
     def test_image_attachment_prefers_vision(self):
+        self.capabilities.append("vision.analyze")
         decision = self.route("What is shown?", [{"name": "photo.png", "media_type": "image/png"}])
         self.assertEqual((decision.module, decision.action), ("vision", "analyze"))
-        self.assertEqual(decision.status, "unavailable")
+        self.assertEqual(decision.status, "routed")
 
     def test_side_effect_needs_security_gate(self):
         decision = self.route("Create a GitHub issue")
