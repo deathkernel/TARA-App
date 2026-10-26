@@ -23,13 +23,121 @@
     return AUDIO_SUFFIX_TYPES[suffix] || null;
   };
   const sessionKey = "tara-app-session";
-  let sessionId = sessionStorage.getItem(sessionKey);
-  if (!sessionId) {
+  const conversationStorageKey = "tara-app-conversations";
+  const conversationList = document.querySelector("#conversation-list");
+  let conversations = [];
+  try {
+    const stored = JSON.parse(localStorage.getItem(conversationStorageKey) || "[]");
+    if (Array.isArray(stored)) {
+      conversations = stored.filter(item => item && typeof item.id === "string" && Array.isArray(item.messages))
+        .map(item => ({
+          id: item.id,
+          title: typeof item.title === "string" ? item.title.slice(0, 80) : "New chat",
+          updatedAt: Number.isFinite(item.updatedAt) ? item.updatedAt : Date.now(),
+          messages: item.messages.filter(message => message && ["user", "answer"].includes(message.role) && typeof message.text === "string")
+            .slice(-24).map(message => ({ role: message.role, text: message.text.slice(0, 6000) }))
+        })).slice(0, 12);
+    }
+  } catch {
+    conversations = [];
+  }
+  let sessionId = localStorage.getItem(sessionKey);
+  if (!sessionId || !conversations.some(item => item.id === sessionId)) {
     sessionId = crypto.randomUUID();
-    sessionStorage.setItem(sessionKey, sessionId);
+    conversations.unshift({ id: sessionId, title: "New chat", updatedAt: Date.now(), messages: [] });
+    try { localStorage.setItem(sessionKey, sessionId); } catch {}
   }
 
-  function addMessage(role, content) {
+  function saveConversations() {
+    try { localStorage.setItem(conversationStorageKey, JSON.stringify(conversations.slice(0, 12))); } catch {}
+  }
+
+  function renderConversationList() {
+    if (!conversationList) return;
+    conversationList.replaceChildren();
+    conversations.forEach(item => {
+      const row = document.createElement("div");
+      row.className = "conversation-row";
+      const open = document.createElement("button");
+      open.type = "button";
+      open.className = "conversation-item" + (item.id === sessionId ? " active" : "");
+      open.textContent = item.title || "New chat";
+      open.title = item.title || "New chat";
+      open.addEventListener("click", () => selectConversation(item.id));
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "conversation-delete";
+      remove.textContent = "×";
+      remove.title = "Delete chat";
+      remove.setAttribute("aria-label", "Delete " + (item.title || "chat"));
+      remove.addEventListener("click", () => deleteConversation(item.id));
+      row.append(open, remove);
+      conversationList.append(row);
+    });
+  }
+
+  function recordMessage(role, text, payload) {
+    const item = conversations.find(entry => entry.id === sessionId);
+    if (!item || !["user", "answer"].includes(role)) return;
+    const safeText = String(text || "").slice(0, 6000);
+    item.messages.push({ role, text: safeText });
+    item.messages = item.messages.slice(-24);
+    if (role === "user" && item.title === "New chat") {
+      item.title = safeText.replace(/\s+/g, " ").trim().slice(0, 48) || "New chat";
+    }
+    item.updatedAt = Date.now();
+    conversations.sort((left, right) => right.updatedAt - left.updatedAt);
+    conversations = conversations.slice(0, 12);
+    saveConversations();
+    renderConversationList();
+  }
+
+  function selectConversation(id) {
+    const item = conversations.find(entry => entry.id === id);
+    if (!item) return;
+    sessionId = item.id;
+    try { localStorage.setItem(sessionKey, sessionId); } catch {}
+    messages.replaceChildren();
+    welcome.hidden = item.messages.length > 0;
+    item.messages.forEach(message => addMessage(message.role, message.text, false));
+    renderConversationList();
+    question.focus();
+  }
+
+  function newConversation() {
+    sessionId = crypto.randomUUID();
+    conversations.unshift({ id: sessionId, title: "New chat", updatedAt: Date.now(), messages: [] });
+    conversations = conversations.slice(0, 12);
+    try { localStorage.setItem(sessionKey, sessionId); } catch {}
+    messages.replaceChildren();
+    welcome.hidden = false;
+    selectedFiles = [];
+    updateFiles();
+    saveConversations();
+    renderConversationList();
+    question.focus();
+  }
+
+  function deleteConversation(id) {
+    conversations = conversations.filter(item => item.id !== id);
+    saveConversations();
+    if (sessionId === id) {
+      sessionId = "";
+      newConversation();
+      return;
+    }
+    renderConversationList();
+  }
+
+  function restoreActiveConversation() {
+    const item = conversations.find(entry => entry.id === sessionId);
+    if (!item || !item.messages.length) return;
+    welcome.hidden = true;
+    item.messages.forEach(message => addMessage(message.role, message.text, false));
+  }
+
+  function addMessage(role, content, persist = true) {
+    if (persist) recordMessage(role, content);
     const article = document.createElement("article");
     article.className = `message ${role}`;
     const bubble = document.createElement("div");
@@ -238,6 +346,7 @@
   }
 
   function addResult(payload) {
+    recordMessage("answer", resultText(payload), payload);
     const article = document.createElement("article");
     article.className = "message answer";
     const route = payload?.route || {};
@@ -541,7 +650,7 @@
     send.disabled = true;
     const files = selectedFiles.splice(0);
     updateFiles();
-    const waiting = addMessage("answer", "TARA is selecting a specialist and preparing its local model if needed...");
+    const waiting = addMessage("answer", "TARA is selecting a specialist and preparing its local model if needed...", false);
     try {
       const attachments = await Promise.all(files.map(encodeFile));
       const response = await fetch("/api/chat", {
@@ -560,6 +669,10 @@
       question.focus();
     }
   }
+
+  renderConversationList();
+  restoreActiveConversation();
+  document.querySelector("#new-chat")?.addEventListener("click", newConversation);
 
   composer.addEventListener("submit", event => {
     event.preventDefault();
