@@ -2,6 +2,16 @@
 # This file is trusted local configuration. Commands are fixed argument arrays;
 # question text is never used to build a command or shell expression.
 
+# Local Ollama models are selected by task. TARA-App does not download them.
+# Pull the configured models in Ollama before sending requests to these specialists.
+[ollama]
+base_url = "http://127.0.0.1:11434"
+
+[ollama.models]
+chat = "llama3.2:3b"
+creative = "llama3.2:3b"
+vision = "gemma3:4b"
+
 [router]
 command = ["{python}", "-m", "tara_router"]
 working_directory = "../TARA-Router"
