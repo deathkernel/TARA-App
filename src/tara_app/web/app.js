@@ -314,6 +314,18 @@
     article.scrollIntoView({ behavior: "smooth", block: "end" });
   }
 
+  function formatModelBytes(value) {
+    if (!Number.isFinite(value) || value < 0) return null;
+    const units = ["B", "KiB", "MiB", "GiB", "TiB"];
+    let size = value;
+    let unit = 0;
+    while (size >= 1024 && unit < units.length - 1) {
+      size /= 1024;
+      unit += 1;
+    }
+    return size.toFixed(unit === 0 ? 0 : 1) + " " + units[unit];
+  }
+
   async function refreshModelStatus() {
     if (modelPollTimer !== null) window.clearTimeout(modelPollTimer);
     modelPollTimer = null;
@@ -350,7 +362,10 @@
         profile.append(specialist, identifier);
         const state = document.createElement("span");
         state.className = "model-state";
-        if (model.installed === true) {
+        if (model.running === true) {
+          state.textContent = "Loaded";
+          state.classList.add("available");
+        } else if (model.installed === true) {
           state.textContent = "Installed";
           state.classList.add("available");
         } else if (model.installed === false) {
@@ -359,6 +374,14 @@
         } else {
           state.textContent = "Unavailable";
           state.classList.add("unavailable");
+        }
+        const memory = formatModelBytes(model.memory_bytes);
+        const vram = formatModelBytes(model.vram_bytes);
+        if (memory || vram) {
+          const resource = document.createElement("span");
+          resource.className = "model-resource";
+          resource.textContent = [memory ? "Memory " + memory : "", vram ? "GPU " + vram : ""].filter(Boolean).join(" | ");
+          profile.append(resource);
         }
         item.append(profile, state);
         if (pullActive && pull.specialist === model.specialist) {
