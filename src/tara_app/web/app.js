@@ -384,6 +384,15 @@
           profile.append(resource);
         }
         item.append(profile, state);
+        if (model.running === true && !pullActive && !send.disabled) {
+          const unload = document.createElement("button");
+          unload.type = "button";
+          unload.className = "model-unload-button";
+          unload.textContent = "Unload";
+          unload.setAttribute("aria-label", "Unload " + String(model.model || "configured model") + " from memory");
+          unload.addEventListener("click", () => unloadModel(String(model.specialist || "")));
+          item.append(unload);
+        }
         if (pullActive && pull.specialist === model.specialist) {
           const progressText = document.createElement("span");
           progressText.className = "model-pull-progress";
@@ -428,6 +437,26 @@
       await refreshModelStatus();
     } catch (error) {
       modelServiceStatus.textContent = error.message || "Could not start local model download.";
+    }
+  }
+
+  async function unloadModel(specialist) {
+    modelServiceStatus.textContent = "Freeing local model memory...";
+    try {
+      const response = await fetch("/api/models/unload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ specialist })
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Could not unload model");
+      const message = payload.status === "unloaded"
+        ? "Model unloaded from memory. Its installed files remain available."
+        : "Model was already unloaded.";
+      await refreshModelStatus();
+      modelServiceStatus.textContent = message;
+    } catch (error) {
+      modelServiceStatus.textContent = error.message || "Could not unload local model.";
     }
   }
 
