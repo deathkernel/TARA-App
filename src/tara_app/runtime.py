@@ -80,7 +80,7 @@ def create_application(config_path: str | Path) -> Orchestrator:
     seen: set[str] = set()
     for index, raw in enumerate(modules):
         item = _table(raw, f"modules[{index}]")
-        if set(item) - {"id", "command", "working_directory", "environment", "allow_remote"}:
+        if set(item) - {"id", "command", "working_directory", "environment", "allow_remote", "timeout_seconds", "max_response_bytes"}:
             raise RuntimeConfigurationError(f"modules[{index}] contains unsupported settings")
         module_id = item.get("id")
         if not isinstance(module_id, str) or module_id not in _POLICIES:
