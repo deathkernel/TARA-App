@@ -40,6 +40,7 @@ button, textarea { font: inherit; }
 .model-profile { display: grid; min-width: 0; }
 .model-profile strong { font-size: 12px; text-transform: capitalize; }
 .model-profile span { color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+.model-profile .model-resource { font-size: 10px; color: #8f93a0; }
 .model-state { flex: 0 0 auto; font-size: 11px; }
 .model-state.available { color: #7bd5a2; }
 .model-state.missing { color: #e8c27e; }
