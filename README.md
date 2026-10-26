@@ -14,15 +14,17 @@ TARA-Chat, TARA-Code, and TARA-Handler are parts of the TARA ecosystem that the 
 - Clear distinction between an AI model, a model runtime/provider, and a tool/engine.
 - Safe defaults: no arbitrary host command execution, no hidden mutation, and no automatic Git merge.
 
-## Current verified repository state
+## Current implementation state
 
-This repository began as an empty application scaffold. The sibling repositories currently have different maturity levels:
+TARA-App is being consolidated as a single Python monorepo. The current integrated source packages are:
 
-- **TARA-CHAT** (`deathkernel/TARA-CHAT`): Python conversation runtime with Ollama provider, bounded session history, explicit local memory, tests, and a narrow read-only subprocess bridge for Handler.
-- **TARA-Code** (`deathkernel/TARA-Code`): independent coding-engine project with deterministic planning and a local Ollama-backed planning adapter. It does not execute code or inspect a workspace through the App adapter.
-- **TARA-Handler** (`deathkernel/TARA-Handler`): native C++17 CLI for developer-environment diagnostics and guarded maintenance/repair workflows. Keep it a separate executable and use a narrow process boundary.
+- `tara_app`: the local app, capability registry, approval flow, Ollama lifecycle manager, and ChatGPT-style browser UI.
+- `tara_router`: a deterministic local router included in this repository; it requires no API key or paid inference.
+- `tara_chat`: the conversation-only specialist, kept separate from Code.
+- `tara_code`: a coding specialist using the local Ollama profile; it returns review-first proposals and never executes code.
+- `tara_research`: a source-first module that queries free Crossref and Wikipedia public APIs and returns links and excerpts.
 
-Do not represent a planned adapter or model provider as an already working integration. Enable each capability only after its contract and integration checks pass.
+The remaining specialists (Planner, Memory, Vision, Data, Creative, Security, Voice, Action, and Handler) are still being brought into this repository. The example config enables only specialists already present in this checkout.
 
 ## Target architecture
 
@@ -93,20 +95,16 @@ See [runtime and development option notes](docs/runtime-evaluation.md) for the c
 
 ## Local Ollama model profiles
 
-TARA-App keeps Chat and Code as separate specialists and selects a local Ollama model by task. The starter profile in `tara-app.example.toml` is:
+TARA-App is the only user-facing process. It starts or reuses the local Ollama service, routes each request to Chat, Code, or Research, and downloads only the selected model the first time that specialist is used.
 
 | Specialist | Default model | Use |
 | --- | --- | --- |
 | Chat | `llama3.2:3b` | Local conversation |
-| Code | `qwen2.5-coder:3b` | Review-first coding plans |
-| Creative | `llama3.2:3b` | Local writing |
-| Vision | `gemma3:4b` | Image understanding |
+| Code | `qwen2.5-coder:3b` | Local code analysis and proposed changes |
 
-Chat and Creative are separate capabilities even though they currently share the same model weights. TARA-App is the only user-facing process: its Router selects a specialist for each request, and the app launches that specialist's adapter internally. Users do not start TARA-Chat, TARA-Code, Router, or the other module processes themselves. The selected specialist receives its configured local Ollama model; other profiles are not loaded by TARA-App at startup.
+These are free-to-download model weights served locally by Ollama; no paid inference API is configured. Model names can be changed in `[ollama.models]`. The app does not preload models at startup. Ollama may keep a recently used model in memory during its idle period.
 
-TARA-App checks the configured loopback Ollama endpoint at startup. If no local service responds and the `ollama` command is available, it starts `ollama serve` in the background. If a local Ollama service was already running, TARA-App reuses it and leaves it running when the app exits. Install the Ollama runtime once; there is no need to manually start its service or use `ollama run`.
-
-On the first request routed to a local-model specialist, TARA-App downloads only that specialist's configured model if it is not already installed, waits for it to finish, then runs the specialist adapter. The Models panel shows pull progress and still allows users to preinstall a model. TARA-App does not download every profile at startup and does not silently fall back to Chat or another model if a selected profile cannot be installed. Ollama may keep the most recently used model in memory for its default idle period, but it performs no inference until TARA-App sends another request. The Models panel reports memory and VRAM, can unload a running model, and can remove an installed model after confirmation that lists shared profiles. Unload keeps installed files; removal deletes them from this device. These names are defaults and can be changed under `[ollama.models]` in the local TOML configuration. Machine-wide resource scheduling controls are not implemented yet.
+Research uses Crossref and Wikipedia public APIs for source records. No API key is required and no paid model is called. A research query is sent to those public services when Research is selected.
 
 ## Target integration contracts
 
@@ -128,39 +126,26 @@ A result should include `schema_version`, `request_id`, `ok`, `status`, structur
 
 ## Local development
 
-TARA-App now has a local browser interface, TOML-based specialist registration, a local Ollama readiness panel with user-triggered installs and confirmed removal, loaded-memory/VRAM reporting and unload control, bounded, specialist-scoped image/audio/CSV/source-code handoff, a one-time session-bound approval step, read-only TARA-Handler diagnostics, and allowlisted GitHub issue creation through TARA-Action after approval. Machine-wide resource monitoring and scheduling, and additional Action tools remain future work.
+TARA-App now includes the local Router, Chat, Code, and Research packages in the same repository. Chat and Code remain distinct specialists. Code suggestions and plans are data only; the current module does not run commands or modify a workspace.
 
-## Check out the current integration branches
+### Run on Windows
 
-The App and specialist implementations are currently held in open pull requests. Clone these exact branches into one parent folder so the editable installs below use the integrated versions:
+1. Install Python 3.11 or newer and Ollama once.
+2. Clone this repository.
+3. Double-click `run-tara.bat`.
 
-```powershell
-git clone --branch feat/app-runtime-core --single-branch https://github.com/deathkernel/TARA-App.git
-git clone --branch feat/router-v1-core --single-branch https://github.com/deathkernel/TARA-Router.git
-git clone --branch feat/app-stdio-adapter --single-branch https://github.com/deathkernel/TARA-CHAT.git
-git clone --branch feat/engine-foundation --single-branch https://github.com/deathkernel/TARA-Code.git
-git clone https://github.com/deathkernel/TARA-Handler.git
-git clone --branch feat/module-v1-core --single-branch https://github.com/deathkernel/TARA-Security.git
-git clone --branch feat/module-v1-core --single-branch https://github.com/deathkernel/TARA-Planner.git
-git clone --branch feat/module-v1-core --single-branch https://github.com/deathkernel/TARA-Research.git
-git clone --branch feat/module-v1-core --single-branch https://github.com/deathkernel/TARA-Memory.git
-git clone --branch feat/module-v1-core --single-branch https://github.com/deathkernel/TARA-Vision.git
-git clone --branch feat/module-v1-core --single-branch https://github.com/deathkernel/TARA-Data.git
-git clone --branch feat/module-v1-core --single-branch https://github.com/deathkernel/TARA-Creative.git
-git clone --branch feat/module-v1-core --single-branch https://github.com/deathkernel/TARA-Voice.git
-git clone --branch feat/action-github-issue-v1 --single-branch https://github.com/deathkernel/TARA-Action.git
+The launcher creates a local virtual environment, installs this repository, creates `tara-app.toml` from the example when needed, and starts TARA-App. TARA-App starts or reuses Ollama and downloads the model for the selected specialist on first use.
+
+### Run from a terminal
+
+```bash
+python -m pip install -e .
+cp tara-app.example.toml tara-app.toml
+python -m tara_app --config tara-app.toml
 ```
 
-After the pull requests are merged, the same repositories can be checked out from their default branches.
+On Windows PowerShell, use `Copy-Item tara-app.example.toml tara-app.toml` in place of `cp`. The app binds to loopback. Research sends only the requested search text to Crossref and Wikipedia; it returns source links and snippets for review.
 
-Install the app and selected specialist packages in one Python 3.11+ environment. Copy `tara-app.example.toml` to `tara-app.toml`, then adjust checkout directories and provider settings. Research, Voice, and GitHub Action dispatch are disabled until `allow_remote = true` is explicitly set in that local file. Action also needs a repository allowlist, a scoped token, and one-time App approval. Build TARA-Handler with CMake and point its configured command at the native handler executable.
+### Consolidation status
 
-Start the local interface from the TARA-App checkout:
-
-```powershell
-python -m pip install -e . -e ../TARA-Router -e ../TARA-CHAT -e ../TARA-Code -e ../TARA-Security -e ../TARA-Planner -e ../TARA-Research -e ../TARA-Memory -e ../TARA-Vision -e ../TARA-Data -e ../TARA-Creative -e ../TARA-Voice -e ../TARA-Action
-Copy-Item tara-app.example.toml tara-app.toml
-tara-app --config tara-app.toml
-```
-
-Open the loopback address printed by the launcher. The app binds only to 127.0.0.1. Specialist health and provider readiness depend on each module's own configuration.
+The current draft PR contains the first single-repository vertical slice. The other TARA specialist implementations have not all been moved into this repository yet. Their existing repositories remain untouched while the remaining packages are integrated and verified.
