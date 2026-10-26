@@ -78,6 +78,12 @@
 
   function resultText(payload) {
     const data = payload?.result?.data || {};
+    if (data.stored === true) return `Saved the note under â€œ${data.key}â€ in TARA-Memory.`;
+    if (typeof data.forgotten === "boolean") return data.forgotten ? `Forgot â€œ${data.key}â€ from TARA-Memory.` : `No saved note matched â€œ${data.key}â€.`;
+    if (Array.isArray(data.memories)) {
+      return data.memories.length ? data.memories.map(item => `${item.key}: ${item.value}`).join("\n") : "No matching saved notes.";
+    }
+    if (data.cancelled === true) return "Cancelled. No change was made.";
     for (const key of ["text", "summary", "description", "transcript"]) {
       if (typeof data[key] === "string" && data[key]) return data[key];
     }
@@ -138,6 +144,8 @@
       card.className = "approval-card";
       const description = document.createElement("p");
       description.textContent = payload.result.data.approval_description || `Run ${route.intended_module || "requested specialist"} once?`;
+      const expires = document.createElement("small");
+      expires.textContent = "One-time approval Â· expires in 2 minutes";
       const actions = document.createElement("div");
       actions.className = "approval-actions";
       const approve = document.createElement("button");
@@ -169,7 +177,7 @@
       approve.addEventListener("click", () => act("/api/approve"));
       cancel.addEventListener("click", () => act("/api/cancel"));
       actions.append(approve, cancel);
-      card.append(description, actions);
+      card.append(description, expires, actions);
       article.append(card);
     }
     article.append(details);

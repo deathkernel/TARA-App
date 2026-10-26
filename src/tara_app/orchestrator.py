@@ -148,6 +148,14 @@ class Orchestrator:
             inputs["intended_action"] = decision.intended_action
         if decision.module == "voice" and decision.action == "speak":
             inputs["text"] = question
+        if decision.module == "memory" and decision.action == "search":
+            query = re.sub(
+                r"^\s*(?:what do you remember(?: about)?|do you remember|search (?:my )?memory(?: for)?|memory(?: search)?(?: for)?|meri memory(?: me)?|yaad hai)\s*",
+                "",
+                question,
+                flags=re.IGNORECASE,
+            ).strip(" ?.,")
+            inputs["query"] = query or question.strip()
         if decision.policy_tags:
             inputs["policy_tags"] = list(decision.policy_tags)
         module_request = ModuleRequest(
@@ -296,7 +304,7 @@ class Orchestrator:
             if not isinstance(session_id, str) or pending.session_id != session_id:
                 return self._outcome(pending.request_id, "permission_denied", pending.route, "approval_session_mismatch", "Approval belongs to another session")
             self._pending_approvals.pop(approval_id, None)
-        result = ModuleResult("success", {"cancelled": True}, "The operation was cancelled and not executed")
+        result = ModuleResult("success", {"cancelled": True})
         return DispatchOutcome("cancelled", pending.route, result, pending.request_id)
 
     def _store_approval(
