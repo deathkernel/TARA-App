@@ -148,6 +148,18 @@ class Orchestrator:
         if decision.requires_approval and decision.module != "security":
             return self._outcome(operation_id, "permission_denied", decision, "policy_route_invalid", "Approval-gated route bypassed TARA-Security")
 
+        if self.model_catalog is not None and decision.module in self.model_catalog.profiles:
+            try:
+                self.model_catalog.ensure_model_installed(decision.module)
+            except RuntimeError:
+                return self._outcome(
+                    operation_id,
+                    "unavailable",
+                    decision,
+                    "local_model_unavailable",
+                    "TARA-App could not prepare the selected local model. Check the Models panel for download status.",
+                )
+
         try:
             health = adapter.health()
         except Exception:
