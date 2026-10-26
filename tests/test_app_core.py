@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import unittest
 from typing import Mapping, Sequence
 
@@ -83,7 +84,10 @@ class AppCoreTests(unittest.TestCase):
             "req-2", "routed", "security", "assess", "policy_review_required", "Approval needed",
             "action", "execute", True, ("side_effect", "human_approval"),
         )
-        result = Orchestrator(registry, FakeRouter(decision)).handle_question("Send a report", request_id="req-2")
+        result = Orchestrator(registry, FakeRouter(decision)).handle_question(
+            "Create a GitHub issue in deathkernel/TARA-App: Bug report\n\nBody: The app crashes",
+            request_id="req-2",
+        )
         self.assertEqual(result.status, "approval_required")
         self.assertEqual(len(security.calls), 1)
         self.assertEqual(len(action.calls), 0)
@@ -130,6 +134,99 @@ class AppCoreTests(unittest.TestCase):
         result = Orchestrator(registry, FakeRouter(decision)).handle_question("Hi", request_id="expected")
         self.assertEqual(result.status, "failed")
         self.assertEqual(chat.calls, [])
+
+
+
+    @staticmethod
+    def encoded(data: bytes) -> str:
+        return base64.b64encode(data).decode("ascii")
+
+    def test_code_receives_only_explicit_source_attachments(self) -> None:
+        code_content = self.encoded(b"def ready(): return True")
+        image_content = self.encoded(b"image")
+        code = FakeAdapter("code", (Capability("code", "plan", "Coding plan", True),))
+        registry = CapabilityRegistry()
+        registry.register(code)
+        router = FakeRouter(RouteDecision("req-code", "routed", "code", "plan", "coding_task", "Code task"))
+        attachments = [
+            {"name": "health.py", "media_type": "text/x-python", "content_base64": code_content},
+            {"name": "screen.png", "media_type": "image/png", "content_base64": image_content},
+        ]
+
+        result = Orchestrator(registry, router).handle_question(
+            "Review this source", attachments=attachments, request_id="req-code"
+        )
+
+        self.assertEqual(result.status, "success")
+        self.assertEqual(code.calls[0].inputs["attachments"], [attachments[0]])
+        self.assertNotIn("images", code.calls[0].inputs)
+        self.assertTrue(all("content_base64" not in item for item in router.payloads[0]["attachments"]))
+
+    def test_vision_receives_only_image_payload(self) -> None:
+        code_content = self.encoded(b"secret source must stay with Code")
+        audio_content = self.encoded(b"audio")
+        image_content = self.encoded(b"image bytes")
+        vision = FakeAdapter("vision", (Capability("vision", "analyze", "Image analysis", True),))
+        registry = CapabilityRegistry()
+        registry.register(vision)
+        router = FakeRouter(RouteDecision("req-vision", "routed", "vision", "analyze", "image", "Image request"))
+        attachments = [
+            {"name": "app.py", "media_type": "text/x-python", "content_base64": code_content},
+            {"name": "recording.wav", "media_type": "audio/wav", "content_base64": audio_content},
+            {"name": "screen.png", "media_type": "image/png", "content_base64": image_content},
+        ]
+
+        result = Orchestrator(registry, router).handle_question(
+            "Describe this image", attachments=attachments, request_id="req-vision"
+        )
+
+        inputs = vision.calls[0].inputs
+        self.assertEqual(result.status, "success")
+        self.assertEqual(inputs["images"], [image_content])
+        self.assertEqual(inputs["attachments"], [{"name": "screen.png", "media_type": "image/png"}])
+        self.assertNotIn(code_content, str(inputs))
+        self.assertNotIn(audio_content, str(inputs))
+
+    def test_data_receives_csv_text_without_duplicate_base64(self) -> None:
+        source_content = self.encoded(b"def ready(): return True")
+        csv_bytes = b"name,age\nAri,30\n"
+        csv_content = self.encoded(csv_bytes)
+        data = FakeAdapter("data", (Capability("data", "analyze", "CSV analysis", True),))
+        registry = CapabilityRegistry()
+        registry.register(data)
+        router = FakeRouter(RouteDecision("req-data", "routed", "data", "analyze", "table", "CSV request"))
+        attachments = [
+            {"name": "app.py", "media_type": "text/x-python", "content_base64": source_content},
+            {"name": "people.csv", "media_type": "text/csv", "content_base64": csv_content},
+        ]
+
+        result = Orchestrator(registry, router).handle_question(
+            "Analyze this table", attachments=attachments, request_id="req-data"
+        )
+
+        inputs = data.calls[0].inputs
+        self.assertEqual(result.status, "success")
+        self.assertEqual(inputs["csv_text"], csv_bytes.decode("utf-8"))
+        self.assertEqual(inputs["attachments"], [{"name": "people.csv", "media_type": "text/csv"}])
+        self.assertNotIn(source_content, str(inputs))
+        self.assertNotIn(csv_content, str(inputs))
+
+    def test_chat_does_not_receive_attachment_content(self) -> None:
+        code_content = self.encoded(b"def ready(): return True")
+        chat = FakeAdapter("chat", (Capability("chat", "respond", "Conversation response", True),))
+        registry = CapabilityRegistry()
+        registry.register(chat)
+        router = FakeRouter(RouteDecision("req-chat", "routed", "chat", "respond", "conversation", "Chat request"))
+        attachments = [{"name": "app.py", "media_type": "text/x-python", "content_base64": code_content}]
+
+        result = Orchestrator(registry, router).handle_question(
+            "Hello", attachments=attachments, request_id="req-chat"
+        )
+
+        self.assertEqual(result.status, "success")
+        self.assertEqual(chat.calls[0].inputs["attachments"], [])
+        self.assertNotIn(code_content, str(chat.calls[0].inputs))
+        self.assertNotIn("content_base64", router.payloads[0]["attachments"][0])
 
 
 if __name__ == "__main__":
