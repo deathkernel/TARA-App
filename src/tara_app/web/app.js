@@ -541,7 +541,7 @@
     send.disabled = true;
     const files = selectedFiles.splice(0);
     updateFiles();
-    const waiting = addMessage("answer", "TARA is selecting a specialist...");
+    const waiting = addMessage("answer", "TARA is selecting a specialist and preparing its local model if needed...");
     try {
       const attachments = await Promise.all(files.map(encodeFile));
       const response = await fetch("/api/chat", {
