@@ -15,12 +15,18 @@ def main() -> int:
     parser.add_argument("--config", type=Path, default=Path("tara-app.toml"), help="path to trusted TARA-App TOML configuration")
     parser.add_argument("--port", type=int, default=8765, help="loopback web port (1024-65535)")
     args = parser.parse_args()
+    app = None
     try:
         app = create_application(args.config)
+        if app.model_catalog is not None:
+            app.model_catalog.ensure_service_started()
         serve(app, port=args.port)
-    except (RuntimeConfigurationError, OSError, ValueError) as exc:
+    except (RuntimeConfigurationError, OSError, RuntimeError, ValueError) as exc:
         print(f"TARA-App could not start: {exc}", file=sys.stderr)
         return 2
+    finally:
+        if app is not None and app.model_catalog is not None:
+            app.model_catalog.close()
     return 0
 
 
