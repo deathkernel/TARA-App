@@ -1,93 +1,37 @@
-# Copy to tara-app.toml and adjust checkout folders or Python executables.
-# This file is trusted local configuration. Commands are fixed argument arrays;
-# question text is never used to build a command or shell expression.
+# Copy to tara-app.toml and adjust only the local settings you need.
+# TARA-App contains its Router and specialist packages in this repository.
+# Ollama runs local open-weight models; TARA-App starts the service and downloads
+# only the selected specialist model on its first request.
 
-# TARA-App starts or reuses the local Ollama service; models are not preloaded.
-# The Router selects a specialist and its configured model for each request.
-# Missing weights download only when that profile is first selected; Models can preinstall.
 [ollama]
 base_url = "http://127.0.0.1:11434"
 
 [ollama.models]
 chat = "llama3.2:3b"
 code = "qwen2.5-coder:3b"
-creative = "llama3.2:3b"
-vision = "gemma3:4b"
 
 [router]
 command = ["{python}", "-m", "tara_router"]
-working_directory = "../TARA-Router"
-
-[[modules]]
-id = "handler"
-# Adjust this path to the CMake output; on Linux/macOS it is usually build/handler.
-command = ["build/Release/handler.exe", "doctor"]
-working_directory = "../TARA-Handler"
+working_directory = "."
+timeout_seconds = 10
 
 [[modules]]
 id = "chat"
-command = ["{python}", "-m", "src.app_adapter"]
-working_directory = "../TARA-CHAT"
+command = ["{python}", "-m", "tara_chat.app_adapter"]
+working_directory = "."
+timeout_seconds = 180
 environment = ["TARA_LLM_BACKEND", "TARA_LLAMA_MODEL", "OLLAMA_HOST", "TARA_POWER_MODE", "TARA_LLM_TIMEOUT_SECONDS", "TARA_CHAT_MEMORY_PATH"]
 
 [[modules]]
 id = "code"
-command = ["{python}", "-m", "tara_code.app_adapter"]
-working_directory = "../TARA-Code"
-# Local model inference may need time to warm up on CPU-only systems.
+command = ["{python}", "-m", "tara_code"]
+working_directory = "."
 timeout_seconds = 180
-
-[[modules]]
-id = "security"
-command = ["{python}", "-m", "tara_security"]
-working_directory = "../TARA-Security"
-
-[[modules]]
-id = "planner"
-command = ["{python}", "-m", "tara_planner"]
-working_directory = "../TARA-Planner"
+environment = ["TARA_CODE_MODEL", "TARA_CODE_OLLAMA_URL"]
 
 [[modules]]
 id = "research"
 command = ["{python}", "-m", "tara_research"]
-working_directory = "../TARA-Research"
-allow_remote = false # Set true only if questions may be sent to Tavily.
-environment = ["TARA_TAVILY_API_KEY"]
-
-[[modules]]
-id = "action"
-command = ["{python}", "-m", "tara_action"]
-working_directory = "../TARA-Action"
-allow_remote = false # Set true only to enable allowlisted GitHub issue creation.
-environment = ["GITHUB_TOKEN", "TARA_ACTION_GITHUB_REPOSITORIES"]
-
-[[modules]]
-id = "memory"
-command = ["{python}", "-m", "tara_memory"]
-working_directory = "../TARA-Memory"
-environment = ["TARA_MEMORY_DB"]
-
-[[modules]]
-id = "vision"
-command = ["{python}", "-m", "tara_vision"]
-working_directory = "../TARA-Vision"
-environment = ["TARA_VISION_MODEL", "TARA_VISION_OLLAMA_URL"]
-
-[[modules]]
-id = "data"
-command = ["{python}", "-m", "tara_data"]
-working_directory = "../TARA-Data"
-
-[[modules]]
-id = "creative"
-command = ["{python}", "-m", "tara_creative"]
-working_directory = "../TARA-Creative"
-environment = ["TARA_CREATIVE_MODEL", "TARA_CREATIVE_OLLAMA_URL"]
-
-[[modules]]
-id = "voice"
-command = ["{python}", "-m", "tara_voice"]
-working_directory = "../TARA-Voice"
-allow_remote = false # Set true only if audio/text may be sent to ElevenLabs.
-environment = ["ELEVENLABS_API_KEY", "TARA_VOICE_ID", "TARA_TTS_MODEL"]
-
+working_directory = "."
+timeout_seconds = 30
+allow_remote = true # Sends the research query to Crossref and Wikipedia; no API key or paid model is used.
