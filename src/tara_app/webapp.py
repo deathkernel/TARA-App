@@ -69,7 +69,7 @@ class _Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         endpoint = urlsplit(self.path).path
-        if endpoint not in {"/api/chat", "/api/approve", "/api/cancel", "/api/models/pull"}:
+        if endpoint not in {"/api/chat", "/api/approve", "/api/cancel", "/api/models/pull", "/api/models/unload"}:
             self._json(404, {"status": "unavailable", "error": "endpoint not found"})
             return
         if not self._local_origin():
@@ -93,14 +93,14 @@ class _Handler(BaseHTTPRequestHandler):
             return
         if endpoint == "/api/chat":
             fields = {"question", "session_id", "attachments"}
-        elif endpoint == "/api/models/pull":
+        elif endpoint in {"/api/models/pull", "/api/models/unload"}:
             fields = {"specialist"}
         else:
             fields = {"approval_id", "session_id"}
         if not isinstance(payload, dict) or set(payload) - fields:
             self._json(400, {"status": "invalid_request", "error": "request fields are invalid"})
             return
-        if endpoint == "/api/models/pull":
+        if endpoint in {"/api/models/pull", "/api/models/unload"}:
             if set(payload) != {"specialist"}:
                 self._json(400, {"status": "invalid_request", "error": "specialist is required"})
                 return
@@ -109,14 +109,20 @@ class _Handler(BaseHTTPRequestHandler):
                 self._json(409, {"status": "unavailable", "error": "local Ollama profiles are not configured"})
                 return
             try:
-                pull = catalog.start_pull(payload["specialist"])
+                if endpoint == "/api/models/pull":
+                    result = catalog.start_pull(payload["specialist"])
+                else:
+                    result = catalog.unload_model(payload["specialist"])
             except ValueError:
                 self._json(400, {"status": "invalid_request", "error": "specialist is not a configured local model"})
                 return
             except RuntimeError:
-                self._json(409, {"status": "unavailable", "error": "local Ollama download cannot be started"})
+                self._json(409, {"status": "unavailable", "error": "local model action could not be completed"})
                 return
-            self._json(202, {"status": "accepted", "pull": pull})
+            status_code = 202 if endpoint == "/api/models/pull" else 200
+            result_status = "accepted" if endpoint == "/api/models/pull" else result["status"]
+            response_key = "pull" if endpoint == "/api/models/pull" else "model"
+            self._json(status_code, {"status": result_status, response_key: result})
             return
         if endpoint == "/api/chat":
             outcome = self.server.app.handle_question(
