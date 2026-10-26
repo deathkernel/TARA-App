@@ -7,7 +7,7 @@ from collections.abc import Mapping
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
 _MAX_RESPONSE_BYTES = 256_000
 
@@ -96,7 +96,7 @@ class OllamaModelCatalog:
             method="GET",
         )
         try:
-            with build_opener(_NoRedirect()).open(request, timeout=2) as response:
+            with build_opener(ProxyHandler({}), _NoRedirect()).open(request, timeout=2) as response:
                 raw = response.read(_MAX_RESPONSE_BYTES + 1)
         except (HTTPError, URLError, TimeoutError, OSError):
             return None
