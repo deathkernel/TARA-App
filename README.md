@@ -88,6 +88,10 @@ docs/
 
 This layout is a target, not a claim that those modules are already implemented.
 
+## Runtime and development options
+
+See [runtime and development option notes](docs/runtime-evaluation.md) for the current scope of Amp, GitHub Copilot sandboxing, GitHub Package Firewall, and AWS TorchNeuron. These are optional references, not built-in TARA runtimes.
+
 ## Target integration contracts
 
 Adapters should expose health, capabilities, and a structured execute operation. Model providers additionally need a model catalogue, load/unload lifecycle, inference settings, cancellation, timeout, resource limits, and health reporting. Model identity and version should be recorded for each inference request.
