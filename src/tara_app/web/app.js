@@ -11,6 +11,7 @@
   const modelsRefresh = document.querySelector("#models-refresh");
   const modelServiceStatus = document.querySelector("#model-service-status");
   const modelList = document.querySelector("#model-list");
+  let modelPollTimer = null;
   const audioUrls = [];
   let selectedFiles = [];
   const sessionKey = "tara-app-session";
@@ -314,6 +315,8 @@
   }
 
   async function refreshModelStatus() {
+    if (modelPollTimer !== null) window.clearTimeout(modelPollTimer);
+    modelPollTimer = null;
     modelServiceStatus.textContent = "Checking local Ollama...";
     modelsRefresh.disabled = true;
     modelList.replaceChildren();
@@ -325,7 +328,13 @@
         modelServiceStatus.textContent = "No local Ollama profiles are configured.";
         return;
       }
-      if (payload.service_available !== true) {
+      const pull = payload.pull || {};
+      const pullActive = ["queued", "pulling"].includes(pull.status);
+      if (pull.status === "failed") {
+        modelServiceStatus.textContent = pull.message || "Model download failed. Check Ollama and try again.";
+      } else if (pullActive) {
+        modelServiceStatus.textContent = "Installing " + String(pull.model || "local model") + "...";
+      } else if (payload.service_available !== true) {
         modelServiceStatus.textContent = "Ollama is not responding. Start the local Ollama service, then refresh.";
       } else {
         modelServiceStatus.textContent = "Ollama is available on this device.";
@@ -352,7 +361,29 @@
           state.classList.add("unavailable");
         }
         item.append(profile, state);
+        if (pullActive && pull.specialist === model.specialist) {
+          const progressText = document.createElement("span");
+          progressText.className = "model-pull-progress";
+          const percent = Number.isInteger(pull.percent) ? "Current layer " + pull.percent + "%" : String(pull.message || "Preparing download");
+          progressText.textContent = percent;
+          const progress = document.createElement("progress");
+          progress.max = 100;
+          progress.value = Number.isInteger(pull.percent) ? pull.percent : 0;
+          progress.setAttribute("aria-label", "Current model layer download progress");
+          item.append(progressText, progress);
+        } else if (model.installed === false && payload.service_available === true && !pullActive) {
+          const install = document.createElement("button");
+          install.type = "button";
+          install.className = "model-install-button";
+          install.textContent = "Install";
+          install.setAttribute("aria-label", "Install " + String(model.model || "configured model"));
+          install.addEventListener("click", () => startModelPull(String(model.specialist || "")));
+          item.append(install);
+        }
         modelList.append(item);
+      }
+      if (pullActive && !modelPanel.hidden) {
+        modelPollTimer = window.setTimeout(refreshModelStatus, 2500);
       }
     } catch (error) {
       modelServiceStatus.textContent = error.message || "Local model status is unavailable.";
@@ -361,11 +392,32 @@
     }
   }
 
+  async function startModelPull(specialist) {
+    modelServiceStatus.textContent = "Starting local model download...";
+    try {
+      const response = await fetch("/api/models/pull", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ specialist })
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Could not start model download");
+      await refreshModelStatus();
+    } catch (error) {
+      modelServiceStatus.textContent = error.message || "Could not start local model download.";
+    }
+  }
+
   modelsToggle.addEventListener("click", () => {
     const opening = modelPanel.hidden;
     modelPanel.hidden = !opening;
     modelsToggle.setAttribute("aria-expanded", String(opening));
-    if (opening) refreshModelStatus();
+    if (opening) {
+      refreshModelStatus();
+    } else if (modelPollTimer !== null) {
+      window.clearTimeout(modelPollTimer);
+      modelPollTimer = null;
+    }
   });
   modelsRefresh.addEventListener("click", refreshModelStatus);
 
