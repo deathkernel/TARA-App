@@ -232,7 +232,8 @@
     const text = document.createElement("div");
     text.className = "answer-content";
     text.textContent = resultText(payload);
-    bubble.append(text);\n    appendSpecialistOutput(bubble, payload);
+    bubble.append(text);
+    appendSpecialistOutput(bubble, payload);
     const audioData = payload?.result?.data?.audio_base64;
     const mediaType = payload?.result?.data?.media_type;
     if (typeof audioData === "string" && mediaType === "audio/mpeg") {
