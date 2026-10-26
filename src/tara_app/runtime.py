@@ -42,11 +42,13 @@ _POLICIES: dict[str, tuple[Capability, ...]] = {
 _REMOTE_MODULES = frozenset({"research", "voice", "action"})
 _OLLAMA_DEFAULT_MODELS = {
     "chat": "llama3.2:3b",
+    "code": "qwen2.5-coder:3b",
     "creative": "llama3.2:3b",
     "vision": "gemma3:4b",
 }
 _OLLAMA_MODULE_ENV = {
     "chat": ("TARA_LLAMA_MODEL", "OLLAMA_HOST"),
+    "code": ("TARA_CODE_MODEL", "TARA_CODE_OLLAMA_URL"),
     "creative": ("TARA_CREATIVE_MODEL", "TARA_CREATIVE_OLLAMA_URL"),
     "vision": ("TARA_VISION_MODEL", "TARA_VISION_OLLAMA_URL"),
 }
