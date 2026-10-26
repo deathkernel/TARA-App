@@ -19,6 +19,20 @@ from tara_app.contracts import AdapterHealth, Capability, ModuleRequest, ModuleR
 from tara_app.ollama_models import OllamaModelCatalog
 from tara_app.registry import CapabilityRegistry
 
+_AUDIO_MEDIA_TYPES = frozenset({
+    "audio/mpeg", "audio/wav", "audio/mp4", "audio/webm", "audio/ogg", "audio/flac", "audio/aac",
+})
+_AUDIO_SUFFIX_TYPES = {
+    ".mp3": "audio/mpeg",
+    ".wav": "audio/wav",
+    ".m4a": "audio/mp4",
+    ".mp4": "audio/mp4",
+    ".webm": "audio/webm",
+    ".ogg": "audio/ogg",
+    ".flac": "audio/flac",
+    ".aac": "audio/aac",
+}
+
 
 @dataclass(frozen=True, slots=True)
 class DispatchOutcome:
@@ -423,7 +437,14 @@ class Orchestrator:
                 raise ValueError("attachment media_type is invalid")
             if not isinstance(name, str) or len(name) > 255:
                 raise ValueError("attachment name is invalid")
-            normalized = {"media_type": media_type, "name": name}
+            normalized_media_type = media_type.casefold()
+            suffix = "." + name.rsplit(".", 1)[-1].casefold() if "." in name else ""
+            if normalized_media_type.startswith("audio/") or suffix in _AUDIO_SUFFIX_TYPES:
+                if normalized_media_type not in _AUDIO_MEDIA_TYPES:
+                    normalized_media_type = _AUDIO_SUFFIX_TYPES.get(suffix, "")
+                if normalized_media_type not in _AUDIO_MEDIA_TYPES:
+                    raise ValueError("audio attachment format is not supported")
+            normalized = {"media_type": normalized_media_type, "name": name}
             content = item.get("content_base64")
             if content is not None:
                 if not isinstance(content, str) or not content or len(content) > 700_000:

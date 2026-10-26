@@ -162,6 +162,39 @@ class AppCoreTests(unittest.TestCase):
         self.assertNotIn("images", code.calls[0].inputs)
         self.assertTrue(all("content_base64" not in item for item in router.payloads[0]["attachments"]))
 
+    def test_voice_receives_supported_audio_with_normalized_mime_alias(self) -> None:
+        voice = FakeAdapter("voice", (Capability("voice", "transcribe", "Audio transcription", True),))
+        registry = CapabilityRegistry()
+        registry.register(voice)
+        router = FakeRouter(RouteDecision("req-voice", "routed", "voice", "transcribe", "audio", "Audio request"))
+        audio_content = self.encoded(b"audio bytes")
+
+        result = Orchestrator(registry, router).handle_question(
+            "Transcribe this recording",
+            attachments=[{"name": "recording.wav", "media_type": "audio/x-wav", "content_base64": audio_content}],
+            request_id="req-voice",
+        )
+
+        self.assertEqual(result.status, "success")
+        self.assertEqual(voice.calls[0].inputs["media_type"], "audio/wav")
+        self.assertEqual(voice.calls[0].inputs["audio_base64"], audio_content)
+
+    def test_unsupported_audio_format_is_rejected_before_routing(self) -> None:
+        voice = FakeAdapter("voice", (Capability("voice", "transcribe", "Audio transcription", True),))
+        registry = CapabilityRegistry()
+        registry.register(voice)
+        router = FakeRouter(RouteDecision("req-audio", "routed", "voice", "transcribe", "audio", "Audio request"))
+
+        result = Orchestrator(registry, router).handle_question(
+            "Transcribe this recording",
+            attachments=[{"name": "recording.mka", "media_type": "audio/x-matroska", "content_base64": self.encoded(b"audio")}],
+            request_id="req-audio",
+        )
+
+        self.assertEqual(result.status, "invalid_request")
+        self.assertEqual(router.payloads, [])
+        self.assertEqual(voice.calls, [])
+
     def test_vision_receives_only_image_payload(self) -> None:
         code_content = self.encoded(b"secret source must stay with Code")
         audio_content = self.encoded(b"audio")

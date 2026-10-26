@@ -6,6 +6,8 @@
   const fileInput = document.querySelector("#files");
   const fileList = document.querySelector("#file-list");
   const send = document.querySelector("#send");
+  const AUDIO_MEDIA_TYPES = new Set(["audio/mpeg", "audio/wav", "audio/mp4", "audio/webm", "audio/ogg", "audio/flac", "audio/aac"]);
+  const AUDIO_SUFFIX_TYPES = { ".mp3": "audio/mpeg", ".wav": "audio/wav", ".m4a": "audio/mp4", ".mp4": "audio/mp4", ".webm": "audio/webm", ".ogg": "audio/ogg", ".flac": "audio/flac", ".aac": "audio/aac" };
   const modelPanel = document.querySelector("#model-panel");
   const modelsToggle = document.querySelector("#models-toggle");
   const modelsRefresh = document.querySelector("#models-refresh");
@@ -14,6 +16,12 @@
   let modelPollTimer = null;
   const audioUrls = [];
   let selectedFiles = [];
+  const audioTypeFor = file => {
+    const declared = file.type.toLowerCase();
+    if (AUDIO_MEDIA_TYPES.has(declared)) return declared;
+    const suffix = file.name.toLowerCase().match(/\.[^.]+$/)?.[0];
+    return AUDIO_SUFFIX_TYPES[suffix] || null;
+  };
   const sessionKey = "tara-app-session";
   let sessionId = sessionStorage.getItem(sessionKey);
   if (!sessionId) {
@@ -57,13 +65,13 @@
     const codeExtensions = new Set([".py", ".pyi", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".java", ".go", ".rs", ".c", ".h", ".cc", ".hh", ".hpp", ".cpp", ".cxx", ".cs", ".rb", ".php", ".sh", ".bash", ".zsh", ".ps1", ".sql", ".swift", ".kt", ".kts", ".dart", ".scala", ".lua", ".pl", ".r"]);
     const allowed = file => {
       const name = file.name.toLowerCase();
-      return file.type.startsWith("image/") || file.type.startsWith("audio/") ||
+      return file.type.startsWith("image/") || Boolean(audioTypeFor(file)) ||
         file.type === "text/csv" || name.endsWith(".csv") ||
         codeExtensions.has(name.slice(name.lastIndexOf(".")));
     };
     const additions = Array.from(fileInput.files || []);
     const rejected = additions.filter(file => !allowed(file) || file.size > 512_000);
-    if (rejected.length) addMessage("answer", "Attach images, audio, CSV, or source-code files up to 512 KB each.");
+    if (rejected.length) addMessage("answer", "Attach images, CSV, source-code files, or MP3, WAV, M4A/MP4, WebM, OGG, FLAC, or AAC audio up to 512 KB each.");
     let totalBytes = selectedFiles.reduce((total, file) => total + file.size, 0);
     for (const file of additions.filter(allowed).filter(file => file.size <= 512_000)) {
       if (selectedFiles.length >= 4) break;
@@ -85,7 +93,7 @@
       reader.onload = () => resolve(String(reader.result).split(",", 2)[1] || "");
       reader.readAsDataURL(file);
     });
-    return { name: file.name, media_type: file.type || (file.name.toLowerCase().endsWith(".csv") ? "text/csv" : "application/octet-stream"), content_base64: encoded };
+    return { name: file.name, media_type: audioTypeFor(file) || file.type || (file.name.toLowerCase().endsWith(".csv") ? "text/csv" : "application/octet-stream"), content_base64: encoded };
   }
 
   function resultText(payload) {
