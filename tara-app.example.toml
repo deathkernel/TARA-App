@@ -7,6 +7,12 @@ command = ["{python}", "-m", "tara_router"]
 working_directory = "../TARA-Router"
 
 [[modules]]
+id = "handler"
+# Adjust this path to the CMake output; on Linux/macOS it is usually build/handler.
+command = ["build/Release/handler.exe", "doctor"]
+working_directory = "../TARA-Handler"
+
+[[modules]]
 id = "chat"
 command = ["{python}", "-m", "src.app_adapter"]
 working_directory = "../TARA-CHAT"

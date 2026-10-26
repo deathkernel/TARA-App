@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from tara_app.contracts import Capability
+from tara_app.handler_adapter import HandlerProcessAdapter
 from tara_app.module_client import StdioModuleAdapter
 from tara_app.orchestrator import Orchestrator
 from tara_app.registry import CapabilityRegistry
@@ -34,6 +35,7 @@ _POLICIES: dict[str, tuple[Capability, ...]] = {
         Capability("voice", "transcribe", "Transcribe user supplied audio", True),
         Capability("voice", "speak", "Synthesize speech from text", True),
     ),
+    "handler": (Capability("handler", "diagnose", "Inspect the local developer environment", True),),
 }
 _REMOTE_MODULES = frozenset({"research", "voice"})
 
@@ -91,17 +93,27 @@ def create_application(config_path: str | Path) -> Orchestrator:
         if not isinstance(env_names, list) or any(not isinstance(name, str) or not _ENV_NAME.fullmatch(name) for name in env_names):
             raise RuntimeConfigurationError(f"modules[{index}].environment must contain environment variable names")
         module_environment = {name: os.environ[name] for name in env_names if name in os.environ}
-        registry.register(
-            StdioModuleAdapter(
+        adapter_args = {
+            "working_directory": _directory(root, item.get("working_directory")),
+            "timeout_seconds": _integer(item.get("timeout_seconds", 30), f"modules[{index}].timeout_seconds", 1, 600),
+            "environment": module_environment,
+        }
+        if module_id == "handler":
+            adapter = HandlerProcessAdapter(
+                _command(item.get("command")),
+                max_response_bytes=_integer(item.get("max_response_bytes", 256_000), f"modules[{index}].max_response_bytes", 256, 1_000_000),
+                **{key: value for key, value in adapter_args.items() if key != "timeout_seconds"},
+                timeout_seconds=_integer(item.get("timeout_seconds", 30), f"modules[{index}].timeout_seconds", 1, 120),
+            )
+        else:
+            adapter = StdioModuleAdapter(
                 module_id,
                 _POLICIES[module_id],
                 _command(item.get("command")),
-                working_directory=_directory(root, item.get("working_directory")),
-                timeout_seconds=_integer(item.get("timeout_seconds", 30), f"modules[{index}].timeout_seconds", 1, 600),
                 max_response_bytes=_integer(item.get("max_response_bytes", 1_000_000), f"modules[{index}].max_response_bytes", 256, 1_000_000),
-                environment=module_environment,
+                **adapter_args,
             )
-        )
+        registry.register(adapter)
     return Orchestrator(registry, router)
 
 

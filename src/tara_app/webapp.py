@@ -54,7 +54,8 @@ class _Handler(BaseHTTPRequestHandler):
         self.wfile.write(content)
 
     def do_POST(self) -> None:
-        if urlsplit(self.path).path != "/api/chat":
+        endpoint = urlsplit(self.path).path
+        if endpoint not in {"/api/chat", "/api/approve", "/api/cancel"}:
             self._json(404, {"status": "unavailable", "error": "endpoint not found"})
             return
         if not self._local_origin():
@@ -76,14 +77,20 @@ class _Handler(BaseHTTPRequestHandler):
         except (UnicodeDecodeError, json.JSONDecodeError):
             self._json(400, {"status": "invalid_request", "error": "request must be UTF-8 JSON"})
             return
-        if not isinstance(payload, dict) or set(payload) - {"question", "session_id", "attachments"}:
+        fields = {"question", "session_id", "attachments"} if endpoint == "/api/chat" else {"approval_id", "session_id"}
+        if not isinstance(payload, dict) or set(payload) - fields:
             self._json(400, {"status": "invalid_request", "error": "request fields are invalid"})
             return
-        outcome = self.server.app.handle_question(
-            payload.get("question"),
-            session_id=payload.get("session_id", "default"),
-            attachments=payload.get("attachments", []),
-        )
+        if endpoint == "/api/chat":
+            outcome = self.server.app.handle_question(
+                payload.get("question"),
+                session_id=payload.get("session_id", "default"),
+                attachments=payload.get("attachments", []),
+            )
+        elif endpoint == "/api/approve":
+            outcome = self.server.app.approve(payload.get("approval_id"), session_id=payload.get("session_id"))
+        else:
+            outcome = self.server.app.cancel_approval(payload.get("approval_id"), session_id=payload.get("session_id"))
         self._json(200, outcome.to_payload())
 
     def _local_origin(self) -> bool:

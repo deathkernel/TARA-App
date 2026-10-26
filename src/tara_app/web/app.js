@@ -82,7 +82,8 @@
       if (typeof data[key] === "string" && data[key]) return data[key];
     }
     if (payload?.result?.error) return payload.result.error;
-    if (payload?.status === "approval_required") return "This request needs human approval. No change was made.";
+    if (payload?.status === "approval_required") return "TARA-Security reviewed this request. Nothing has run yet.";
+    if (payload?.status === "cancelled") return "Cancelled. No change was made.";
     return "The specialist returned a structured result. Open details to inspect it.";
   }
 
@@ -130,7 +131,48 @@
     if (safePayload?.result?.data?.audio_base64) safePayload.result.data.audio_base64 = "[audio bytes omitted]";
     pre.textContent = JSON.stringify(safePayload, null, 2);
     details.append(summary, pre);
-    article.append(routeLine, bubble, details);
+    article.append(routeLine, bubble);
+    const approvalId = payload?.result?.data?.approval_id;
+    if (payload?.status === "approval_required" && typeof approvalId === "string") {
+      const card = document.createElement("section");
+      card.className = "approval-card";
+      const description = document.createElement("p");
+      description.textContent = payload.result.data.approval_description || `Run ${route.intended_module || "requested specialist"} once?`;
+      const actions = document.createElement("div");
+      actions.className = "approval-actions";
+      const approve = document.createElement("button");
+      approve.type = "button";
+      approve.className = "approve-button";
+      approve.textContent = "Approve once";
+      const cancel = document.createElement("button");
+      cancel.type = "button";
+      cancel.className = "cancel-button";
+      cancel.textContent = "Cancel";
+      const act = async endpoint => {
+        approve.disabled = true;
+        cancel.disabled = true;
+        try {
+          const response = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ approval_id: approvalId, session_id: sessionId })
+          });
+          const outcome = await response.json();
+          card.remove();
+          addResult(outcome);
+        } catch (error) {
+          approve.disabled = false;
+          cancel.disabled = false;
+          addMessage("answer", `Could not update approval: ${error.message || "local server unavailable"}`);
+        }
+      };
+      approve.addEventListener("click", () => act("/api/approve"));
+      cancel.addEventListener("click", () => act("/api/cancel"));
+      actions.append(approve, cancel);
+      card.append(description, actions);
+      article.append(card);
+    }
+    article.append(details);
     messages.append(article);
     article.scrollIntoView({ behavior: "smooth", block: "end" });
   }

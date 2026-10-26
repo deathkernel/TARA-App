@@ -4,6 +4,10 @@ from __future__ import annotations
 
 import base64
 import binascii
+import hashlib
+import re
+import secrets
+import time
 from collections import OrderedDict
 from dataclasses import dataclass
 from threading import RLock
@@ -44,6 +48,21 @@ class DispatchOutcome:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class PendingApproval:
+    approval_id: str
+    request_id: str
+    session_id: str
+    question: str
+    target_module: str
+    target_action: str
+    target_inputs: Mapping[str, Any]
+    workspace_root: str | None
+    route: RouteDecision
+    expires_at: float
+    description: str
+
+
 class Orchestrator:
     """Uses Router proposals and registered module adapters; it never auto-approves."""
 
@@ -52,6 +71,8 @@ class Orchestrator:
         self.router = router
         self._conversation_history: OrderedDict[str, list[dict[str, str]]] = OrderedDict()
         self._history_lock = RLock()
+        self._pending_approvals: OrderedDict[str, PendingApproval] = OrderedDict()
+        self._approval_lock = RLock()
 
     def handle_question(
         self,
@@ -112,7 +133,8 @@ class Orchestrator:
         if not isinstance(health, AdapterHealth) or health.status != "healthy":
             return self._outcome(operation_id, "unavailable", decision, "adapter_unavailable", "Selected specialist is unavailable")
 
-        inputs: dict[str, Any] = {"question": question, "attachments": safe_attachments}
+        module_attachments = route_attachments if decision.module == "security" else safe_attachments
+        inputs: dict[str, Any] = {"question": question, "attachments": module_attachments}
         try:
             self._add_specialist_attachment_inputs(inputs, decision.module, decision.action, safe_attachments)
         except ValueError:
@@ -163,18 +185,185 @@ class Orchestrator:
                 return DispatchOutcome("permission_denied", decision, result, operation_id)
             if result.status != "success":
                 return DispatchOutcome(result.status, decision, result, operation_id)
+            if verdict not in {"allow", "approval_required"} or not decision.intended_module or not decision.intended_action:
+                return self._outcome(operation_id, "failed", decision, "invalid_security_response", "TARA-Security did not return a valid assessment")
+            target_capability = self.registry.capability(decision.intended_module, decision.intended_action)
+            target_adapter = self.registry.adapter(decision.intended_module)
+            if target_capability is None or target_adapter is None or (target_capability.read_only and not target_capability.requires_approval):
+                return self._outcome(operation_id, "unavailable", decision, "approved_target_unavailable", "The assessed capability is not registered")
+            try:
+                target_health = target_adapter.health()
+            except Exception:
+                return self._outcome(operation_id, "unavailable", decision, "approved_target_health_failed", "The assessed specialist is unavailable")
+            if not isinstance(target_health, AdapterHealth) or target_health.status != "healthy":
+                return self._outcome(operation_id, "unavailable", decision, "approved_target_unavailable", "The assessed specialist is unavailable")
+            target_inputs = {"question": question, "attachments": safe_attachments}
+            try:
+                self._add_specialist_attachment_inputs(target_inputs, decision.intended_module, decision.intended_action, safe_attachments)
+                self._add_approval_inputs(target_inputs, decision.intended_module, decision.intended_action, question, operation_id)
+            except ValueError:
+                return self._outcome(operation_id, "invalid_request", decision, "approval_input_invalid", "The requested operation needs valid structured input")
+            if decision.intended_module == "voice" and decision.intended_action == "speak":
+                target_inputs["text"] = question
+            if decision.policy_tags:
+                target_inputs["policy_tags"] = list(decision.policy_tags)
+            approval_id = self._store_approval(
+                request_id=operation_id,
+                session_id=session_id,
+                question=question,
+                target_module=decision.intended_module,
+                target_action=decision.intended_action,
+                target_inputs=target_inputs,
+                workspace_root=workspace_root,
+                route=decision,
+            )
             pending = ModuleResult(
                 status="approval_required",
                 data={
-                    "security_assessed": isinstance(verdict, str) and verdict in {"allow", "approval_required"},
+                    "security_assessed": True,
                     "intended_module": decision.intended_module,
                     "intended_action": decision.intended_action,
+                    "approval_id": approval_id,
+                    "approval_description": self._approval_description(decision.intended_module, decision.intended_action, target_inputs),
+                    "expires_in_seconds": 120,
                 },
-                error="human approval is required; the requested side effect was not executed",
+                error="TARA-Security assessed the request; approve it explicitly to continue",
             )
             return DispatchOutcome("approval_required", decision, pending, operation_id)
 
         return DispatchOutcome(result.status, decision, result, operation_id)
+
+    def approve(self, approval_id: str, *, session_id: str) -> DispatchOutcome:
+        """Execute one exact, session-bound operation after explicit user approval."""
+        if not isinstance(approval_id, str) or not approval_id or len(approval_id) > 128:
+            return self._outcome("unknown", "invalid_request", None, "invalid_approval", "approval ID is invalid")
+        if not isinstance(session_id, str) or not session_id.strip() or len(session_id) > 128:
+            return self._outcome("unknown", "invalid_request", None, "invalid_session", "session ID is invalid")
+        with self._approval_lock:
+            pending = self._pending_approvals.get(approval_id)
+            if pending is None:
+                return self._outcome("unknown", "unavailable", None, "approval_expired", "Approval is missing, expired, or already used")
+            if pending.session_id != session_id:
+                return self._outcome(pending.request_id, "permission_denied", pending.route, "approval_session_mismatch", "Approval belongs to another session")
+            self._pending_approvals.pop(approval_id, None)
+        if pending.expires_at <= time.monotonic():
+            return self._outcome(pending.request_id, "timeout", pending.route, "approval_expired", "Approval expired; submit the request again")
+        capability = self.registry.capability(pending.target_module, pending.target_action)
+        adapter = self.registry.adapter(pending.target_module)
+        if capability is None or adapter is None:
+            return self._outcome(pending.request_id, "unavailable", pending.route, "approved_target_unavailable", "The approved capability is no longer registered")
+        try:
+            health = adapter.health()
+        except Exception:
+            return self._outcome(pending.request_id, "unavailable", pending.route, "approved_target_health_failed", "The approved specialist is unavailable")
+        if not isinstance(health, AdapterHealth) or health.status != "healthy":
+            return self._outcome(pending.request_id, "unavailable", pending.route, "approved_target_unavailable", "The approved specialist is unavailable")
+        request = ModuleRequest(
+            request_id=pending.request_id,
+            session_id=pending.session_id,
+            module=pending.target_module,
+            action=pending.target_action,
+            inputs=pending.target_inputs,
+            workspace_root=pending.workspace_root,
+            approval_token=approval_id,
+        )
+        try:
+            result = adapter.execute(request)
+        except Exception:
+            return self._outcome(pending.request_id, "failed", pending.route, "approved_action_failed", "Approved specialist execution failed")
+        if not isinstance(result, ModuleResult):
+            return self._outcome(pending.request_id, "failed", pending.route, "invalid_adapter_response", "Specialist returned an invalid result")
+        approved_route = RouteDecision(
+            request_id=pending.request_id,
+            status="routed",
+            module=pending.target_module,
+            action=pending.target_action,
+            reason_code="human_approved",
+            reason="The user approved this one operation after TARA-Security assessment.",
+            policy_tags=pending.route.policy_tags,
+        )
+        return DispatchOutcome(result.status, approved_route, result, pending.request_id)
+
+    def cancel_approval(self, approval_id: str, *, session_id: str) -> DispatchOutcome:
+        if not isinstance(approval_id, str) or not approval_id or len(approval_id) > 128:
+            return self._outcome("unknown", "invalid_request", None, "invalid_approval", "approval ID is invalid")
+        if not isinstance(session_id, str) or not session_id.strip() or len(session_id) > 128:
+            return self._outcome("unknown", "invalid_request", None, "invalid_session", "session ID is invalid")
+        with self._approval_lock:
+            pending = self._pending_approvals.get(approval_id)
+            if pending is None:
+                return self._outcome("unknown", "unavailable", None, "approval_expired", "Approval is missing, expired, or already used")
+            if not isinstance(session_id, str) or pending.session_id != session_id:
+                return self._outcome(pending.request_id, "permission_denied", pending.route, "approval_session_mismatch", "Approval belongs to another session")
+            self._pending_approvals.pop(approval_id, None)
+        result = ModuleResult("success", {"cancelled": True}, "The operation was cancelled and not executed")
+        return DispatchOutcome("cancelled", pending.route, result, pending.request_id)
+
+    def _store_approval(
+        self,
+        *,
+        request_id: str,
+        session_id: str,
+        question: str,
+        target_module: str,
+        target_action: str,
+        target_inputs: Mapping[str, Any],
+        workspace_root: str | None,
+        route: RouteDecision,
+    ) -> str:
+        approval_id = secrets.token_urlsafe(32)
+        now = time.monotonic()
+        with self._approval_lock:
+            for key, item in list(self._pending_approvals.items()):
+                if item.expires_at <= now:
+                    self._pending_approvals.pop(key, None)
+            self._pending_approvals[approval_id] = PendingApproval(
+                approval_id=approval_id,
+                request_id=request_id,
+                session_id=session_id,
+                question=question,
+                target_module=target_module,
+                target_action=target_action,
+                target_inputs=dict(target_inputs),
+                workspace_root=workspace_root,
+                route=route,
+                expires_at=now + 120,
+                description=self._approval_description(target_module, target_action, target_inputs),
+            )
+            while len(self._pending_approvals) > 32:
+                self._pending_approvals.popitem(last=False)
+        return approval_id
+
+    @staticmethod
+    def _approval_description(module: str, action: str, inputs: Mapping[str, Any]) -> str:
+        if module == "memory" and action == "store":
+            return f"Store the note under key '{inputs.get('key', '')}' in local memory."
+        if module == "memory" and action == "forget":
+            return f"Delete the local memory entry named '{inputs.get('key', '')}'."
+        return f"Run {module}.{action} once."
+
+    @staticmethod
+    def _add_approval_inputs(inputs: dict[str, Any], module: str, action: str, question: str, request_id: str) -> None:
+        if module != "memory":
+            return
+        if action == "store":
+            content = re.sub(r"^\s*(?:remember(?:\s+(?:this|that))?|save(?:\s+(?:this|to memory))?|store(?:\s+(?:this|in memory))?|yaad rakh(?:na)?)\s*[:,-]?\s*", "", question, flags=re.IGNORECASE).strip()
+            if not content or len(content) > 2000:
+                raise ValueError("memory note must contain 1 to 2000 characters")
+            match = re.fullmatch(r"(.{1,120}?)(?:\s+(?:is|are)\s+|\s*[:=]\s*)(.{1,2000})", content, flags=re.IGNORECASE | re.DOTALL)
+            if match:
+                key, value = match.group(1).strip(), match.group(2).strip()
+            else:
+                key = "note-" + hashlib.sha256(content.casefold().encode("utf-8")).hexdigest()[:16]
+                value = content
+            if not key or not value or len(value) > 2000:
+                raise ValueError("memory note must contain a key and value")
+            inputs.update({"key": key, "value": value})
+        elif action == "forget":
+            key = re.sub(r"^\s*(?:forget(?:\s+(?:this|my))?|delete from memory|remove from memory|bhool ja(?:o)?)\s*[:,-]?\s*", "", question, flags=re.IGNORECASE).strip().strip("\"'")
+            if not key or len(key) > 120:
+                raise ValueError("memory key must contain 1 to 120 characters")
+            inputs["key"] = key
 
     @staticmethod
     def _validate_attachments(attachments: Sequence[Mapping[str, str]]) -> list[dict[str, str]]:

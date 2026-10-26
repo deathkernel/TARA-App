@@ -112,7 +112,7 @@ A result should include `schema_version`, `request_id`, `ok`, `status`, structur
 
 ## Local development
 
-TARA-App now has a local browser interface, TOML-based specialist registration, bounded file handoff for images/audio/CSV, and fail-closed routing. Model downloading, lifecycle control, resource monitoring, and approval confirmation remain future milestones.
+TARA-App now has a local browser interface, TOML-based specialist registration, bounded image/audio/CSV handoff, a one-time session-bound approval step, and read-only TARA-Handler diagnostics. Model download/lifecycle control, resource monitoring, and TARA-Action tool integrations remain future work.
 
 Suggested sibling checkout:
 
@@ -123,7 +123,7 @@ git clone https://github.com/deathkernel/TARA-Code.git
 git clone https://github.com/deathkernel/TARA-Handler.git
 ```
 
-Install the app and selected specialist packages in one Python 3.11+ environment. Copy tara-app.example.toml to tara-app.toml, then adjust checkout directories and provider settings. Research and Voice are disabled until allow_remote = true is explicitly set in that local file.
+Install the app and selected specialist packages in one Python 3.11+ environment. Copy tara-app.example.toml to tara-app.toml, then adjust checkout directories and provider settings. Research and Voice are disabled until allow_remote = true is explicitly set in that local file. Build TARA-Handler with CMake and point its configured command at the native handler executable.
 
 Start the local interface from the TARA-App checkout:
 

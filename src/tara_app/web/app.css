@@ -51,6 +51,13 @@ button, textarea { font: inherit; }
 .details { margin-top: 10px; color: var(--muted); font-size: 12px; }
 .details summary { cursor: pointer; }
 .details pre { max-width: 100%; padding: 10px; border-radius: 9px; background: #101115; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+.approval-card { max-width: min(82%, 700px); margin: 10px 0 0 5px; padding: 12px 14px; border: 1px solid #665637; border-radius: 13px; background: #242117; }
+.approval-card p { margin: 0 0 10px; color: #ead8af; font-size: 13px; }
+.approval-actions { display: flex; gap: 8px; }
+.approval-actions button { padding: 7px 11px; border: 1px solid #554936; border-radius: 9px; cursor: pointer; }
+.approve-button { background: #d7b779; color: #241b0e; font-weight: 650; }
+.cancel-button { background: #302d27; color: #dbd5c8; }
+.approval-actions button:disabled { opacity: .5; cursor: wait; }
 .composer { position: relative; display: flex; align-items: flex-end; gap: 10px; margin: 0 0 12px; padding: 12px 13px 30px; border: 1px solid #3a3d47; border-radius: 22px; background: #191b20; box-shadow: 0 12px 40px #0005; flex: 0 0 auto; }
 .attachment-button { display: grid; width: 37px; height: 37px; flex: 0 0 auto; place-items: center; border-radius: 13px; background: var(--panel-raised); color: #c5c7cf; font-size: 23px; cursor: pointer; }
 .attachment-button:hover { color: var(--accent); }
