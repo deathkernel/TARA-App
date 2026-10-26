@@ -102,9 +102,9 @@ TARA-App keeps Chat and Code as separate specialists and selects a local Ollama 
 | Creative | `llama3.2:3b` | Local writing |
 | Vision | `gemma3:4b` | Image understanding |
 
-Chat and Creative are separate capabilities even though they currently share the same model weights. The Ollama service is local-only. TARA-App passes each configured model and endpoint to its specialist adapter, but does not download models or manage model lifecycle yet.
+Chat and Creative are separate capabilities even though they currently share the same model weights. The Ollama service is local-only. TARA-App passes each configured model and endpoint to its specialist adapter. A user can click Install in the local model panel to pull a configured profile; downloads are never automatic. Removal, unload, and resource lifecycle controls are not implemented yet.
 
-Install Ollama separately, start its local service, then pull the models you intend to use:
+Install Ollama separately and start its local service. You can pull a model from the app's Models panel or use the CLI commands below:
 
 ```bash
 ollama pull llama3.2:3b
@@ -134,7 +134,7 @@ A result should include `schema_version`, `request_id`, `ok`, `status`, structur
 
 ## Local development
 
-TARA-App now has a local browser interface, TOML-based specialist registration, a local Ollama readiness panel, bounded image/audio/CSV handoff, a one-time session-bound approval step, read-only TARA-Handler diagnostics, and allowlisted GitHub issue creation through TARA-Action after approval. Model downloads/lifecycle control, resource monitoring, and additional Action tools remain future work.
+TARA-App now has a local browser interface, TOML-based specialist registration, a local Ollama readiness and user-triggered install panel, bounded image/audio/CSV handoff, a one-time session-bound approval step, read-only TARA-Handler diagnostics, and allowlisted GitHub issue creation through TARA-Action after approval. Model removal/unload, resource monitoring, and additional Action tools remain future work.
 
 Suggested sibling checkout:
 
