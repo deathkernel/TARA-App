@@ -2,8 +2,9 @@
 # This file is trusted local configuration. Commands are fixed argument arrays;
 # question text is never used to build a command or shell expression.
 
-# Local Ollama models are selected by task. The app pulls a configured model
-# only after the user explicitly chooses Install in the local model panel.
+# TARA-App starts or reuses the local Ollama service; models are not preloaded.
+# The Router selects a specialist and its configured model for each request.
+# Install model weights explicitly from the app's local Models panel.
 [ollama]
 base_url = "http://127.0.0.1:11434"
 
