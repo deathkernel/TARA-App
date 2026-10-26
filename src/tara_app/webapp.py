@@ -34,7 +34,21 @@ class _Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
     def do_GET(self) -> None:
-        asset = _ASSETS.get(urlsplit(self.path).path)
+        endpoint = urlsplit(self.path).path
+        if endpoint == "/api/models":
+            if not self._local_origin():
+                self._json(403, {"status": "permission_denied", "error": "request origin is not allowed"})
+                return
+            catalog = self.server.app.model_catalog
+            payload = catalog.status() if catalog is not None else {
+                "status": "not_configured",
+                "provider": "ollama",
+                "service_available": False,
+                "models": [],
+            }
+            self._json(200, payload)
+            return
+        asset = _ASSETS.get(endpoint)
         if asset is None:
             self._json(404, {"status": "unavailable", "error": "page not found"})
             return
