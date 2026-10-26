@@ -28,6 +28,22 @@ button, textarea { font: inherit; }
 .topbar p { margin: 1px 0 0; color: var(--muted); font-size: 12px; }
 .local-badge { margin-left: auto; padding: 6px 10px; border: 1px solid #343740; border-radius: 20px; color: #c5c7d0; font-size: 11px; }
 .local-badge span { display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: #7bd5a2; }
+.models-button, .model-panel-header button { padding: 7px 11px; border: 1px solid #424550; border-radius: 10px; background: #202229; color: #dadbe2; cursor: pointer; }
+.models-button:hover, .model-panel-header button:hover { border-color: #78659a; color: var(--accent); }
+.model-panel { display: grid; gap: 8px; margin: 12px 0 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: 16px; background: #17191eea; flex: 0 0 auto; }
+.model-panel[hidden] { display: none; }
+.model-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.model-panel-header h2 { margin: 0; font-size: 14px; }
+.model-panel-header p { margin: 2px 0 0; color: var(--muted); font-size: 11px; }
+.model-list { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.model-list li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 10px; background: #202229; }
+.model-profile { display: grid; min-width: 0; }
+.model-profile strong { font-size: 12px; text-transform: capitalize; }
+.model-profile span { color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+.model-state { flex: 0 0 auto; font-size: 11px; }
+.model-state.available { color: #7bd5a2; }
+.model-state.missing { color: #e8c27e; }
+.model-state.unavailable { color: #f0a0a0; }
 .conversation { display: flex; flex: 1; flex-direction: column; min-height: 0; overflow: auto; scrollbar-color: #41434c transparent; }
 .welcome { margin: auto; max-width: 570px; padding: 48px 0; text-align: center; }
 .welcome-icon { display: grid; width: 52px; height: 52px; margin: 0 auto 18px; place-items: center; border: 1px solid #423852; border-radius: 18px; background: #211c2b; color: var(--accent); font-size: 23px; }
