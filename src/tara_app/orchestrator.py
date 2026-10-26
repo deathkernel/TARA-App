@@ -514,7 +514,7 @@ class Orchestrator:
             ".pl",
             ".r"
         ))
-            ]
+            ][:4]
         if module == "vision" and action == "analyze":
             images = [
                 item for item in attachments

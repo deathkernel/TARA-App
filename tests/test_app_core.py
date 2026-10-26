@@ -162,6 +162,27 @@ class AppCoreTests(unittest.TestCase):
         self.assertNotIn("images", code.calls[0].inputs)
         self.assertTrue(all("content_base64" not in item for item in router.payloads[0]["attachments"]))
 
+    def test_code_attachments_respect_adapter_file_limit(self) -> None:
+        code = FakeAdapter("code", (Capability("code", "plan", "Code planning", True),))
+        registry = CapabilityRegistry()
+        registry.register(code)
+        router = FakeRouter(RouteDecision("req-code-limit", "routed", "code", "plan", "coding", "Code request"))
+        attachments = [
+            {"name": f"module_{index}.py", "media_type": "text/x-python", "content_base64": self.encoded(b"source")}
+            for index in range(5)
+        ]
+
+        result = Orchestrator(registry, router).handle_question(
+            "Review these files", attachments=attachments, request_id="req-code-limit"
+        )
+
+        self.assertEqual(result.status, "success")
+        self.assertEqual(len(code.calls[0].inputs["attachments"]), 4)
+        self.assertEqual(
+            [item["name"] for item in code.calls[0].inputs["attachments"]],
+            ["module_0.py", "module_1.py", "module_2.py", "module_3.py"],
+        )
+
     def test_voice_receives_supported_audio_with_normalized_mime_alias(self) -> None:
         voice = FakeAdapter("voice", (Capability("voice", "transcribe", "Audio transcription", True),))
         registry = CapabilityRegistry()
