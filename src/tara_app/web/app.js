@@ -6,6 +6,11 @@
   const fileInput = document.querySelector("#files");
   const fileList = document.querySelector("#file-list");
   const send = document.querySelector("#send");
+  const modelPanel = document.querySelector("#model-panel");
+  const modelsToggle = document.querySelector("#models-toggle");
+  const modelsRefresh = document.querySelector("#models-refresh");
+  const modelServiceStatus = document.querySelector("#model-service-status");
+  const modelList = document.querySelector("#model-list");
   const audioUrls = [];
   let selectedFiles = [];
   const sessionKey = "tara-app-session";
@@ -307,6 +312,62 @@
     messages.append(article);
     article.scrollIntoView({ behavior: "smooth", block: "end" });
   }
+
+  async function refreshModelStatus() {
+    modelServiceStatus.textContent = "Checking local Ollama...";
+    modelsRefresh.disabled = true;
+    modelList.replaceChildren();
+    try {
+      const response = await fetch("/api/models", { headers: { Accept: "application/json" }, cache: "no-store" });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Could not read model status");
+      if (payload.status === "not_configured") {
+        modelServiceStatus.textContent = "No local Ollama profiles are configured.";
+        return;
+      }
+      if (payload.service_available !== true) {
+        modelServiceStatus.textContent = "Ollama is not responding. Start the local Ollama service, then refresh.";
+      } else {
+        modelServiceStatus.textContent = "Ollama is available on this device.";
+      }
+      for (const model of Array.isArray(payload.models) ? payload.models : []) {
+        const item = document.createElement("li");
+        const profile = document.createElement("div");
+        profile.className = "model-profile";
+        const specialist = document.createElement("strong");
+        specialist.textContent = String(model.specialist || "Specialist");
+        const identifier = document.createElement("span");
+        identifier.textContent = String(model.model || "Model not configured");
+        profile.append(specialist, identifier);
+        const state = document.createElement("span");
+        state.className = "model-state";
+        if (model.installed === true) {
+          state.textContent = "Installed";
+          state.classList.add("available");
+        } else if (model.installed === false) {
+          state.textContent = "Not installed";
+          state.classList.add("missing");
+        } else {
+          state.textContent = "Unavailable";
+          state.classList.add("unavailable");
+        }
+        item.append(profile, state);
+        modelList.append(item);
+      }
+    } catch (error) {
+      modelServiceStatus.textContent = error.message || "Local model status is unavailable.";
+    } finally {
+      modelsRefresh.disabled = false;
+    }
+  }
+
+  modelsToggle.addEventListener("click", () => {
+    const opening = modelPanel.hidden;
+    modelPanel.hidden = !opening;
+    modelsToggle.setAttribute("aria-expanded", String(opening));
+    if (opening) refreshModelStatus();
+  });
+  modelsRefresh.addEventListener("click", refreshModelStatus);
 
   async function submit() {
     const prompt = question.value.trim();
