@@ -9,7 +9,15 @@
     <script src="/app.js" defer></script>
   </head>
   <body>
-    <main class="shell">
+    <div class="app-layout">
+      <aside class="sidebar" aria-label="Conversation history">
+        <div class="sidebar-brand"><span class="sidebar-mark" aria-hidden="true">T</span><span>TARA</span></div>
+        <button id="new-chat" class="new-chat-button" type="button">+ <span>New chat</span></button>
+        <p class="history-label">Recent chats</p>
+        <nav id="conversation-list" class="conversation-list" aria-label="Recent chats"></nav>
+        <div class="sidebar-footer">Chats are saved on this device</div>
+      </aside>
+      <main class="shell">
       <header class="topbar">
         <div class="brand-mark" aria-hidden="true">T</div>
         <div>
@@ -57,6 +65,7 @@
       </form>
       <footer>Chat and Code are separate specialists | TARA-App routes each request</footer>
     </main>
+    </div>
   </body>
 </html>
 
