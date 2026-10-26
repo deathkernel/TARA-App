@@ -129,6 +129,44 @@ class OllamaModelCatalog:
         with self._pull_lock:
             return dict(self._pull_state)
 
+    def unload_model(self, specialist: Any) -> dict[str, str]:
+        """Unload a configured running model from memory without deleting its files."""
+        if not isinstance(specialist, str) or specialist not in self.profiles:
+            raise ValueError("specialist is not a configured local model profile")
+        if self.base_url is None:
+            raise RuntimeError("local Ollama is not configured")
+
+        model = self.profiles[specialist]
+        running = self._running_models()
+        if running is None:
+            raise RuntimeError("local Ollama running-model status is unavailable")
+        if model not in running:
+            return {"status": "not_loaded", "specialist": specialist, "model": model}
+
+        request = Request(
+            self.base_url + "/api/generate",
+            data=json.dumps(
+                {"model": model, "prompt": "", "stream": False, "keep_alive": 0},
+                separators=(",", ":"),
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json", "Accept": "application/json"},
+            method="POST",
+        )
+        try:
+            with build_opener(ProxyHandler({}), _NoRedirect()).open(request, timeout=30) as response:
+                raw = response.read(_MAX_RESPONSE_BYTES + 1)
+        except (HTTPError, URLError, TimeoutError, OSError) as exc:
+            raise RuntimeError("local Ollama could not unload the configured model") from exc
+        if len(raw) > _MAX_RESPONSE_BYTES:
+            raise RuntimeError("local Ollama returned an oversized unload response")
+        try:
+            payload = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise RuntimeError("local Ollama returned an invalid unload response") from exc
+        if not isinstance(payload, Mapping) or payload.get("done") is not True:
+            raise RuntimeError("local Ollama did not confirm the model unload")
+        return {"status": "unloaded", "specialist": specialist, "model": model}
+
     def _pull_model(self, specialist: str, model: str) -> None:
         base_url = self.base_url
         if base_url is None:
