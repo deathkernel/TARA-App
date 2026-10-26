@@ -93,6 +93,8 @@ class Orchestrator:
         adapter = self.registry.adapter(decision.module)
         if capability is None or adapter is None:
             return self._outcome(operation_id, "unavailable", decision, "capability_unavailable", "Selected capability is not registered")
+        if (not capability.read_only or capability.requires_approval) and not decision.requires_approval:
+            return self._outcome(operation_id, "permission_denied", decision, "approval_route_required", "Side-effecting capabilities must be assessed by TARA-Security first")
         if decision.requires_approval and decision.module != "security":
             return self._outcome(operation_id, "permission_denied", decision, "policy_route_invalid", "Approval-gated route bypassed TARA-Security")
 
@@ -142,8 +144,6 @@ class Orchestrator:
             )
             return DispatchOutcome("approval_required", decision, pending, operation_id)
 
-        if not capability.read_only or capability.requires_approval:
-            return self._outcome(operation_id, "approval_required", decision, "human_approval", "Capability requires an approval workflow")
         return DispatchOutcome(result.status, decision, result, operation_id)
 
     @staticmethod
