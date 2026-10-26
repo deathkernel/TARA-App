@@ -136,14 +136,28 @@ A result should include `schema_version`, `request_id`, `ok`, `status`, structur
 
 TARA-App now has a local browser interface, TOML-based specialist registration, a local Ollama readiness panel with user-triggered installs and confirmed removal, loaded-memory/VRAM reporting and unload control, bounded image/audio/CSV handoff, a one-time session-bound approval step, read-only TARA-Handler diagnostics, and allowlisted GitHub issue creation through TARA-Action after approval. Machine-wide resource monitoring and scheduling, and additional Action tools remain future work.
 
-Suggested sibling checkout:
+## Check out the current integration branches
+
+The App and specialist implementations are currently held in open pull requests. Clone these exact branches into one parent folder so the editable installs below use the integrated versions:
 
 ```powershell
-git clone https://github.com/deathkernel/TARA-App.git
-git clone https://github.com/deathkernel/TARA-CHAT.git
-git clone https://github.com/deathkernel/TARA-Code.git
+git clone --branch feat/app-runtime-core --single-branch https://github.com/deathkernel/TARA-App.git
+git clone --branch feat/router-v1-core --single-branch https://github.com/deathkernel/TARA-Router.git
+git clone --branch feat/app-stdio-adapter --single-branch https://github.com/deathkernel/TARA-CHAT.git
+git clone --branch feat/engine-foundation --single-branch https://github.com/deathkernel/TARA-Code.git
 git clone https://github.com/deathkernel/TARA-Handler.git
+git clone --branch feat/module-v1-core --single-branch https://github.com/deathkernel/TARA-Security.git
+git clone --branch feat/module-v1-core --single-branch https://github.com/deathkernel/TARA-Planner.git
+git clone --branch feat/module-v1-core --single-branch https://github.com/deathkernel/TARA-Research.git
+git clone --branch feat/module-v1-core --single-branch https://github.com/deathkernel/TARA-Memory.git
+git clone --branch feat/module-v1-core --single-branch https://github.com/deathkernel/TARA-Vision.git
+git clone --branch feat/module-v1-core --single-branch https://github.com/deathkernel/TARA-Data.git
+git clone --branch feat/module-v1-core --single-branch https://github.com/deathkernel/TARA-Creative.git
+git clone --branch feat/module-v1-core --single-branch https://github.com/deathkernel/TARA-Voice.git
+git clone --branch feat/action-github-issue-v1 --single-branch https://github.com/deathkernel/TARA-Action.git
 ```
+
+After the pull requests are merged, the same repositories can be checked out from their default branches.
 
 Install the app and selected specialist packages in one Python 3.11+ environment. Copy `tara-app.example.toml` to `tara-app.toml`, then adjust checkout directories and provider settings. Research, Voice, and GitHub Action dispatch are disabled until `allow_remote = true` is explicitly set in that local file. Action also needs a repository allowlist, a scoped token, and one-time App approval. Build TARA-Handler with CMake and point its configured command at the native handler executable.
 
