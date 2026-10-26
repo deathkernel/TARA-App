@@ -7,7 +7,7 @@ TARA-Chat, TARA-Code, and TARA-Handler are parts of the TARA ecosystem that the 
 ## Product vision
 
 - One app and unified UI for the TARA ecosystem.
-- Multiple TARA models selectable by task, with model/runtime lifecycle management.
+- Multiple model profiles selectable by task, with model/runtime lifecycle management.
 - Chat, coding, and environment-management workflows integrated as specialist capabilities.
 - Local-first model execution where supported, with explicit provider configuration.
 - Model downloads/updates, memory, GPU/CPU/RAM visibility, concurrency, and resource limits managed deliberately.
@@ -19,10 +19,10 @@ TARA-Chat, TARA-Code, and TARA-Handler are parts of the TARA ecosystem that the 
 This repository began as an empty application scaffold. The sibling repositories currently have different maturity levels:
 
 - **TARA-CHAT** (`deathkernel/TARA-CHAT`): Python conversation runtime with Ollama provider, bounded session history, explicit local memory, tests, and a narrow read-only subprocess bridge for Handler.
-- **TARA-Code** (`deathkernel/TARA-Code`): independent coding-engine scaffold. Its README specifies bounded task planning, workspace-root constraints, sandbox-runner contracts, test/change-review reports, and human-reviewed promotion. The code engine is not yet a mature runtime integration.
+- **TARA-Code** (`deathkernel/TARA-Code`): independent coding-engine project with deterministic planning and a local Ollama-backed planning adapter. It does not execute code or inspect a workspace through the App adapter.
 - **TARA-Handler** (`deathkernel/TARA-Handler`): native C++17 CLI for developer-environment diagnostics and guarded maintenance/repair workflows. Keep it a separate executable and use a narrow process boundary.
 
-Do not represent a planned adapter or model provider as an already working integration. Enable each capability only after its contract and integration tests pass.
+Do not represent a planned adapter or model provider as an already working integration. Enable each capability only after its contract and integration checks pass.
 
 ## Target architecture
 
@@ -32,8 +32,7 @@ TARA-App (one application)
   +-- UI / sessions / settings / model catalogue
   |
   +-- Model Runtime Manager
-  |     +-- TARA model A (actual inventory to be defined)
-  |     +-- TARA model B (actual inventory to be defined)
+  |     +-- Local Ollama profiles (configured below)
   |     +-- Other configured local/remote model providers
   |     +-- Resource scheduling, load/unload, health and limits
   |
@@ -44,7 +43,7 @@ TARA-App (one application)
         +-- Future TARA specialist models/tools
 ```
 
-The model catalogue above is conceptual: exact TARA model names, formats, and supported runtimes must be specified before implementing model loading.
+The model catalogue is configured explicitly. Model weights, provider/runtime, and specialist tools are separate concepts.
 
 ## Core design rules
 
@@ -92,6 +91,29 @@ This layout is a target, not a claim that those modules are already implemented.
 
 See [runtime and development option notes](docs/runtime-evaluation.md) for the current scope of Amp, GitHub Copilot sandboxing, GitHub Package Firewall, and AWS TorchNeuron. These are optional references, not built-in TARA runtimes.
 
+## Local Ollama model profiles
+
+TARA-App keeps Chat and Code as separate specialists and selects a local Ollama model by task. The starter profile in `tara-app.example.toml` is:
+
+| Specialist | Default model | Use |
+| --- | --- | --- |
+| Chat | `llama3.2:3b` | Local conversation |
+| Code | `qwen2.5-coder:3b` | Review-first coding plans |
+| Creative | `llama3.2:3b` | Local writing |
+| Vision | `gemma3:4b` | Image understanding |
+
+Chat and Creative are separate capabilities even though they currently share the same model weights. The Ollama service is local-only. TARA-App passes each configured model and endpoint to its specialist adapter, but does not download models or manage model lifecycle yet.
+
+Install Ollama separately, start its local service, then pull the models you intend to use:
+
+```bash
+ollama pull llama3.2:3b
+ollama pull qwen2.5-coder:3b
+ollama pull gemma3:4b
+```
+
+The starter configuration lists four model profiles, with Creative reusing Chat's model. Pulling each unique model once is enough. A specialist reports unavailable if its model is missing; it does not silently fall back to Chat or another model. These names are defaults and can be changed under `[ollama.models]` in the local TOML configuration.
+
 ## Target integration contracts
 
 Adapters should expose health, capabilities, and a structured execute operation. Model providers additionally need a model catalogue, load/unload lifecycle, inference settings, cancellation, timeout, resource limits, and health reporting. Model identity and version should be recorded for each inference request.
@@ -123,7 +145,7 @@ git clone https://github.com/deathkernel/TARA-Code.git
 git clone https://github.com/deathkernel/TARA-Handler.git
 ```
 
-Install the app and selected specialist packages in one Python 3.11+ environment. Copy tara-app.example.toml to tara-app.toml, then adjust checkout directories and provider settings. Research, Voice, and GitHub Action dispatch are disabled until allow_remote = true is explicitly set in that local file. Action also needs a repository allowlist, a scoped token, and one-time App approval. Build TARA-Handler with CMake and point its configured command at the native handler executable.
+Install the app and selected specialist packages in one Python 3.11+ environment. Copy `tara-app.example.toml` to `tara-app.toml`, then adjust checkout directories and provider settings. Research, Voice, and GitHub Action dispatch are disabled until `allow_remote = true` is explicitly set in that local file. Action also needs a repository allowlist, a scoped token, and one-time App approval. Build TARA-Handler with CMake and point its configured command at the native handler executable.
 
 Start the local interface from the TARA-App checkout:
 
