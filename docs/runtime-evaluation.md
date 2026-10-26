@@ -4,9 +4,9 @@ Research notes checked on 2026-10-26. These products are optional references; TA
 
 ## Amp
 
-Amp's current documentation describes a coding agent and development environment that can work from the web, apps, and terminal. Treat Amp as an optional way to develop or review TARA repositories. It is not a TARA model provider or a dependency of the TARA-App runtime. The product documentation reviewed here does not establish that all Amp usage is free, so do not make a free-use claim in TARA setup instructions.
+Amp offers a free Hobby tier. Its pricing page lists remote orb use as pay-as-you-go and user-owned runners as free. Treat Amp as an optional way to develop or review TARA repositories; its usage and model-provider costs are separate from TARA-App. Amp is not a TARA model provider or a dependency of the TARA-App runtime.
 
-Source: [Amp documentation](https://ampcode.com/docs).
+Source: [Amp pricing](https://ampcode.com/pricing).
 
 ## GitHub Copilot local sandboxing
 
@@ -22,14 +22,13 @@ Sources: [GitHub preview announcement](https://github.blog/changelog/2026-10-20-
 
 ## AWS TorchNeuron
 
-AWS documents TorchNeuron as a native PyTorch backend for Trainium, currently in public beta for Trainium2 and Trainium3. It is relevant only when TARA's model runtime is deployed on supported AWS hardware with a compatible PyTorch model and software stack. Keep it as a hardware-specific optional backend; it is not a general local inference runtime and should not be presented as free cloud compute.
+AWS documents TorchNeuron as an open-source native PyTorch backend for Trainium, currently in public beta for Trainium2 and Trainium3. It is relevant only when TARA's model runtime is deployed on supported AWS hardware with a compatible PyTorch model and software stack. Keep it as a hardware-specific optional backend; it is not a general local inference runtime and should not be presented as free cloud compute.
 
 Sources: [TorchNeuron overview](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/torch/about-pytorch-neuron.html), [Neuron 2.33 TorchNeuron release notes](https://awsdocs-neuron.readthedocs-hosted.com/en/v2.33.0/release-notes/components/torchneuron.html).
 
 ## TARA integration decisions
 
 - TARA-App owns provider selection and capability routing; specialist repositories stay independently installable.
-- Provider backends require an explicit configuration, compatible hardware/runtime, health checks, and offline contract coverage before they appear as available capabilities.
+- Provider backends require explicit configuration, compatible hardware/runtime, health checks, and offline contract coverage before they appear as available capabilities.
 - Research, Voice, and Action modules stay disabled until the local app configuration opts in. Action writes also require an allowlisted repository and a separate one-time user approval.
 - Any future code execution uses a dedicated, reviewed sandbox contract. A developer's Copilot sandbox setup is not silently reused as TARA's execution guarantee.
-
