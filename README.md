@@ -108,7 +108,7 @@ A result should include `schema_version`, `request_id`, `ok`, `status`, structur
 
 ## Local development
 
-The repository currently contains architecture documentation only; it is not yet a runnable integrated application.
+The first runtime foundation now includes typed module contracts, a capability registry, a restricted stdio Router client, and fail-closed orchestration. The UI and live specialist integrations are still pending.
 
 Suggested sibling checkout:
 
