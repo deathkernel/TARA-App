@@ -36,7 +36,7 @@
       chip.append(document.createTextNode(file.name));
       const remove = document.createElement("button");
       remove.type = "button";
-      remove.textContent = "Ã—";
+      remove.textContent = "x";
       remove.setAttribute("aria-label", `Remove ${file.name}`);
       remove.addEventListener("click", () => {
         selectedFiles.splice(index, 1);
@@ -78,12 +78,23 @@
 
   function resultText(payload) {
     const data = payload?.result?.data || {};
-    if (data.stored === true) return `Saved the note under â€œ${data.key}â€ in TARA-Memory.`;
-    if (typeof data.forgotten === "boolean") return data.forgotten ? `Forgot â€œ${data.key}â€ from TARA-Memory.` : `No saved note matched â€œ${data.key}â€.`;
+    if (data.operation === "github.issue.create" && Number.isInteger(data.issue_number)) {
+      return "Created GitHub issue #" + data.issue_number + " in " + data.repository + ": " + data.title;
+    }
+    if (data.stored === true) return 'Saved the note under "' + data.key + '" in TARA-Memory.';
+    if (typeof data.forgotten === "boolean") return data.forgotten ? 'Forgot "' + data.key + '" from TARA-Memory.' : 'No saved note matched "' + data.key + '".';
     if (Array.isArray(data.memories)) {
-      return data.memories.length ? data.memories.map(item => `${item.key}: ${item.value}`).join("\n") : "No matching saved notes.";
+      return data.memories.length ? data.memories.map(item => item.key + ": " + item.value).join("\n") : "No matching saved notes.";
     }
     if (data.cancelled === true) return "Cancelled. No change was made.";
+    if (Number.isInteger(data.rows) && Array.isArray(data.columns)) {
+      return "Analyzed " + data.rows + " rows across " + data.columns.length + " columns.";
+    }
+    const steps = Array.isArray(data.steps) ? data.steps : (Array.isArray(data.plan?.steps) ? data.plan.steps : null);
+    if (steps) {
+      const summary = data.plan?.summary || data.goal || "TARA-Code plan";
+      return summary + "\n" + steps.length + " reviewable step" + (steps.length === 1 ? "" : "s") + ".";
+    }
     for (const key of ["text", "summary", "description", "transcript"]) {
       if (typeof data[key] === "string" && data[key]) return data[key];
     }
@@ -93,6 +104,117 @@
     return "The specialist returned a structured result. Open details to inspect it.";
   }
 
+  function appendSpecialistOutput(bubble, payload) {
+    const data = payload?.result?.data || {};
+
+    if (data.operation === "github.issue.create" && typeof data.url === "string") {
+      try {
+        const issueUrl = new URL(data.url);
+        if (issueUrl.protocol === "https:" && issueUrl.hostname === "github.com") {
+          const link = document.createElement("a");
+          link.href = issueUrl.href;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.textContent = "Open created GitHub issue";
+          bubble.append(link);
+        }
+      } catch (_) {
+        // Ignore malformed provider links.
+      }
+    }
+
+    if (Array.isArray(data.sources)) {
+      const sources = document.createElement("section");
+      sources.className = "source-list";
+      const heading = document.createElement("strong");
+      heading.textContent = "Sources";
+      const list = document.createElement("ul");
+      for (const source of data.sources.slice(0, 5)) {
+        if (!source || typeof source.url !== "string" || typeof source.title !== "string") continue;
+        try {
+          const sourceUrl = new URL(source.url);
+          if (!["https:", "http:"].includes(sourceUrl.protocol) || sourceUrl.username || sourceUrl.password) continue;
+          const item = document.createElement("li");
+          const link = document.createElement("a");
+          link.href = sourceUrl.href;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.textContent = source.title || sourceUrl.hostname;
+          item.append(link);
+          if (typeof source.snippet === "string" && source.snippet) {
+            const snippet = document.createElement("p");
+            snippet.textContent = source.snippet;
+            item.append(snippet);
+          }
+          list.append(item);
+        } catch (_) {
+          continue;
+        }
+      }
+      if (list.childElementCount) {
+        sources.append(heading, list);
+        bubble.append(sources);
+      }
+    }
+
+    const numeric = data.numeric_summary;
+    if (numeric && typeof numeric === "object" && !Array.isArray(numeric)) {
+      const entries = Object.entries(numeric).slice(0, 50);
+      if (entries.length) {
+        const wrap = document.createElement("div");
+        wrap.className = "analysis-table-wrap";
+        const table = document.createElement("table");
+        table.className = "analysis-table";
+        const caption = document.createElement("caption");
+        caption.textContent = "Numeric summary";
+        table.append(caption);
+        const header = document.createElement("tr");
+        for (const label of ["Column", "Count", "Min", "Max", "Mean", "Median"]) {
+          const cell = document.createElement("th");
+          cell.scope = "col";
+          cell.textContent = label;
+          header.append(cell);
+        }
+        const head = document.createElement("thead");
+        head.append(header);
+        const body = document.createElement("tbody");
+        for (const [name, values] of entries) {
+          if (!values || typeof values !== "object" || Array.isArray(values)) continue;
+          const row = document.createElement("tr");
+          for (const value of [name, values.count, values.min, values.max, values.mean, values.median]) {
+            const cell = document.createElement("td");
+            cell.textContent = value === undefined || value === null ? "-" : String(value);
+            row.append(cell);
+          }
+          body.append(row);
+        }
+        table.append(head, body);
+        wrap.append(table);
+        bubble.append(wrap);
+      }
+    }
+
+    const steps = Array.isArray(data.steps) ? data.steps : (Array.isArray(data.plan?.steps) ? data.plan.steps : null);
+    if (steps) {
+      const list = document.createElement("ol");
+      list.className = "plan-steps";
+      for (const step of steps.slice(0, 64)) {
+        const item = document.createElement("li");
+        const title = typeof step.title === "string" ? step.title : "";
+        const description = typeof step.description === "string" ? step.description : "";
+        item.textContent = title && description ? title + ": " + description : (description || title || "Review this step");
+        list.append(item);
+      }
+      if (list.childElementCount) bubble.append(list);
+      const warnings = data.plan?.warnings;
+      if (Array.isArray(warnings) && warnings.length) {
+        const note = document.createElement("p");
+        note.textContent = "Warnings: " + warnings.slice(0, 10).map(String).join("; ");
+        bubble.append(note);
+      }
+    }
+  }
+
   function addResult(payload) {
     const article = document.createElement("article");
     article.className = "message answer";
@@ -100,7 +222,7 @@
     const routeLine = document.createElement("div");
     routeLine.className = "route";
     const specialist = document.createElement("strong");
-    specialist.textContent = route.module ? `${route.module}${route.action ? ` Â· ${route.action}` : ""}` : (route.intended_module || "TARA-App");
+    specialist.textContent = route.module ? `${route.module}${route.action ? ` | ${route.action}` : ""}` : (route.intended_module || "TARA-App");
     const state = document.createElement("span");
     state.className = `status ${payload?.status || "failed"}`;
     state.textContent = payload?.status || "failed";
@@ -110,7 +232,7 @@
     const text = document.createElement("div");
     text.className = "answer-content";
     text.textContent = resultText(payload);
-    bubble.append(text);
+    bubble.append(text);\n    appendSpecialistOutput(bubble, payload);
     const audioData = payload?.result?.data?.audio_base64;
     const mediaType = payload?.result?.data?.media_type;
     if (typeof audioData === "string" && mediaType === "audio/mpeg") {
@@ -145,7 +267,7 @@
       const description = document.createElement("p");
       description.textContent = payload.result.data.approval_description || `Run ${route.intended_module || "requested specialist"} once?`;
       const expires = document.createElement("small");
-      expires.textContent = "One-time approval Â· expires in 2 minutes";
+      expires.textContent = "One-time approval | expires in 2 minutes";
       const actions = document.createElement("div");
       actions.className = "approval-actions";
       const approve = document.createElement("button");
@@ -195,7 +317,7 @@
     send.disabled = true;
     const files = selectedFiles.splice(0);
     updateFiles();
-    const waiting = addMessage("answer", "TARA is selecting a specialistâ€¦");
+    const waiting = addMessage("answer", "TARA is selecting a specialist...");
     try {
       const attachments = await Promise.all(files.map(encodeFile));
       const response = await fetch("/api/chat", {
