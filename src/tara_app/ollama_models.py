@@ -217,6 +217,8 @@ class OllamaModelCatalog:
                 if pull.get("status") in _ACTIVE_PULL_STATES:
                     time.sleep(min(0.25, max(0.0, deadline - time.monotonic())))
                     continue
+                if pull.get("status") == "failed" and pull.get("model") == model:
+                    raise RuntimeError("the selected local model could not be installed")
                 try:
                     self.start_pull(specialist)
                     break
