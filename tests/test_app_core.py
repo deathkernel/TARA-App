@@ -35,6 +35,30 @@ class FakeRouter:
 
 
 class AppCoreTests(unittest.TestCase):
+    def test_chat_history_is_session_scoped_and_bounded(self) -> None:
+        chat = FakeAdapter(
+            "chat",
+            (Capability("chat", "respond", "Conversation response", True),),
+            ModuleResult("success", {"text": "TARA reply"}),
+        )
+        registry = CapabilityRegistry()
+        registry.register(chat)
+
+        class SessionRouter:
+            def route(self, payload):
+                return RouteDecision(payload["request_id"], "routed", "chat", "respond", "conversation", "Chat intent")
+
+        app = Orchestrator(registry, SessionRouter())
+        for index in range(14):
+            app.handle_question(f"Question {index}", session_id="session-a", request_id=f"req-{index}")
+        app.handle_question("Separate session", session_id="session-b", request_id="req-other")
+        history_a = chat.calls[-2].inputs["history"]
+        history_b = chat.calls[-1].inputs["history"]
+        self.assertEqual(len(history_a), 24)
+        self.assertEqual(history_a[-2]["content"], "Question 12")
+        self.assertEqual(history_a[-1]["content"], "TARA reply")
+        self.assertEqual(history_b, [])
+
     def test_read_only_route_dispatches_to_its_own_adapter(self) -> None:
         chat = FakeAdapter("chat", (Capability("chat", "respond", "Conversation response", True),))
         registry = CapabilityRegistry()
@@ -110,3 +134,4 @@ class AppCoreTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

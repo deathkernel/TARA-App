@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from collections import OrderedDict
 from dataclasses import dataclass
+from threading import RLock
 from typing import Any, Mapping, Sequence
 from uuid import uuid4
 
@@ -46,6 +48,8 @@ class Orchestrator:
     def __init__(self, registry: CapabilityRegistry, router: RouterClient) -> None:
         self.registry = registry
         self.router = router
+        self._conversation_history: OrderedDict[str, list[dict[str, str]]] = OrderedDict()
+        self._history_lock = RLock()
 
     def handle_question(
         self,
@@ -106,6 +110,9 @@ class Orchestrator:
             return self._outcome(operation_id, "unavailable", decision, "adapter_unavailable", "Selected specialist is unavailable")
 
         inputs: dict[str, Any] = {"question": question, "attachments": safe_attachments}
+        if decision.module == "chat" and decision.action == "respond":
+            with self._history_lock:
+                inputs["history"] = [dict(turn) for turn in self._conversation_history.get(session_id, [])]
         if decision.intended_module:
             inputs["intended_module"] = decision.intended_module
         if decision.intended_action:
@@ -126,6 +133,20 @@ class Orchestrator:
             return self._outcome(operation_id, "failed", decision, "adapter_execution_failed", "Specialist execution failed")
         if not isinstance(result, ModuleResult):
             return self._outcome(operation_id, "failed", decision, "invalid_adapter_response", "Specialist returned an invalid result")
+
+        if decision.module == "chat" and decision.action == "respond" and result.status == "success":
+            response_text = result.data.get("text") if isinstance(result.data, Mapping) else None
+            if isinstance(response_text, str) and response_text.strip():
+                with self._history_lock:
+                    history = self._conversation_history.setdefault(session_id, [])
+                    history.extend((
+                        {"role": "user", "content": question.strip()},
+                        {"role": "assistant", "content": response_text.strip()},
+                    ))
+                    del history[:-24]
+                    self._conversation_history.move_to_end(session_id)
+                    while len(self._conversation_history) > 512:
+                        self._conversation_history.popitem(last=False)
 
         if decision.requires_approval:
             verdict = result.data.get("decision") if isinstance(result.data, Mapping) else None
@@ -173,3 +194,4 @@ class Orchestrator:
     ) -> DispatchOutcome:
         result = ModuleResult(status=status if status in ModuleResult._STATUSES else "failed", data={"reason_code": reason_code}, error=reason)
         return DispatchOutcome(status, route, result, request_id)
+
