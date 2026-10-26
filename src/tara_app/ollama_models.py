@@ -40,6 +40,7 @@ class OllamaModelCatalog:
         self.base_url = base_url
         self._lifecycle_lock = Lock()
         self._pull_lock = Lock()
+        self._ensure_lock = Lock()
         self._pull_state: dict[str, Any] = {"status": "idle"}
         self._managed_server: subprocess.Popen[bytes] | None = None
         if not self.profiles:
@@ -186,6 +187,56 @@ class OllamaModelCatalog:
             worker = Thread(target=self._pull_model, args=(specialist, model), daemon=True)
             worker.start()
             return dict(self._pull_state)
+
+    def ensure_model_installed(self, specialist: Any, *, timeout_seconds: float = 3600.0) -> dict[str, str]:
+        """Install the selected profile on demand and wait until it is ready."""
+        if not isinstance(specialist, str) or specialist not in self.profiles:
+            raise ValueError("specialist is not a configured local model profile")
+        if self.base_url is None:
+            raise RuntimeError("local Ollama is not configured")
+        if (
+            isinstance(timeout_seconds, bool)
+            or not isinstance(timeout_seconds, (int, float))
+            or not 1 <= timeout_seconds <= 7200
+        ):
+            raise ValueError("model install timeout is outside the allowed range")
+
+        model = self.profiles[specialist]
+        deadline = time.monotonic() + timeout_seconds
+        with self._ensure_lock:
+            while True:
+                installed = self._installed_models()
+                if installed is None:
+                    raise RuntimeError("local Ollama is unavailable")
+                if model in installed:
+                    return {"status": "installed", "specialist": specialist, "model": model}
+                if time.monotonic() >= deadline:
+                    raise RuntimeError("waiting for a local model download timed out")
+
+                pull = self.pull_status()
+                if pull.get("status") in _ACTIVE_PULL_STATES:
+                    time.sleep(min(0.25, max(0.0, deadline - time.monotonic())))
+                    continue
+                try:
+                    self.start_pull(specialist)
+                    break
+                except RuntimeError:
+                    if self.pull_status().get("status") not in _ACTIVE_PULL_STATES:
+                        raise
+
+            while True:
+                installed = self._installed_models()
+                if installed is None:
+                    raise RuntimeError("local Ollama became unavailable during model installation")
+                if model in installed:
+                    return {"status": "installed", "specialist": specialist, "model": model}
+
+                pull = self.pull_status()
+                if pull.get("status") == "failed" and pull.get("model") == model:
+                    raise RuntimeError("the selected local model could not be installed")
+                if time.monotonic() >= deadline:
+                    raise RuntimeError("local model installation is still in progress")
+                time.sleep(min(0.5, max(0.0, deadline - time.monotonic())))
 
     def pull_status(self) -> dict[str, Any]:
         with self._pull_lock:
