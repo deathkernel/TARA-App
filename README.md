@@ -102,17 +102,11 @@ TARA-App keeps Chat and Code as separate specialists and selects a local Ollama 
 | Creative | `llama3.2:3b` | Local writing |
 | Vision | `gemma3:4b` | Image understanding |
 
-Chat and Creative are separate capabilities even though they currently share the same model weights. The Ollama service is local-only. TARA-App passes each configured model and endpoint to its specialist adapter. A user can click Install in the local model panel to pull a configured profile; downloads are never automatic. The panel reports loaded memory and VRAM, can unload a running model, and can remove an installed model after a confirmation that lists shared profiles. Unload keeps installed files; removal deletes them from this device and the model can be installed again. Machine-wide resource scheduling controls are not implemented yet.
+Chat and Creative are separate capabilities even though they currently share the same model weights. TARA-App is the only user-facing process: its Router selects a specialist for each request, and the app launches that specialist's adapter internally. Users do not start TARA-Chat, TARA-Code, Router, or the other module processes themselves. The selected specialist receives its configured local Ollama model; other profiles are not loaded by TARA-App at startup.
 
-Install Ollama separately and start its local service. You can pull a model from the app's Models panel or use the CLI commands below:
+TARA-App checks the configured loopback Ollama endpoint at startup. If no local service responds and the `ollama` command is available, it starts `ollama serve` in the background. If a local Ollama service was already running, TARA-App reuses it and leaves it running when the app exits. Install the Ollama runtime once; there is no need to manually start its service or use `ollama run`.
 
-```bash
-ollama pull llama3.2:3b
-ollama pull qwen2.5-coder:3b
-ollama pull gemma3:4b
-```
-
-The starter configuration lists four model profiles, with Creative reusing Chat's model. Pulling each unique model once is enough. A specialist reports unavailable if its model is missing; it does not silently fall back to Chat or another model. These names are defaults and can be changed under `[ollama.models]` in the local TOML configuration.
+Model weights can be installed from TARA-App's Models panel by selecting Install for the profiles you want available. This keeps large downloads explicit. Once installed, TARA-App chooses the profile based on the Router's selected specialist. A specialist reports unavailable if its model is missing; it does not silently fall back to Chat or another model. Ollama may keep the most recently used model in memory for its default idle period, but it performs no inference until TARA-App sends another request. The Models panel reports memory and VRAM, can unload a running model, and can remove an installed model after confirmation that lists shared profiles. Unload keeps installed files; removal deletes them from this device. These names are defaults and can be changed under `[ollama.models]` in the local TOML configuration. Machine-wide resource scheduling controls are not implemented yet.
 
 ## Target integration contracts
 
