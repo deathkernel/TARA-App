@@ -156,14 +156,20 @@ export default function App() {
         body: JSON.stringify({ question, session_id: active.id, attachments: [], history }),
       });
       const text = answerText(payload);
+      const assistantMessage: Message = { role: "assistant", text, status: payload?.status ?? "success" };
       updateActive((item) => ({
         ...item, updatedAt: Date.now(),
-        messages: [...item.messages, { role: "assistant", text, status: payload?.status ?? "success" }].slice(-24),
+        messages: [...item.messages, assistantMessage].slice(-24),
       }));
     } catch (error) {
+      const failureMessage: Message = {
+        role: "assistant",
+        text: error instanceof Error ? error.message : "Local server unavailable.",
+        status: "unavailable",
+      };
       updateActive((item) => ({
         ...item, updatedAt: Date.now(),
-        messages: [...item.messages, { role: "assistant", text: error instanceof Error ? error.message : "Local server unavailable.", status: "unavailable" }].slice(-24),
+        messages: [...item.messages, failureMessage].slice(-24),
       }));
     } finally {
       setSending(false);
