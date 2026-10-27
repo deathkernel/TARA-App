@@ -18,7 +18,7 @@ TARA-Chat, TARA-Code, and TARA-Handler are parts of the TARA ecosystem that the 
 
 TARA-App is being consolidated as a single Python monorepo. The current integrated source packages are:
 
-- `tara_app`: the local app, capability registry, approval flow, Ollama lifecycle manager, and ChatGPT-style browser UI.
+- `tara_app`: the local app, capability registry, approval flow, Ollama lifecycle manager, conversation controls, and safe Markdown chat UI.
 - `tara_router`: a deterministic local router included in this repository; it requires no API key or paid inference.
 - `tara_chat`: the conversation-only specialist, kept separate from Code.
 - `tara_code`: a coding specialist using the local Ollama profile; it returns review-first proposals and never executes code.
@@ -115,6 +115,10 @@ TARA-App is the only user-facing process. It starts or reuses the local Ollama s
 
 These are free-to-download model weights served locally by Ollama; no paid inference API is configured. Model names can be changed in `[ollama.models]`. The app does not preload models at startup. Ollama may keep a recently used model in memory during its idle period.
 
+### Chat experience
+
+Assistant replies render safe Markdown for headings, lists, quotes, links, inline formatting, and code blocks. HTML in model output is treated as text; links are limited to HTTP or HTTPS. Replies and code blocks can be copied. Users can edit and resend a text-only prompt or regenerate its latest answer. TARA synchronizes the edited conversation context with its local chat runtime, including after the app restarts. Prompts with file attachments cannot be edited or regenerated because attachment bytes are not stored in the local chat history.
+
 Research uses Crossref and Wikipedia public APIs for source records. No API key is required and no paid model is called. A research query is sent to those public services when Research is selected. Voice transcription uses the optional local faster-whisper package and weights; audio is processed on-device. The launcher skips that optional package on Python 3.15 or newer, so other app features still install. Read-aloud uses only browser voices marked local.
 
 ## Target integration contracts
@@ -175,4 +179,4 @@ If installation previously stopped with `No matching distributions found for onn
 
 ### Consolidation status
 
-The draft PR now contains the local Router, Chat, Code, Planner, Memory, Creative, Security, Action, Data, Vision, Voice, and Research packages. The native Handler source and on-demand adapter are included; the app exposes only environment diagnosis. GitHub issue creation requires local credentials, a repo allowlist, Security review, and one-time user approval. A final smoke run on the target computer is still needed to confirm Ollama availability and hardware-specific model performance.
+The consolidated Router, Chat, Code, Planner, Memory, Creative, Security, Action, Data, Vision, Voice, and Research packages are merged into `main`. The native Handler source and on-demand adapter are included; the app exposes only environment diagnosis. GitHub issue creation requires local credentials, a repo allowlist, Security review, and one-time user approval. A final smoke run on the target computer is still needed to confirm Ollama availability and hardware-specific model performance.
