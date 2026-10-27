@@ -476,8 +476,8 @@
     let totalBytes = selectedFiles.reduce((total, file) => total + file.size, 0);
     for (const file of additions.filter(allowed).filter(file => file.size <= MAX_ATTACHMENT_BYTES)) {
       if (selectedFiles.length >= 4) break;
-      if (totalBytes + file.size > MAX_ATTACHMENT_BYTES) {
-        addMessage("answer", "The combined attachment limit is 512 KB per message.");
+      if (totalBytes + file.size > MAX_TOTAL_ATTACHMENT_BYTES) {
+        addMessage("answer", "The combined attachment limit is 10 MB per message.");
         continue;
       }
       selectedFiles.push(file);
