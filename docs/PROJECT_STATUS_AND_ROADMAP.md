@@ -45,7 +45,7 @@ Use these status labels carefully:
 
 | Area | Current documented scope | Important limit / verification gap |
 |---|---|---|
-| App and launchers | Python app; Windows `run-tara.bat`; Linux `run-tara.sh`; local configuration from `tara-app.example.toml` | Windows/Linux are the current targets; fresh installation and launch still need target-machine smoke tests. macOS is outside the current target scope. |
+| App and launchers | Python app; Windows `run-tara.bat`; Linux `run-tara.sh`; local configuration from `tara-app.example.toml` | Windows/macOS/Linux launchers are documented; fresh installation and launch still need target-machine smoke tests on each supported target. |
 | Chat UI | Markdown replies, safe link handling, copy, edit/resend, regenerate, conversation context | Attached-file prompts have editing/regeneration limitations; browser visual QA is not established by docs alone |
 | Router and specialists | Local deterministic Router; Chat, Code, Planner, Creative, Security, Action, Memory, Research, Data, Vision, Voice, Study, Weather and Models areas are documented | Confirm each route and dependency against current code/tests; do not infer all are production-ready from the module list |
 | Local inference | Ollama profiles documented for Chat, Creative, Code and Vision; specialist models may be pulled on first use | Actual model download, hardware fit, latency, RAM/VRAM use and first response need machine-level verification |
@@ -53,7 +53,7 @@ Use these status labels carefully:
 | Research | Crossref and Wikipedia public APIs, returning source links/excerpts | Network-dependent; sources and output still need user review |
 | Memory | Local SQLite memory with Security review/approval for writes/deletes | Re-check persistence, migration, retention and approval behavior in tests |
 | Code | Review-first plans/proposals and adapter contracts | **No generated-code execution or workspace mutation** until real sandboxing and approval enforcement are implemented and tested |
-| Handler/actions | Native C++17 Handler source; read-only environment diagnostics; optional Python diagnostic fallback; approved fixed desktop/browser actions documented | Verify native build/fallback on each OS; GitHub issue creation requires credentials, allowlist and approval |
+| Handler/actions | Native C++17 Handler source; read-only environment diagnostics; optional Python diagnostic fallback; approved fixed desktop/browser actions documented | Verify native build/fallback on Windows, macOS and Linux; GitHub issue creation requires credentials, allowlist and approval |
 | Data / Study / Weather | Read-only CSV summaries; source-grounded study notes, quizzes, flashcards, bounded plans; Open-Meteo weather | Study OCR, semantic retrieval, spaced repetition and progress tracking are described as future work; weather is network/rate-limit dependent |
 | Voice / Vision | Optional local faster-whisper transcription and local Ollama image analysis are documented | Voice dependency availability varies by Python/platform; test local model and media paths rather than assuming success |
 | React frontend | `frontend/` uses React, TypeScript and Vite; migration is incremental with existing UI fallback | Build/typecheck and actual browser QA are required; a successful CSS commit is not proof of pixel parity or full frontend migration |
@@ -102,7 +102,7 @@ Useful history links:
 
 ## 4. What is still left
 
-This roadmap is dependency-ordered. The daily development task should choose one bounded item per run, avoid duplicate work, and update this document with evidence after meaningful progress.
+This roadmap is dependency-ordered. The daily development task should deliver a coherent, reviewable batch of multiple eligible items per run, avoid duplicate work, and update this document with evidence after meaningful progress.
 
 ### P0 — Establish a trustworthy baseline
 
@@ -137,9 +137,9 @@ This roadmap is dependency-ordered. The daily development task should choose one
 
 - [ ] Finish the React + TypeScript migration only after typecheck/build and browser smoke tests pass; retain the existing UI fallback until the migration is verified.
 - [ ] Test responsive layout, keyboard navigation, focus states, accessibility, loading/error/empty states, message editing/regeneration and code-copy behavior.
-- [ ] Test local Voice/Vision dependencies and graceful fallback on supported Python versions in Windows/Linux environments.
+- [ ] Test local Voice/Vision dependencies and graceful fallback on supported Python versions in Windows/macOS/Linux environments.
 - [ ] Expand Study Mode only with tests and clear source-grounding: OCR/scanned PDFs, stronger question generation, spaced repetition and progress tracking.
-- [ ] Verify Windows/Linux installation paths, optional native Handler compilation and Python diagnostic fallback. macOS is outside the current supported/tested target scope unless explicitly requested.
+- [ ] Verify Windows/macOS/Linux installation paths, optional native Handler compilation and Python diagnostic fallback.
 - [ ] Complete release packaging, versioning, installation notes and a target-machine acceptance checklist.
 
 ### P3 — Ecosystem expansion (only after core contracts are stable)
@@ -161,7 +161,7 @@ Use this sequence unless fresh repository evidence shows a more urgent blocker:
 5. **Code adapter and secure sandbox design** — proposals first; execution remains off until proven safe.
 6. **Handler subprocess boundary, timeouts and cancellation.**
 7. **Runtime lifecycle, persistence and approval UX.**
-8. **React/browser QA and cross-platform smoke tests.**
+8. **React/browser QA and Windows/macOS/Linux smoke tests.**
 9. **Sibling repository integrations and optional provider/tool expansion.**
 10. **Release readiness and acceptance checklist.**
 
@@ -174,7 +174,7 @@ The scheduled task should read this file **and** the current source/tests before
 For each daily run:
 
 1. Fetch latest `main`, recent commits, open PRs/issues and current CI/check results.
-2. Read this roadmap and relevant implementation/test/docs files. Pick exactly one high-value unchecked item or a clearly scoped subtask.
+2. Read this roadmap and relevant implementation/test/docs files. Pick a coherent batch of multiple high-value, dependency-eligible unchecked items or subtasks; keep the batch reviewable and avoid unrelated scope.
 3. Check for overlapping branches/PRs first. Do not create duplicate work.
 4. Implement production code plus regression tests where appropriate; update user docs/config only as needed.
 5. Run relevant tests, lint/typecheck/build and security checks available in the environment. Record exact commands and actual results.
@@ -184,7 +184,7 @@ For each daily run:
 9. Report the chosen item, files changed, PR/commit link, tests and CI evidence, merge status, remaining blockers, and the next eligible item.
 10. If access, credentials, CI, a test environment or permissions are missing, stop safely for that run and record the limitation. Never fabricate implementation, test results or merges. The next scheduled run should continue from the latest repository state.
 
-**Independence rule:** unrelated user work is not a reason to abandon this roadmap. Each scheduled run should inspect the latest repository state and continue when the platform and permissions permit. Do not attempt to bypass platform limits or repository protections.
+**Independence rule:** unrelated user work is not a reason to abandon this roadmap. Each scheduled run should inspect the latest repository state and deliver meaningful work in bulk when the platform and permissions permit. Preserve Windows, macOS and Linux support unless the user explicitly authorizes a platform to be removed. Do not attempt to bypass platform limits or repository protections.
 
 ## 7. Progress log
 
