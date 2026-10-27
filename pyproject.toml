@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "TARA-App contracts, capability registry, and safe module orchestration"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = ["faster-whisper>=1.1,<2"]
 
 [project.scripts]
 tara-app = "tara_app.cli:main"
