@@ -103,7 +103,7 @@ See [runtime and development option notes](docs/runtime-evaluation.md) for the c
 
 ## Local Ollama model profiles
 
-TARA-App is the only user-facing process. It starts or reuses the local Ollama service, routes each request to Chat, Code, Planner, Creative, Data, Vision, Memory, or Research, and downloads only the selected local model the first time it is needed.
+TARA-App is the only user-facing process. It starts or reuses the local Ollama service, routes each request to Chat, Code, Planner, Creative, Data, Vision, Voice, Memory, or Research, and downloads only the selected local model the first time it is needed.
 
 | Specialist | Default model | Use |
 | --- | --- | --- |
@@ -115,7 +115,7 @@ TARA-App is the only user-facing process. It starts or reuses the local Ollama s
 
 These are free-to-download model weights served locally by Ollama; no paid inference API is configured. Model names can be changed in `[ollama.models]`. The app does not preload models at startup. Ollama may keep a recently used model in memory during its idle period.
 
-Research uses Crossref and Wikipedia public APIs for source records. No API key is required and no paid model is called. A research query is sent to those public services when Research is selected.
+Research uses Crossref and Wikipedia public APIs for source records. No API key is required and no paid model is called. A research query is sent to those public services when Research is selected. Voice transcription uses local faster-whisper weights downloaded on first audio use; audio is processed on-device. Read-aloud uses only browser voices marked local.
 
 ## Target integration contracts
 
