@@ -22,11 +22,11 @@ class AttachmentSizeLimitTests(unittest.TestCase):
 
     def test_single_attachment_over_10_mb_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "10 MB"):
-            TARAOrchestrator._validate_attachments([attachment(10_000_001)])
+            Orchestrator._validate_attachments([attachment(10_000_001)])
 
     def test_combined_attachments_over_10_mb_are_rejected(self):
         with self.assertRaisesRegex(ValueError, "10 MB per-message"):
-            TARAOrchestrator._validate_attachments([
+            Orchestrator._validate_attachments([
                 attachment(6_000_000, "first.txt"),
                 attachment(4_000_001, "second.txt"),
             ])
