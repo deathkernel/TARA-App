@@ -23,10 +23,15 @@ TARA-App is being consolidated as a single Python monorepo. The current integrat
 - `tara_chat`: the conversation-only specialist, kept separate from Code.
 - `tara_code`: a coding specialist using the local Ollama profile; it returns review-first proposals and never executes code.
 - `tara_research`: a source-first module that queries free Crossref and Wikipedia public APIs and returns links and excerpts.
+- `tara_planner`: bounded plans with validated dependencies; plans are never executed.
+- `tara_memory`: local SQLite memory; write and delete requests require Security review and per-request approval.
+- `tara_creative`: local Ollama writing, with no paid inference provider.
+- `tara_security`: deterministic policy assessment for sensitive capabilities.
+- `tara_action`: optional GitHub issue creation through the public API, gated by credentials, a repository allowlist, Security review, and explicit approval.
 - `tara_vision`: local Ollama image analysis; images stay on the device.
 - `tara_data`: deterministic, read-only CSV summaries.
 
-The remaining specialists (Planner, Memory, Creative, Security, Voice, Action, and Handler) are still being brought into this repository. The example config enables only specialists already present in this checkout.
+Voice and the native Handler implementation still need integration. The GitHub Action is inactive until credentials and a repository allowlist are configured.
 
 ## Target architecture
 
@@ -97,11 +102,13 @@ See [runtime and development option notes](docs/runtime-evaluation.md) for the c
 
 ## Local Ollama model profiles
 
-TARA-App is the only user-facing process. It starts or reuses the local Ollama service, routes each request to Chat, Code, Data, Vision, or Research, and downloads only the selected local model the first time it is needed.
+TARA-App is the only user-facing process. It starts or reuses the local Ollama service, routes each request to Chat, Code, Planner, Creative, Data, Vision, Memory, or Research, and downloads only the selected local model the first time it is needed.
 
 | Specialist | Default model | Use |
 | --- | --- | --- |
 | Chat | `llama3.2:3b` | Local conversation |
+| Planner | deterministic dependency checks | Reviewable plans; no execution |
+| Creative | `llama3.2:3b` | Local writing and rewriting |
 | Code | `qwen2.5-coder:3b` | Local code analysis and proposed changes |
 | Vision | `gemma3:4b` | Local image understanding |
 
@@ -129,7 +136,7 @@ A result should include `schema_version`, `request_id`, `ok`, `status`, structur
 
 ## Local development
 
-TARA-App now includes the local Router, Chat, Code, Data, Vision, and Research packages in the same repository. Chat and Code remain distinct specialists. Code suggestions and plans are data only; the current module does not run commands or modify a workspace. Vision uses a configured local Ollama model. Data performs bounded, read-only CSV analysis.
+TARA-App now includes the local Router, Chat, Code, Planner, Memory, Creative, Security, Action, Data, Vision, and Research packages in the same repository. Chat and Code remain distinct specialists. Code suggestions and plans are data only; the current module does not run commands or modify a workspace. Vision uses a configured local Ollama model. Data performs bounded, read-only CSV analysis.
 
 ### Run on Windows
 
@@ -151,4 +158,4 @@ On Windows PowerShell, use `Copy-Item tara-app.example.toml tara-app.toml` in pl
 
 ### Consolidation status
 
-The current draft PR contains a single-repository vertical slice. Planner, Memory, Creative, Security, Voice, Action, and Handler still need to be integrated. Their existing repositories remain untouched while the remaining packages are integrated and verified.
+The draft PR now contains the local Router, Chat, Code, Planner, Memory, Creative, Security, Action, Data, Vision, and Research packages. Voice and native Handler integration remain in progress. GitHub issue creation requires local credentials, a repo allowlist, Security review, and one-time user approval.
