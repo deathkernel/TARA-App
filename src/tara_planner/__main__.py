@@ -5,7 +5,7 @@ from .service import MODULE_ID, execute
 MAX_REQUEST_BYTES = 1_000_000
 _ALLOWED = {"schema_version", "request_id", "session_id", "module", "action", "inputs", "workspace_root", "timeout_seconds", "approval_token"}
 def _reply(rid, status, data, error, duration):
-    sys.stdout.write(json.dumps({"schema_version":"1.0","request_id":rid,"status":status,"data":data,"error":error,"duration_ms":duration},ensure_ascii=False,separators=(",",":"),allow_nan=False)+"\\n")
+    sys.stdout.write(json.dumps({"schema_version":"1.0","request_id":rid,"status":status,"data":data,"error":error,"duration_ms":duration},ensure_ascii=False,separators=(",",":"),allow_nan=False)+chr(10))
 def main():
     raw=sys.stdin.buffer.read(MAX_REQUEST_BYTES+1)
     if len(raw)>MAX_REQUEST_BYTES: _reply("unknown","invalid_request",{},"request exceeds the size limit",0); return 0
