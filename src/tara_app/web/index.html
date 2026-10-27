@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark light">
+    <title>TARA-App</title>
+    <link rel="stylesheet" href="/app.css">
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <div class="app-layout">
+      <aside class="sidebar" aria-label="Conversation history">
+        <div class="sidebar-brand"><span class="sidebar-mark" aria-hidden="true">T</span><span>TARA</span></div>
+        <button id="new-chat" class="new-chat-button" type="button">+ <span>New chat</span></button>
+        <p class="history-label">Recent chats</p>
+        <nav id="conversation-list" class="conversation-list" aria-label="Recent chats"></nav>
+        <div class="sidebar-footer">Chats are saved on this device</div>
+      </aside>
+      <main class="shell">
+      <header class="topbar">
+        <div class="brand-mark" aria-hidden="true">T</div>
+        <div>
+          <h1>TARA</h1>
+          <p>Your assistant, routed to the right specialist</p>
+        </div>
+        <span class="local-badge"><span></span> Local app</span>
+        <button id="models-toggle" class="models-button" type="button" aria-expanded="false" aria-controls="model-panel">Models</button>
+      </header>
+
+      <section id="model-panel" class="model-panel" hidden aria-live="polite" aria-label="Local Ollama models">
+        <div class="model-panel-header">
+          <div>
+            <h2>Local models</h2>
+            <p id="model-service-status">TARA downloads only the model selected for a request when it is missing. Open this panel to view download progress. Downloads use disk and network.</p>
+          </div>
+          <button id="models-refresh" type="button">Refresh</button>
+        </div>
+        <ul id="model-list" class="model-list"></ul>
+      </section>
+
+      <section class="conversation" aria-live="polite" aria-label="Conversation">
+        <article class="welcome" id="welcome">
+          <div class="welcome-icon" aria-hidden="true">*</div>
+          <h2>What can I help with?</h2>
+          <p>Chat, Code, Creative, and Vision use local models. Voice transcribes audio locally and can read answers aloud using installed device voices. Planner builds reviewable steps, Data reads CSV files, and Memory saves notes only after approval. Research can query public Crossref and Wikipedia APIs.</p>
+          <div class="examples">
+            <button type="button" data-prompt="Explain this concept in simple terms">Explain a concept</button>
+            <button type="button" data-prompt="Help me debug this code">Work on code</button>
+            <button type="button" data-prompt="Research the latest sources about">Research a topic</button>
+          </div>
+        </article>
+        <div id="messages" class="messages"></div>
+      </section>
+
+      <form id="composer" class="composer">
+        <label class="attachment-button" for="files" title="Attach an image, audio clip, CSV, or source-code file">+</label>
+        <input id="files" type="file" multiple accept="image/*,audio/*,.mp3,.wav,.m4a,.mp4,.webm,.ogg,.flac,.aac,audio/mpeg,audio/wav,audio/mp4,audio/webm,audio/ogg,audio/flac,audio/aac,.csv,text/csv,.py,.pyi,.js,.mjs,.cjs,.ts,.tsx,.jsx,.java,.go,.rs,.c,.h,.cc,.hh,.hpp,.cpp,.cxx,.cs,.rb,.php,.sh,.bash,.zsh,.ps1,.sql,.swift,.kt,.kts,.dart,.scala,.lua,.pl,.r" hidden>
+        <div class="input-wrap">
+          <div id="file-list" class="file-list" hidden></div>
+          <textarea id="question" rows="1" maxlength="20000" placeholder="Message TARA..." aria-label="Message TARA"></textarea>
+        </div>
+        <button id="send" class="send-button" type="submit" aria-label="Send message">Send</button>
+        <p class="composer-note">Chat and Voice inference stays local. Research sends selected queries to public sources. Memory and GitHub changes require your approval.</p>
+      </form>
+      <footer>Chat and Code are separate specialists | TARA-App routes each request</footer>
+    </main>
+    </div>
+  </body>
+</html>
+

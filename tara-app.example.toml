@@ -1,0 +1,100 @@
+# Copy to tara-app.toml and adjust only the local settings you need.
+# TARA-App contains its Router and specialist packages in this repository.
+# Ollama runs local open-weight models; TARA-App starts the service and downloads
+# only the selected specialist model on its first request.
+
+[ollama]
+base_url = "http://127.0.0.1:11434"
+
+[ollama.models]
+chat = "llama3.2:3b"
+code = "qwen2.5-coder:3b"
+vision = "gemma3:4b"
+creative = "llama3.2:3b"
+
+[router]
+command = ["{python}", "-m", "tara_router"]
+working_directory = "."
+timeout_seconds = 10
+
+[[modules]]
+id = "chat"
+command = ["{python}", "-m", "tara_chat.app_adapter"]
+working_directory = "."
+timeout_seconds = 180
+environment = ["TARA_LLM_BACKEND", "TARA_LLAMA_MODEL", "OLLAMA_HOST", "TARA_POWER_MODE", "TARA_LLM_TIMEOUT_SECONDS", "TARA_CHAT_MEMORY_PATH"]
+
+[[modules]]
+id = "code"
+command = ["{python}", "-m", "tara_code"]
+working_directory = "."
+timeout_seconds = 180
+environment = ["TARA_CODE_MODEL", "TARA_CODE_OLLAMA_URL"]
+
+[[modules]]
+id = "research"
+command = ["{python}", "-m", "tara_research"]
+working_directory = "."
+timeout_seconds = 30
+allow_remote = true # Sends the research query to Crossref and Wikipedia; no API key or paid model is used.
+
+[[modules]]
+id = "data"
+command = ["{python}", "-m", "tara_data"]
+working_directory = "."
+timeout_seconds = 30
+
+[[modules]]
+id = "vision"
+command = ["{python}", "-m", "tara_vision"]
+working_directory = "."
+timeout_seconds = 180
+environment = ["TARA_VISION_MODEL", "TARA_VISION_OLLAMA_URL"]
+
+[[modules]]
+id = "planner"
+command = ["{python}", "-m", "tara_planner"]
+working_directory = "."
+timeout_seconds = 30
+
+[[modules]]
+id = "memory"
+command = ["{python}", "-m", "tara_memory"]
+working_directory = "."
+timeout_seconds = 30
+environment = ["TARA_MEMORY_DB"]
+
+[[modules]]
+id = "security"
+command = ["{python}", "-m", "tara_security"]
+working_directory = "."
+timeout_seconds = 30
+
+[[modules]]
+id = "creative"
+command = ["{python}", "-m", "tara_creative"]
+working_directory = "."
+timeout_seconds = 180
+environment = ["TARA_CREATIVE_MODEL", "TARA_CREATIVE_OLLAMA_URL"]
+
+[[modules]]
+id = "action"
+command = ["{python}", "-m", "tara_action"]
+working_directory = "."
+timeout_seconds = 30
+allow_remote = true # GitHub writes need a local token, an explicit repo allowlist, Security review, and your approval.
+environment = ["GITHUB_TOKEN", "TARA_ACTION_GITHUB_REPOSITORIES"]
+
+[[modules]]
+id = "voice"
+command = ["{python}", "-m", "tara_voice"]
+working_directory = "."
+timeout_seconds = 180
+allow_remote = true # Downloads open speech weights on demand; audio processing and read-aloud remain local.
+environment = ["TARA_VOICE_MODEL", "TARA_VOICE_DEVICE"]
+
+[[modules]]
+id = "handler"
+command = ["{python}", "-m", "tara_app.handler_launcher", "doctor"]
+working_directory = "."
+timeout_seconds = 120
