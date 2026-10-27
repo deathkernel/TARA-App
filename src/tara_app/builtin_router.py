@@ -20,6 +20,16 @@ _MEMORY_STORE = re.compile(r"\b(?:remember|save to memory|store this)\b", re.I)
 _MEMORY_FORGET = re.compile(r"\b(?:forget|delete from memory|remove memory)\b", re.I)
 _MEMORY_SEARCH = re.compile(r"\b(?:what do you remember|search memory|my saved memory)\b", re.I)
 _VOICE_SPEAK = re.compile(r"\b(?:read|speak|say)(?:\s+(?:this|that|it))?(?:\s+(?:aloud|out\s+loud|to\s+me))\b", re.I)
+_DESKTOP_APP_OPEN = re.compile(
+    r"\s*(?:(?:please\s+)?(?:open|launch|start)\s+(?:the\s+)?(?:calculator|calc|notepad|text editor|paint|mspaint)|"
+    r"(?:calculator|calc|notepad|paint)\s+(?:kholo|khol(?:o)?|open\s+karo|start\s+karo))\s*[.!]?\s*",
+    re.I,
+)
+_WEBSITE_OPEN = re.compile(
+    r"""\s*(?:please\s+)?(?:open|visit|go\s+to|browse|kholo|khol(?:o)?)\s+(?:the\s+)?"""
+    r"""(?P<url>https?://[^\s<>\"']+|www\.[^\s<>\"']+|[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}\.)+[A-Za-z]{2,63}(?::\d{1,5})?(?:[/?#][^\s<>\"']*)?)\s*[.!?]?\s*""",
+    re.I,
+)
 
 
 class BuiltinRouter:
@@ -61,6 +71,20 @@ class BuiltinRouter:
                 intended_module="memory", intended_action=memory_write_action,
                 requires_approval=True,
                 policy_tags=("memory_write", "consent_required", "human_approval"),
+            )
+        if _DESKTOP_APP_OPEN.fullmatch(question.strip()) or _WEBSITE_OPEN.fullmatch(question.strip()):
+            if "security.assess" not in available or "action.execute" not in available:
+                return RouteDecision(
+                    request_id, "unavailable", None, None, "desktop_automation_unavailable",
+                    "TARA's approved desktop automation is not installed or enabled.",
+                    intended_module="action", intended_action="execute",
+                    policy_tags=("desktop_automation",),
+                )
+            return RouteDecision(
+                request_id, "routed", "security", "assess", "desktop_automation_approval",
+                "This local automation needs your approval before it runs.",
+                intended_module="action", intended_action="execute", requires_approval=True,
+                policy_tags=("desktop_automation", "human_approval"),
             )
         if _SIDE_EFFECT.search(question):
             if "security.assess" in available:
