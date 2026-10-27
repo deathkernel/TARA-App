@@ -10,6 +10,8 @@ base_url = "http://127.0.0.1:11434"
 chat = "llama3.2:3b"
 code = "qwen2.5-coder:3b"
 vision = "gemma3:4b"
+planner = "llama3.2:3b"
+creative = "llama3.2:3b"
 
 [router]
 command = ["{python}", "-m", "tara_router"]
@@ -49,3 +51,37 @@ command = ["{python}", "-m", "tara_vision"]
 working_directory = "."
 timeout_seconds = 180
 environment = ["TARA_VISION_MODEL", "TARA_VISION_OLLAMA_URL"]
+
+[[modules]]
+id = "planner"
+command = ["{python}", "-m", "tara_planner"]
+working_directory = "."
+timeout_seconds = 30
+
+[[modules]]
+id = "memory"
+command = ["{python}", "-m", "tara_memory"]
+working_directory = "."
+timeout_seconds = 30
+environment = ["TARA_MEMORY_DB"]
+
+[[modules]]
+id = "security"
+command = ["{python}", "-m", "tara_security"]
+working_directory = "."
+timeout_seconds = 30
+
+[[modules]]
+id = "creative"
+command = ["{python}", "-m", "tara_creative"]
+working_directory = "."
+timeout_seconds = 180
+environment = ["TARA_CREATIVE_MODEL", "TARA_CREATIVE_OLLAMA_URL"]
+
+[[modules]]
+id = "action"
+command = ["{python}", "-m", "tara_action"]
+working_directory = "."
+timeout_seconds = 30
+allow_remote = true # GitHub writes need a local token, an explicit repo allowlist, Security review, and your approval.
+environment = ["GITHUB_TOKEN", "TARA_ACTION_GITHUB_REPOSITORIES"]
