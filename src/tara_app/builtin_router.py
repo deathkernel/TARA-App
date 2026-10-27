@@ -19,6 +19,7 @@ _CREATIVE = re.compile(r"\b(?:poem|story|lyrics|brainstorm|creative|rewrite|draf
 _MEMORY_STORE = re.compile(r"\b(?:remember|save to memory|store this)\b", re.I)
 _MEMORY_FORGET = re.compile(r"\b(?:forget|delete from memory|remove memory)\b", re.I)
 _MEMORY_SEARCH = re.compile(r"\b(?:what do you remember|search memory|my saved memory)\b", re.I)
+_VOICE_SPEAK = re.compile(r"\b(?:read|speak|say)(?:\s+(?:this|that|it))?(?:\s+(?:aloud|out\s+loud|to\s+me))\b", re.I)
 
 
 class BuiltinRouter:
@@ -92,6 +93,8 @@ class BuiltinRouter:
                 target = ("memory", "forget", "memory_write", "The user requested explicit memory deletion.")
             elif _MEMORY_SEARCH.search(normalized):
                 target = ("memory", "search", "memory_lookup", "The user asked about saved memory.")
+            elif _VOICE_SPEAK.search(normalized):
+                target = ("voice", "speak", "read_aloud", "The user asked for local read-aloud.")
             elif _RESEARCH.search(normalized):
                 target = ("research", "answer", "research_intent", "The request asks for current or sourced information.")
             elif _PLANNER.search(normalized):
