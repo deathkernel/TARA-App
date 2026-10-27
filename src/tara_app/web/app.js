@@ -35,13 +35,24 @@
           title: typeof item.title === "string" ? item.title.slice(0, 80) : "New chat",
           updatedAt: Number.isFinite(item.updatedAt) ? item.updatedAt : Date.now(),
           messages: item.messages.filter(message => message && ["user", "answer"].includes(message.role) && typeof message.text === "string")
-            .slice(-24).map(message => ({ role: message.role, text: message.text.slice(0, 6000) }))
+            .slice(-24).map(message => ({
+              role: message.role,
+              text: message.text.slice(0, 6000),
+              ...(message.hasAttachments === true ? { hasAttachments: true } : {}),
+              ...(typeof message.status === "string" ? { status: message.status.slice(0, 40) } : {}),
+              ...(typeof message.module === "string" ? { module: message.module.slice(0, 60) } : {}),
+              ...(typeof message.action === "string" ? { action: message.action.slice(0, 60) } : {})
+            }))
         })).slice(0, 12);
     }
   } catch {
     conversations = [];
   }
   let sessionId = "";
+  let editingIndex = null;
+  const editBanner = document.querySelector("#edit-banner");
+  const editLabel = document.querySelector("#edit-label");
+  const cancelEditButton = document.querySelector("#cancel-edit");
   try { sessionId = localStorage.getItem(sessionKey) || ""; } catch {}
   if (!sessionId || !conversations.some(item => item.id === sessionId)) {
     sessionId = crypto.randomUUID();
@@ -77,11 +88,18 @@
     });
   }
 
-  function recordMessage(role, text, payload) {
+  function recordMessage(role, text, metadata = {}) {
     const item = conversations.find(entry => entry.id === sessionId);
-    if (!item || !["user", "answer"].includes(role)) return;
+    if (!item || !["user", "answer"].includes(role)) return -1;
     const safeText = String(text || "").slice(0, 6000);
-    item.messages.push({ role, text: safeText });
+    const message = { role, text: safeText };
+    if (role === "user" && metadata && metadata.hasAttachments === true) message.hasAttachments = true;
+    if (role === "answer" && metadata && typeof metadata === "object") {
+      if (typeof metadata.status === "string") message.status = metadata.status.slice(0, 40);
+      if (typeof metadata.route?.module === "string") message.module = metadata.route.module.slice(0, 60);
+      if (typeof metadata.route?.action === "string") message.action = metadata.route.action.slice(0, 60);
+    }
+    item.messages.push(message);
     item.messages = item.messages.slice(-24);
     if (role === "user" && item.title === "New chat") {
       item.title = safeText.replace(/\s+/g, " ").trim().slice(0, 48) || "New chat";
@@ -91,12 +109,14 @@
     conversations = conversations.slice(0, 12);
     saveConversations();
     renderConversationList();
+    return item.messages.length - 1;
   }
 
   function setConversationNavigationDisabled(disabled) {
     const newChat = document.querySelector("#new-chat");
     if (newChat) newChat.disabled = disabled;
     if (conversationList) conversationList.querySelectorAll("button").forEach(button => { button.disabled = disabled; });
+    messages.querySelectorAll(".message-action-button, .code-copy-button").forEach(button => { button.disabled = disabled; });
   }
 
   function selectConversation(id) {
@@ -105,9 +125,10 @@
     if (!item) return;
     sessionId = item.id;
     try { localStorage.setItem(sessionKey, sessionId); } catch {}
-    messages.replaceChildren();
-    welcome.hidden = item.messages.length > 0;
-    item.messages.forEach(message => addMessage(message.role, message.text, false));
+    clearEditing();
+    question.value = "";
+    resizeComposer();
+    renderActiveConversation();
     renderConversationList();
     question.focus();
   }
@@ -118,6 +139,8 @@
     conversations.unshift({ id: sessionId, title: "New chat", updatedAt: Date.now(), messages: [] });
     conversations = conversations.slice(0, 12);
     try { localStorage.setItem(sessionKey, sessionId); } catch {}
+    clearEditing();
+    question.value = "";
     messages.replaceChildren();
     welcome.hidden = false;
     selectedFiles = [];
@@ -139,24 +162,282 @@
     renderConversationList();
   }
 
+  function renderActiveConversation() {
+    const item = conversations.find(entry => entry.id === sessionId);
+    messages.replaceChildren();
+    if (!item) {
+      welcome.hidden = false;
+      return;
+    }
+    welcome.hidden = item.messages.length > 0;
+    item.messages.forEach((message, index) => addMessage(message.role, message.text, false, message, index));
+  }
+
   function restoreActiveConversation() {
     const item = conversations.find(entry => entry.id === sessionId);
     if (!item || !item.messages.length) return;
-    welcome.hidden = true;
-    item.messages.forEach(message => addMessage(message.role, message.text, false));
+    renderActiveConversation();
   }
 
-  function addMessage(role, content, persist = true) {
-    if (persist) recordMessage(role, content);
+  function addMessage(role, content, persist = true, metadata = {}, indexHint = null) {
+    const messageIndex = persist ? recordMessage(role, content, metadata) : indexHint;
     const article = document.createElement("article");
-    article.className = `message ${role}`;
+    article.className = "message " + role;
     const bubble = document.createElement("div");
     bubble.className = "bubble";
-    bubble.textContent = content;
+    if (role === "answer") renderMarkdown(bubble, String(content || ""));
+    else bubble.textContent = String(content || "");
     article.append(bubble);
+    if (messageIndex !== null && messageIndex >= 0) addMessageActions(article, role, messageIndex, String(content || ""));
     messages.append(article);
     article.scrollIntoView({ behavior: "smooth", block: "end" });
     return article;
+  }
+
+  function addMessageActions(article, role, index, text) {
+    const item = conversations.find(entry => entry.id === sessionId);
+    const message = item && item.messages[index];
+    if (!message || message.role !== role) return;
+    const actions = document.createElement("div");
+    actions.className = "message-actions";
+    if (role === "user" && message.hasAttachments !== true) {
+      const edit = document.createElement("button");
+      edit.type = "button";
+      edit.className = "message-action-button";
+      edit.textContent = "Edit";
+      edit.setAttribute("aria-label", "Edit this message");
+      edit.addEventListener("click", () => startEditing(index));
+      actions.append(edit);
+    }
+    if (role === "answer") {
+      const copy = document.createElement("button");
+      copy.type = "button";
+      copy.className = "message-action-button";
+      copy.textContent = "Copy";
+      copy.setAttribute("aria-label", "Copy this answer");
+      copy.addEventListener("click", () => copyText(text, copy));
+      actions.append(copy);
+      const previous = item.messages[index - 1];
+      if (index === item.messages.length - 1 && previous && previous.role === "user" && previous.hasAttachments !== true) {
+        const regenerate = document.createElement("button");
+        regenerate.type = "button";
+        regenerate.className = "message-action-button";
+        regenerate.textContent = "Regenerate";
+        regenerate.setAttribute("aria-label", "Regenerate this answer");
+        regenerate.addEventListener("click", () => regenerateAnswer(index));
+        actions.append(regenerate);
+      }
+    }
+    if (actions.childElementCount) article.append(actions);
+  }
+
+  function historyFor(sourceMessages) {
+    const history = [];
+    for (let index = 0; index + 1 < sourceMessages.length; index += 1) {
+      const user = sourceMessages[index];
+      const answer = sourceMessages[index + 1];
+      if (!user || user.role !== "user" || user.hasAttachments === true || !answer || answer.role !== "answer") continue;
+      if (["failed", "unavailable", "invalid_request", "permission_denied", "cancelled"].includes(answer.status)) continue;
+      history.push(
+        { role: "user", content: user.text },
+        { role: "assistant", content: answer.text }
+      );
+      index += 1;
+    }
+    return history.slice(-24);
+  }
+
+  function clearEditing() {
+    editingIndex = null;
+    if (editBanner) editBanner.hidden = true;
+    if (editLabel) editLabel.textContent = "";
+  }
+
+  function resizeComposer() {
+    question.style.height = "auto";
+    question.style.height = Math.min(question.scrollHeight, 180) + "px";
+  }
+
+  function startEditing(index) {
+    if (send.disabled) return;
+    const item = conversations.find(entry => entry.id === sessionId);
+    const message = item && item.messages[index];
+    if (!message || message.role !== "user" || message.hasAttachments === true) return;
+    editingIndex = index;
+    question.value = message.text;
+    if (editLabel) editLabel.textContent = "Editing your message";
+    if (editBanner) editBanner.hidden = false;
+    resizeComposer();
+    question.focus();
+  }
+
+  function cancelEditing() {
+    clearEditing();
+    question.value = "";
+    resizeComposer();
+    question.focus();
+  }
+
+  async function copyText(value, button) {
+    const original = button.textContent;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(value);
+      } else {
+        const temporary = document.createElement("textarea");
+        temporary.value = value;
+        temporary.style.position = "fixed";
+        temporary.style.opacity = "0";
+        document.body.append(temporary);
+        temporary.select();
+        const copied = document.execCommand("copy");
+        temporary.remove();
+        if (!copied) throw new Error("Clipboard is unavailable");
+      }
+      button.textContent = "Copied";
+    } catch {
+      button.textContent = "Copy unavailable";
+    }
+    window.setTimeout(() => { if (button.isConnected) button.textContent = original; }, 1600);
+  }
+
+  function regenerateAnswer(index) {
+    if (send.disabled) return;
+    const item = conversations.find(entry => entry.id === sessionId);
+    const answer = item && item.messages[index];
+    const user = item && item.messages[index - 1];
+    if (!item || index !== item.messages.length - 1 || !answer || answer.role !== "answer" ||
+        !user || user.role !== "user" || user.hasAttachments === true) return;
+    const prompt = user.text;
+    const history = historyFor(item.messages.slice(0, index - 1));
+    item.messages = item.messages.slice(0, index);
+    item.updatedAt = Date.now();
+    saveConversations();
+    renderConversationList();
+    renderActiveConversation();
+    requestPrompt(prompt, [], history, false);
+  }
+
+  function appendInlineMarkdown(parent, source) {
+    const tick = String.fromCharCode(96);
+    const tokenPattern = new RegExp("(\\[[^\\]]+\\]\\(https?:\\/\\/[^\\s)]+\\)|" + tick + "[^" + tick + "]+" + tick + "|\\*\\*[^*]+\\*\\*|__[^_]+__|\\*[^*\\n]+\\*|_[^_\\n]+_)", "g");
+    let offset = 0;
+    for (const match of source.matchAll(tokenPattern)) {
+      if (match.index > offset) parent.append(document.createTextNode(source.slice(offset, match.index)));
+      const token = match[0];
+      let node;
+      if (token.startsWith("[") && token.includes("](")) {
+        const split = token.match(/^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/);
+        if (split) {
+          try {
+            const parsed = new URL(split[2]);
+            if (["https:", "http:"].includes(parsed.protocol) && !parsed.username && !parsed.password) {
+              node = document.createElement("a");
+              node.href = parsed.href;
+              node.target = "_blank";
+              node.rel = "noopener noreferrer";
+              node.textContent = split[1];
+            }
+          } catch {}
+        }
+      } else if (token.startsWith(tick)) {
+        node = document.createElement("code");
+        node.className = "inline-code";
+        node.textContent = token.slice(1, -1);
+      } else if (token.startsWith("**") || token.startsWith("__")) {
+        node = document.createElement("strong");
+        node.textContent = token.slice(2, -2);
+      } else {
+        node = document.createElement("em");
+        node.textContent = token.slice(1, -1);
+      }
+      parent.append(node || document.createTextNode(token));
+      offset = match.index + token.length;
+    }
+    if (offset < source.length) parent.append(document.createTextNode(source.slice(offset)));
+  }
+
+  function renderMarkdown(container, source) {
+    container.classList.add("markdown-content");
+    const tick = String.fromCharCode(96);
+    const lines = String(source || "").replace(/\r\n?/g, "\n").split("\n");
+    let index = 0;
+    while (index < lines.length) {
+      const line = lines[index];
+      if (!line.trim()) { index += 1; continue; }
+      if (line.trimStart().startsWith(tick.repeat(3))) {
+        const language = line.trimStart().slice(3).trim().slice(0, 40);
+        const codeLines = [];
+        index += 1;
+        while (index < lines.length && !lines[index].trimStart().startsWith(tick.repeat(3))) codeLines.push(lines[index++]);
+        if (index < lines.length) index += 1;
+        const wrap = document.createElement("div");
+        wrap.className = "code-block-wrap";
+        const pre = document.createElement("pre");
+        const code = document.createElement("code");
+        if (language) code.dataset.language = language;
+        code.textContent = codeLines.join("\n");
+        pre.append(code);
+        const copy = document.createElement("button");
+        copy.type = "button";
+        copy.className = "code-copy-button";
+        copy.textContent = "Copy code";
+        copy.addEventListener("click", () => copyText(code.textContent, copy));
+        wrap.append(pre, copy);
+        container.append(wrap);
+        continue;
+      }
+      const heading = line.match(/^(#{1,6})\s+(.+)$/);
+      if (heading) {
+        const node = document.createElement("h" + heading[1].length);
+        appendInlineMarkdown(node, heading[2]);
+        container.append(node);
+        index += 1;
+        continue;
+      }
+      if (/^\s*(?:---+|\*\*\*+|___+)\s*$/.test(line)) {
+        container.append(document.createElement("hr"));
+        index += 1;
+        continue;
+      }
+      if (/^\s*>/.test(line)) {
+        const quote = document.createElement("blockquote");
+        const paragraph = document.createElement("p");
+        while (index < lines.length && /^\s*>/.test(lines[index])) {
+          if (paragraph.childNodes.length) paragraph.append(document.createElement("br"));
+          appendInlineMarkdown(paragraph, lines[index++].replace(/^\s*>\s?/, ""));
+        }
+        quote.append(paragraph);
+        container.append(quote);
+        continue;
+      }
+      const listStart = line.match(/^\s*(?:[-+*]\s+|\d+[.)]\s+)/);
+      if (listStart) {
+        const ordered = /^\s*\d+[.)]/.test(line);
+        const list = document.createElement(ordered ? "ol" : "ul");
+        while (index < lines.length) {
+          const current = lines[index].match(/^\s*(?:([-+*])\s+|(\d+)[.)]\s+)(.+)$/);
+          if (!current || Boolean(current[2]) !== ordered) break;
+          const item = document.createElement("li");
+          appendInlineMarkdown(item, current[3]);
+          list.append(item);
+          index += 1;
+        }
+        container.append(list);
+        continue;
+      }
+      const paragraph = document.createElement("p");
+      while (index < lines.length && lines[index].trim() &&
+        !lines[index].trimStart().startsWith(tick.repeat(3)) &&
+        !/^#{1,6}\s+/.test(lines[index]) &&
+        !/^\s*>/.test(lines[index]) &&
+        !/^\s*(?:[-+*]\s+|\d+[.)]\s+)/.test(lines[index]) &&
+        !/^\s*(?:---+|\*\*\*+|___+)\s*$/.test(lines[index])) {
+        if (paragraph.childNodes.length) paragraph.append(document.createElement("br"));
+        appendInlineMarkdown(paragraph, lines[index++].replace(/\s{2,}$/, ""));
+      }
+      container.append(paragraph);
+    }
   }
 
   function updateFiles() {
@@ -356,7 +637,8 @@
   }
 
   function addResult(payload) {
-    recordMessage("answer", resultText(payload), payload);
+    const answerText = resultText(payload);
+    const messageIndex = recordMessage("answer", answerText, payload);
     const article = document.createElement("article");
     article.className = "message answer";
     const route = payload?.route || {};
@@ -372,7 +654,7 @@
     bubble.className = "bubble";
     const text = document.createElement("div");
     text.className = "answer-content";
-    text.textContent = resultText(payload);
+    renderMarkdown(text, answerText);
     bubble.append(text);
     appendSpecialistOutput(bubble, payload);
     const audioData = payload?.result?.data?.audio_base64;
@@ -402,6 +684,7 @@
     pre.textContent = JSON.stringify(safePayload, null, 2);
     details.append(summary, pre);
     article.append(routeLine, bubble);
+    addMessageActions(article, "answer", messageIndex, answerText);
     if (payload?.status === "success" && typeof window.speechSynthesis !== "undefined") {
       const speak = document.createElement("button");
       speak.type = "button";
@@ -671,36 +954,60 @@
   });
   modelsRefresh.addEventListener("click", refreshModelStatus);
 
-  async function submit() {
-    const prompt = question.value.trim();
-    if (!prompt || send.disabled) return;
+  async function requestPrompt(prompt, files, history, addUser) {
+    if (addUser) addMessage("user", prompt, true, { hasAttachments: files.length > 0 });
     welcome.hidden = true;
-    addMessage("user", prompt);
     question.value = "";
-    question.style.height = "auto";
+    resizeComposer();
     send.disabled = true;
     setConversationNavigationDisabled(true);
-    const files = selectedFiles.splice(0);
+    const pendingFiles = files.splice(0);
     updateFiles();
     const waiting = addMessage("answer", "TARA is selecting a specialist and preparing its local model if needed...", false);
     try {
-      const attachments = await Promise.all(files.map(encodeFile));
+      const attachments = await Promise.all(pendingFiles.map(encodeFile));
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: prompt, session_id: sessionId, attachments })
+        body: JSON.stringify({ question: prompt, session_id: sessionId, attachments, history })
       });
       const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "TARA could not accept this request");
       waiting.remove();
       addResult(payload);
     } catch (error) {
       waiting.remove();
-      addMessage("answer", `TARA could not complete the request: ${error.message || "local server unavailable"}`);
+      addMessage("answer", "TARA could not complete the request: " + (error.message || "local server unavailable"), true, { status: "unavailable" });
     } finally {
       send.disabled = false;
       setConversationNavigationDisabled(false);
       question.focus();
     }
+  }
+
+  async function submit() {
+    const prompt = question.value.trim();
+    if (!prompt || send.disabled) return;
+    const item = conversations.find(entry => entry.id === sessionId);
+    if (!item) return;
+    let history = historyFor(item.messages);
+    if (editingIndex !== null) {
+      const target = item.messages[editingIndex];
+      if (!target || target.role !== "user" || target.hasAttachments === true) {
+        clearEditing();
+        return;
+      }
+      history = historyFor(item.messages.slice(0, editingIndex));
+      item.messages = item.messages.slice(0, editingIndex);
+      item.updatedAt = Date.now();
+      saveConversations();
+      renderActiveConversation();
+      renderConversationList();
+      clearEditing();
+    }
+    const files = selectedFiles.splice(0);
+    updateFiles();
+    await requestPrompt(prompt, files, history, true);
   }
 
   renderConversationList();
@@ -711,10 +1018,8 @@
     event.preventDefault();
     submit();
   });
-  question.addEventListener("input", () => {
-    question.style.height = "auto";
-    question.style.height = `${Math.min(question.scrollHeight, 180)}px`;
-  });
+  question.addEventListener("input", resizeComposer);
+  cancelEditButton?.addEventListener("click", cancelEditing);
   question.addEventListener("keydown", event => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
