@@ -3,7 +3,7 @@ from __future__ import annotations
 import base64
 import unittest
 
-from tara_app.orchestrator import TARAOrchestrator
+from tara_app.orchestrator import Orchestrator
 
 
 def attachment(size: int, name: str = "document.txt") -> dict[str, str]:
@@ -17,7 +17,7 @@ def attachment(size: int, name: str = "document.txt") -> dict[str, str]:
 
 class AttachmentSizeLimitTests(unittest.TestCase):
     def test_attachment_at_10_mb_is_accepted(self):
-        result = TARAOrchestrator._validate_attachments([attachment(10_000_000)])
+        result = Orchestrator._validate_attachments([attachment(10_000_000)])
         self.assertEqual(len(base64.b64decode(result[0]["content_base64"])), 10_000_000)
 
     def test_single_attachment_over_10_mb_is_rejected(self):
