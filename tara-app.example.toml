@@ -1,7 +1,7 @@
 # Copy to tara-app.toml and adjust only the local settings you need.
 # TARA-App contains its Router and specialist packages in this repository.
-# Ollama runs local open-weight models; TARA-App starts the service and downloads
-# only the selected specialist model on its first request.
+# Ollama runs local open-weight models; TARA-App starts the service, prepares
+# Chat before opening the interface, and downloads other specialists on first use.
 
 [ollama]
 base_url = "http://127.0.0.1:11434"
