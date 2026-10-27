@@ -82,7 +82,7 @@ id = "action"
 command = ["{python}", "-m", "tara_action"]
 working_directory = "."
 timeout_seconds = 30
-allow_remote = true # GitHub writes need a local token, an explicit repo allowlist, Security review, and your approval.
+# Local app/browser actions need approval. GitHub writes additionally need a local token, an explicit repo allowlist, Security review, and your approval.
 environment = ["GITHUB_TOKEN", "TARA_ACTION_GITHUB_REPOSITORIES"]
 
 [[modules]]

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import re
 from typing import Any, Mapping
+from urllib.parse import urlsplit
 
 from tara_app.contracts import RouteDecision, SCHEMA_VERSION
 
@@ -20,6 +21,41 @@ _MEMORY_STORE = re.compile(r"\b(?:remember|save to memory|store this)\b", re.I)
 _MEMORY_FORGET = re.compile(r"\b(?:forget|delete from memory|remove memory)\b", re.I)
 _MEMORY_SEARCH = re.compile(r"\b(?:what do you remember|search memory|my saved memory)\b", re.I)
 _VOICE_SPEAK = re.compile(r"\b(?:read|speak|say)(?:\s+(?:this|that|it))?(?:\s+(?:aloud|out\s+loud|to\s+me))\b", re.I)
+_DESKTOP_APP_OPEN = re.compile(
+    r"\s*(?:(?:please\s+)?(?:open|launch|start)\s+(?:the\s+)?(?:calculator|calc|notepad|text editor|paint|mspaint)|"
+    r"(?:calculator|calc|notepad|paint)\s+(?:kholo|khol(?:o)?|open\s+karo|start\s+karo))\s*[.!]?\s*",
+    re.I,
+)
+_WEBSITE_OPEN = re.compile(
+    r"""\s*(?:please\s+)?(?:open|visit|go\s+to|browse|kholo|khol(?:o)?)\s+(?:the\s+)?"""
+    r"""(?P<url>https?://[^\s<>\"']+|www\.[^\s<>\"']+|[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}\.)+[A-Za-z]{2,63}(?::\d{1,5})?(?:[/?#][^\s<>\"']*)?)\s*[.!?]?\s*""",
+    re.I,
+)
+ 
+def _valid_website_open(question: str) -> bool:
+    """Validate website requests before they can enter the approval flow."""
+    match = _WEBSITE_OPEN.fullmatch(question.strip())
+    if match is None:
+        return False
+    raw_url = match.group("url")
+    if not raw_url.casefold().startswith(("http://", "https://")):
+        raw_url = raw_url.rstrip(".,!?;:")
+        raw_url = "https://" + raw_url
+    if len(raw_url) > 2048 or any(ord(char) < 32 or ord(char) == 127 for char in raw_url):
+        return False
+    try:
+        parsed = urlsplit(raw_url)
+        port = parsed.port
+    except ValueError:
+        return False
+    return (
+        parsed.scheme.casefold() in {"http", "https"}
+        and bool(parsed.hostname)
+        and parsed.username is None
+        and parsed.password is None
+        and (port is None or 1 <= port <= 65535)
+    )
+
 
 
 class BuiltinRouter:
@@ -61,6 +97,26 @@ class BuiltinRouter:
                 intended_module="memory", intended_action=memory_write_action,
                 requires_approval=True,
                 policy_tags=("memory_write", "consent_required", "human_approval"),
+            )
+        website_match = _WEBSITE_OPEN.fullmatch(question.strip())
+        if website_match is not None and not _valid_website_open(question):
+            return RouteDecision(
+                request_id, "invalid_request", None, None, "invalid_website_url",
+                "The website address is invalid or exceeds the 2048-character limit.",
+            )
+        if _DESKTOP_APP_OPEN.fullmatch(question.strip()) or website_match is not None:
+            if "security.assess" not in available or "action.execute" not in available:
+                return RouteDecision(
+                    request_id, "unavailable", None, None, "desktop_automation_unavailable",
+                    "TARA's approved desktop automation is not installed or enabled.",
+                    intended_module="action", intended_action="execute",
+                    policy_tags=("desktop_automation",),
+                )
+            return RouteDecision(
+                request_id, "routed", "security", "assess", "desktop_automation_approval",
+                "This local automation needs your approval before it runs.",
+                intended_module="action", intended_action="execute", requires_approval=True,
+                policy_tags=("desktop_automation", "human_approval"),
             )
         if _SIDE_EFFECT.search(question):
             if "security.assess" in available:

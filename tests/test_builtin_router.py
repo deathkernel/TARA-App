@@ -57,6 +57,25 @@ class BuiltinRouterTests(unittest.TestCase):
         decision = self.router.route({"request_id": "route-3", "question": "", "available_capabilities": []})
         self.assertEqual(decision.status, "invalid_request")
 
+    def test_invalid_website_port_is_rejected_before_approval(self):
+        self.capabilities.append("action.execute")
+        decision = self.route("Open https://example.com:99999/path")
+        self.assertEqual(decision.status, "invalid_request")
+        self.assertEqual(decision.reason_code, "invalid_website_url")
+        self.assertFalse(decision.requires_approval)
+
+    def test_oversized_website_url_is_rejected_before_approval(self):
+        self.capabilities.append("action.execute")
+        decision = self.route("Open https://example.com/" + "a" * 2050)
+        self.assertEqual(decision.status, "invalid_request")
+        self.assertEqual(decision.reason_code, "invalid_website_url")
+
+    def test_valid_website_still_requires_security_approval(self):
+        self.capabilities.append("action.execute")
+        decision = self.route("Open https://example.com/search?q=why?")
+        self.assertEqual((decision.module, decision.action), ("security", "assess"))
+        self.assertTrue(decision.requires_approval)
+
 
 if __name__ == "__main__":
     unittest.main()

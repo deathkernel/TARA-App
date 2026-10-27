@@ -27,12 +27,16 @@ TARA-App is being consolidated as a single Python monorepo. The current integrat
 - `tara_memory`: local SQLite memory; write and delete requests require Security review and per-request approval.
 - `tara_creative`: local Ollama writing, with no paid inference provider.
 - `tara_security`: deterministic policy assessment for sensitive capabilities.
-- `tara_action`: optional GitHub issue creation through the public API, gated by credentials, a repository allowlist, Security review, and explicit approval.
+- `tara_action`: local desktop and browser actions plus optional GitHub issue creation; every action is gated by TARA-Security and explicit approval, while GitHub writes also require credentials and a repository allowlist.
 - `tara_voice`: optional faster-whisper transcription when compatible wheels are available; read-aloud uses installed local browser voices.
 - `tara_vision`: local Ollama image analysis; images stay on the device.
 - `tara_data`: deterministic, read-only CSV summaries.
 
 TARA-Handler's C++17 source is included in TARA-App. The launchers explicitly prepare its optional native diagnostic before starting the app; only the environment-diagnosis command is exposed. If CMake or a C++ compiler is unavailable, the app uses read-only Python diagnostics. GitHub issue creation remains inactive until local credentials and a repository allowlist are configured.
+
+### Personal desktop automation
+
+TARA can open Calculator, Notepad, and Paint, or open an HTTP(S) website in the default browser. Commands such as `Open Calculator`, `Notepad kholo`, and `Open https://example.com` are routed to TARA-Security and require a one-operation approval before launch. Each app maps to a fixed operating-system command; website addresses are validated and handed to the system browser. If an app or browser is unavailable, TARA reports that instead of claiming success.
 
 ## Target architecture
 

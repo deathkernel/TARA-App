@@ -500,6 +500,13 @@
     if (data.operation === "github.issue.create" && Number.isInteger(data.issue_number)) {
       return "Created GitHub issue #" + data.issue_number + " in " + data.repository + ": " + data.title;
     }
+    if (data.operation === "desktop.app.open" && typeof data.application === "string") {
+      const labels = { calculator: "Calculator", notepad: "Notepad", paint: "Paint" };
+      return "Opened " + (labels[data.application] || "the app") + ".";
+    }
+    if (data.operation === "desktop.url.open" && typeof data.url === "string") {
+      return "Opened " + data.url + " in your browser.";
+    }
     if (data.stored === true) return 'Saved the note under "' + data.key + '" in TARA-Memory.';
     if (typeof data.forgotten === "boolean") return data.forgotten ? 'Forgot "' + data.key + '" from TARA-Memory.' : 'No saved note matched "' + data.key + '".';
     if (Array.isArray(data.memories)) {
