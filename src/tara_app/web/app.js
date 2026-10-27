@@ -5,6 +5,8 @@
   const welcome = document.querySelector("#welcome");
   const fileInput = document.querySelector("#files");
   const fileList = document.querySelector("#file-list");
+  const MAX_ATTACHMENT_BYTES = 10_000_000;
+  const MAX_TOTAL_ATTACHMENT_BYTES = 10_000_000;
   const send = document.querySelector("#send");
   const AUDIO_MEDIA_TYPES = new Set(["audio/mpeg", "audio/wav", "audio/mp4", "audio/webm", "audio/ogg", "audio/flac", "audio/aac"]);
   const AUDIO_SUFFIX_TYPES = { ".mp3": "audio/mpeg", ".wav": "audio/wav", ".m4a": "audio/mp4", ".mp4": "audio/mp4", ".webm": "audio/webm", ".ogg": "audio/ogg", ".flac": "audio/flac", ".aac": "audio/aac" };
@@ -469,12 +471,12 @@
         codeExtensions.has(name.slice(name.lastIndexOf(".")));
     };
     const additions = Array.from(fileInput.files || []);
-    const rejected = additions.filter(file => !allowed(file) || file.size > 512_000);
-    if (rejected.length) addMessage("answer", "Attach images, CSV, source-code files, or MP3, WAV, M4A/MP4, WebM, OGG, FLAC, or AAC audio up to 512 KB each.");
+    const rejected = additions.filter(file => !allowed(file) || file.size > MAX_ATTACHMENT_BYTES);
+    if (rejected.length) addMessage("answer", "Attach images, CSV, source-code files, or supported audio files up to 10 MB each.");
     let totalBytes = selectedFiles.reduce((total, file) => total + file.size, 0);
-    for (const file of additions.filter(allowed).filter(file => file.size <= 512_000)) {
+    for (const file of additions.filter(allowed).filter(file => file.size <= MAX_ATTACHMENT_BYTES)) {
       if (selectedFiles.length >= 4) break;
-      if (totalBytes + file.size > 512_000) {
+      if (totalBytes + file.size > MAX_ATTACHMENT_BYTES) {
         addMessage("answer", "The combined attachment limit is 512 KB per message.");
         continue;
       }
