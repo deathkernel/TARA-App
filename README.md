@@ -161,13 +161,15 @@ TARA-App now includes the local Router, Chat, Code, Planner, Memory, Creative, S
 The launcher creates a local virtual environment, installs this repository, creates `tara-app.toml` from the example when needed, prepares the optional native Handler diagnostic, and starts TARA-App. TARA-App starts or reuses Ollama and prepares the Chat model before showing the ready message. The first launch may download Chat; other specialist models download only when that specialist is first selected.
 
 
-### Run on macOS or Linux
+### Run on Linux
 
 1. Install Python 3.11 or newer and Ollama once.
 2. Clone this repository.
 3. Run `./run-tara.sh` from the repository folder.
 
 The script creates a virtual environment, installs TARA-App, initializes the local config, explicitly prepares the optional native Handler diagnostic, and starts the app. If a local CMake/C++ toolchain is missing, Handler keeps working through the read-only Python fallback.
+
+> **Platform scope:** Windows and Linux are the current TARA-App targets. macOS is outside the supported/tested target matrix unless the project scope is explicitly changed.
 
 ### Run from a terminal
 
