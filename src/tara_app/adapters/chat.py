@@ -25,6 +25,9 @@ class TaraChatAdapter:
         if request.capability != "chat.reply":
             return SpecialistResult(request.request_id, "unsupported_capability")
         payload = request.payload
+        if not isinstance(payload, dict):
+            return SpecialistResult(request.request_id, "invalid_request",
+                                    warnings=("payload must be an object",))
         session_id = payload.get("session_id")
         messages = payload.get("messages")
         if not isinstance(session_id, str) or not session_id.strip():

@@ -26,18 +26,24 @@ class OllamaModel:
 class OllamaProvider:
     """Talk to Ollama on 127.0.0.1 only; no remote endpoint configuration."""
 
-    def __init__(self, port: int = 11434, timeout_seconds: float = 10.0) -> None:
+    def __init__(self, port: int = 11434, timeout_seconds: float = 10.0, chat_timeout_seconds: float = 120.0) -> None:
         if isinstance(port, bool) or not isinstance(port, int) or not 1 <= port <= 65535:
             raise ValueError("port must be an integer between 1 and 65535")
         if isinstance(timeout_seconds, bool) or not isinstance(timeout_seconds, (int, float)):
             raise ValueError("timeout_seconds must be numeric")
         if not 1 <= timeout_seconds <= 120:
             raise ValueError("timeout_seconds must be between 1 and 120")
+        if isinstance(chat_timeout_seconds, bool) or not isinstance(chat_timeout_seconds, (int, float)):
+            raise ValueError("chat_timeout_seconds must be numeric")
+        if not 1 <= chat_timeout_seconds <= 600:
+            raise ValueError("chat_timeout_seconds must be between 1 and 600")
         self._port = port
         self._timeout = float(timeout_seconds)
+        self._chat_timeout = float(chat_timeout_seconds)
 
-    def _request(self, path: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        connection = http.client.HTTPConnection("127.0.0.1", self._port, timeout=self._timeout)
+    def _request(self, path: str, payload: dict[str, Any] | None = None, *, timeout_seconds: float | None = None) -> dict[str, Any]:
+        timeout = self._timeout if timeout_seconds is None else timeout_seconds
+        connection = http.client.HTTPConnection("127.0.0.1", self._port, timeout=timeout)
         body = None if payload is None else json.dumps(payload)
         headers = {"Accept": "application/json"}
         if body is not None:
@@ -104,7 +110,7 @@ class OllamaProvider:
             for message in messages
         ):
             raise ValueError("messages must contain role/content string pairs")
-        response = self._request("/api/chat", {"model": model, "messages": messages, "stream": False})
+        response = self._request("/api/chat", {"model": model, "messages": messages, "stream": False}, timeout_seconds=self._chat_timeout)
         message = response.get("message")
         if not isinstance(message, dict) or not isinstance(message.get("content"), str):
             raise ProviderError("Ollama chat response has an unexpected shape")

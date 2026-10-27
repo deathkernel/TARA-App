@@ -48,6 +48,6 @@ class PermissionPolicy:
             return PermissionDecision(PermissionAction.DENY, capability, "Capability is disabled by safety policy")
         if capability not in self.allowed_capabilities:
             return PermissionDecision(PermissionAction.DENY, capability, "Capability is not explicitly allowlisted")
-        if capability in self.approval_required and not approved:
+        if capability in self.approval_required and approved is not True:
             return PermissionDecision(PermissionAction.REQUIRE_APPROVAL, capability, "Explicit user approval is required")
         return PermissionDecision(PermissionAction.ALLOW, capability, "Capability is allowed by local policy")

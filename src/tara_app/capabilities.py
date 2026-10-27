@@ -25,7 +25,7 @@ class CapabilityRegistry:
     """In-memory registry; it never discovers or launches arbitrary executables."""
 
     def __init__(self) -> None:
-        self._adapters: dict[str, tuple[SpecialistAdapter, frozenset[str]]] = {}
+        self._adapters: dict[str, tuple[SpecialistAdapter, frozenset[str], frozenset[str]]] = {}
         self._lock = RLock()
 
     def register(self, adapter: SpecialistAdapter, capabilities: tuple[str, ...], *, enabled: bool = False) -> None:
@@ -44,7 +44,8 @@ class CapabilityRegistry:
         with self._lock:
             if specialist_id in self._adapters:
                 raise CapabilityRegistryError(f"specialist {specialist_id!r} is already registered")
-            self._adapters[specialist_id] = (adapter, frozenset(capabilities) if enabled else frozenset())
+            declared = frozenset(capabilities)
+            self._adapters[specialist_id] = (adapter, declared, declared if enabled else frozenset())
 
     def set_enabled(self, specialist_id: str, enabled: bool) -> None:
         if type(enabled) is not bool:
@@ -53,12 +54,8 @@ class CapabilityRegistry:
             current = self._adapters.get(specialist_id)
             if current is None:
                 raise CapabilityRegistryError("specialist is not registered")
-            adapter, capabilities = current
-            # Original declared capabilities are retained separately in the descriptor map.
-            declared = getattr(adapter, "capabilities", None)
-            if not isinstance(declared, (list, tuple, set, frozenset)):
-                declared = capabilities
-            self._adapters[specialist_id] = (adapter, frozenset(declared) if enabled else frozenset())
+            adapter, declared, _enabled_capabilities = current
+            self._adapters[specialist_id] = (adapter, declared, declared if enabled else frozenset())
 
     def describe(self) -> list[CapabilityDescriptor]:
         with self._lock:
@@ -69,7 +66,7 @@ class CapabilityRegistry:
                     contract_version=getattr(adapter, "contract_version", SPECIALIST_CONTRACT_VERSION),
                     enabled=bool(capabilities),
                 )
-                for specialist_id, (adapter, capabilities) in sorted(self._adapters.items())
+                for specialist_id, (adapter, _declared, capabilities) in sorted(self._adapters.items())
             ]
 
     def dispatch(self, specialist_id: str, request: SpecialistRequest) -> SpecialistResult:
