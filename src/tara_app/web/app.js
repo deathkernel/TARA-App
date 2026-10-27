@@ -402,6 +402,27 @@
     pre.textContent = JSON.stringify(safePayload, null, 2);
     details.append(summary, pre);
     article.append(routeLine, bubble);
+    if (payload?.status === "success" && typeof window.speechSynthesis !== "undefined") {
+      const speak = document.createElement("button");
+      speak.type = "button";
+      speak.className = "read-aloud-button";
+      speak.textContent = route.module === "voice" && route.action === "speak" ? "Play with local voice" : "Read aloud locally";
+      speak.addEventListener("click", () => {
+        const localVoices = window.speechSynthesis.getVoices().filter(voice => voice.localService === true);
+        if (!localVoices.length) {
+          speak.textContent = "No local speech voice available";
+          speak.disabled = true;
+          return;
+        }
+        const utterance = new SpeechSynthesisUtterance(resultText(payload).slice(0, 5000));
+        const language = (navigator.language || "").split("-")[0].toLowerCase();
+        utterance.voice = localVoices.find(voice => voice.lang.toLowerCase().startsWith(language)) || localVoices[0];
+        utterance.lang = utterance.voice.lang;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utterance);
+      });
+      article.append(speak);
+    }
     const approvalId = payload?.result?.data?.approval_id;
     if (payload?.status === "approval_required" && typeof approvalId === "string") {
       const card = document.createElement("section");
