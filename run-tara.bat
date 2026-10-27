@@ -21,6 +21,16 @@ if errorlevel 1 (
   exit /b 1
 )
 
+".venv\Scripts\python.exe" -c "import sys; raise SystemExit(0 if sys.version_info < (3, 15) else 1)"
+if errorlevel 1 (
+  echo Skipping optional Voice transcription dependencies on Python 3.15 or newer.
+) else (
+  ".venv\Scripts\python.exe" -m pip install -e ".[voice]"
+  if errorlevel 1 (
+    echo Voice transcription dependencies are unavailable; the rest of TARA-App will continue.
+  )
+)
+
 if not exist "tara-app.toml" (
   copy "tara-app.example.toml" "tara-app.toml" >nul
 )
