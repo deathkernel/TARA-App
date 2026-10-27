@@ -20,6 +20,14 @@ def main() -> int:
         app = create_application(args.config)
         if app.model_catalog is not None:
             app.model_catalog.ensure_service_started()
+            if "chat" in app.model_catalog.profiles:
+                print("Preparing TARA's local chat model before the app opens. The first launch may take longer.", flush=True)
+                try:
+                    app.model_catalog.ensure_model_installed("chat")
+                    app.model_catalog.preload_model("chat", keep_alive="15m")
+                    print("TARA's chat model is ready.", flush=True)
+                except RuntimeError:
+                    print("TARA-App will start, but the chat model could not be prepared. Check the Models panel.", file=sys.stderr, flush=True)
         serve(app, port=args.port)
     except (RuntimeConfigurationError, OSError, RuntimeError, ValueError) as exc:
         print(f"TARA-App could not start: {exc}", file=sys.stderr)

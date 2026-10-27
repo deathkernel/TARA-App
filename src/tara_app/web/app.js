@@ -954,6 +954,23 @@
   });
   modelsRefresh.addEventListener("click", refreshModelStatus);
 
+  function addThinkingIndicator() {
+    const article = addMessage("answer", "", false);
+    const bubble = article.querySelector(".bubble");
+    const indicator = document.createElement("div");
+    indicator.className = "thinking-indicator";
+    indicator.setAttribute("role", "status");
+    indicator.setAttribute("aria-label", "TARA is thinking");
+    indicator.setAttribute("aria-live", "polite");
+    for (let index = 0; index < 3; index += 1) {
+      const dot = document.createElement("span");
+      dot.setAttribute("aria-hidden", "true");
+      indicator.append(dot);
+    }
+    bubble.append(indicator);
+    return article;
+  }
+
   async function requestPrompt(prompt, files, history, addUser) {
     if (addUser) addMessage("user", prompt, true, { hasAttachments: files.length > 0 });
     welcome.hidden = true;
@@ -963,7 +980,7 @@
     setConversationNavigationDisabled(true);
     const pendingFiles = files.splice(0);
     updateFiles();
-    const waiting = addMessage("answer", "TARA is selecting a specialist and preparing its local model if needed...", false);
+    const waiting = addThinkingIndicator();
     try {
       const attachments = await Promise.all(pendingFiles.map(encodeFile));
       const response = await fetch("/api/chat", {

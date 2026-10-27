@@ -288,6 +288,42 @@ class OllamaModelCatalog:
             raise RuntimeError("local Ollama did not confirm the model unload")
         return {"status": "unloaded", "specialist": specialist, "model": model}
 
+    def preload_model(self, specialist: Any, *, keep_alive: str = "15m") -> dict[str, str]:
+        """Load an installed local model before the first user request."""
+        if not isinstance(specialist, str) or specialist not in self.profiles:
+            raise ValueError("specialist is not a configured local model profile")
+        if self.base_url is None:
+            raise RuntimeError("local Ollama is not configured")
+        if keep_alive not in {"5m", "10m", "15m", "30m"}:
+            raise ValueError("keep_alive is outside the supported warm-up options")
+        model = self.profiles[specialist]
+        installed = self._installed_models()
+        if installed is None or model not in installed:
+            raise RuntimeError("the configured local model is not installed")
+        request = Request(
+            self.base_url + "/api/generate",
+            data=json.dumps(
+                {"model": model, "prompt": "", "stream": False, "keep_alive": keep_alive},
+                separators=(",", ":"),
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json", "Accept": "application/json"},
+            method="POST",
+        )
+        try:
+            with build_opener(ProxyHandler({}), _NoRedirect()).open(request, timeout=300) as response:
+                raw = response.read(_MAX_RESPONSE_BYTES + 1)
+        except (HTTPError, URLError, TimeoutError, OSError) as exc:
+            raise RuntimeError("local Ollama could not warm the configured model") from exc
+        if len(raw) > _MAX_RESPONSE_BYTES:
+            raise RuntimeError("local Ollama returned an oversized warm-up response")
+        try:
+            payload = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise RuntimeError("local Ollama returned an invalid warm-up response") from exc
+        if not isinstance(payload, Mapping) or payload.get("done") is not True:
+            raise RuntimeError("local Ollama did not confirm the model warm-up")
+        return {"status": "ready", "specialist": specialist, "model": model}
+
     def remove_model(self, specialist: Any) -> dict[str, str]:
         with self._lifecycle_lock:
             return self._remove_model_locked(specialist)
