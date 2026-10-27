@@ -422,11 +422,43 @@ class Orchestrator:
             return f"Delete the local memory entry named '{inputs.get('key', '')}'."
         if module == "action" and action == "execute" and inputs.get("operation") == "github.issue.create":
             return f"Create a GitHub issue in {inputs.get('repository')} titled '{inputs.get('title')}'."
+        if module == "action" and action == "execute" and inputs.get("operation") == "desktop.app.open":
+            label = {"calculator": "Calculator", "notepad": "Notepad", "paint": "Paint"}.get(inputs.get("application"), "the requested app")
+            return f"Open {label} on this computer."
+        if module == "action" and action == "execute" and inputs.get("operation") == "desktop.url.open":
+            return f"Open this website in your browser: {inputs.get('url')}."
         return f"Run {module}.{action} once."
 
     @staticmethod
     def _add_approval_inputs(inputs: dict[str, Any], module: str, action: str, question: str, request_id: str) -> None:
         if module == "action" and action == "execute":
+            app_match = re.fullmatch(
+                r"\s*(?:(?:please\s+)?(?:open|launch|start)\s+(?:the\s+)?(?P<app>calculator|calc|notepad|text editor|paint|mspaint)|"
+                r"(?P<app_hindi>calculator|calc|notepad|paint)\s+(?:kholo|khol(?:o)?|open\s+karo|start\s+karo))\s*[.!]?\s*",
+                question,
+                flags=re.IGNORECASE,
+            )
+            if app_match is not None:
+                requested_app = (app_match.group("app") or app_match.group("app_hindi")).casefold()
+                application = {
+                    "calc": "calculator", "calculator": "calculator",
+                    "notepad": "notepad", "text editor": "notepad",
+                    "paint": "paint", "mspaint": "paint",
+                }[requested_app]
+                inputs.update({"operation": "desktop.app.open", "application": application})
+                return
+            website_match = re.fullmatch(
+                r"""\s*(?:please\s+)?(?:open|visit|go\s+to|browse|kholo|khol(?:o)?)\s+(?:the\s+)?"""
+                r"""(?P<url>https?://[^\s<>\"']+|www\.[^\s<>\"']+|[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}\.)+[A-Za-z]{2,63}(?::\d{1,5})?(?:[/?#][^\s<>\"']*)?)\s*[.!?]?\s*""",
+                question,
+                flags=re.IGNORECASE,
+            )
+            if website_match is not None:
+                url = website_match.group("url").rstrip(".,!?;:")
+                if not url.casefold().startswith(("http://", "https://")):
+                    url = "https://" + url
+                inputs.update({"operation": "desktop.url.open", "url": url})
+                return
             match = re.fullmatch(
                 r"\s*(?:create|open)\s+(?:a\s+)?(?:github\s+)?issue\s+in\s+([A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100})\s*(?::|with title\s+|titled\s+)(.+?)\s*",
                 question,
