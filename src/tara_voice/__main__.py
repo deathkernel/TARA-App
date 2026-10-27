@@ -23,6 +23,7 @@ def main():
         status,data,error=execute(action,inputs,approval_token=req.get("approval_token"))
         if not isinstance(data,dict): raise ValueError("invalid result data")
     except ValueError as exc: status,data,error="invalid_request",{},str(exc)[:500]
+    except RuntimeError as exc: status,data,error="unavailable",{},str(exc)[:500]
     except Exception: status,data,error="failed",{},"module operation failed"
     _reply(rid,status,data,error,max(0,int((time.monotonic()-start)*1000)));return 0
 if __name__=="__main__": raise SystemExit(main())

@@ -28,7 +28,7 @@ TARA-App is being consolidated as a single Python monorepo. The current integrat
 - `tara_creative`: local Ollama writing, with no paid inference provider.
 - `tara_security`: deterministic policy assessment for sensitive capabilities.
 - `tara_action`: optional GitHub issue creation through the public API, gated by credentials, a repository allowlist, Security review, and explicit approval.
-- `tara_voice`: local faster-whisper transcription; read-aloud uses installed local browser voices.
+- `tara_voice`: optional faster-whisper transcription when compatible wheels are available; read-aloud uses installed local browser voices.
 - `tara_vision`: local Ollama image analysis; images stay on the device.
 - `tara_data`: deterministic, read-only CSV summaries.
 
@@ -115,7 +115,7 @@ TARA-App is the only user-facing process. It starts or reuses the local Ollama s
 
 These are free-to-download model weights served locally by Ollama; no paid inference API is configured. Model names can be changed in `[ollama.models]`. The app does not preload models at startup. Ollama may keep a recently used model in memory during its idle period.
 
-Research uses Crossref and Wikipedia public APIs for source records. No API key is required and no paid model is called. A research query is sent to those public services when Research is selected. Voice transcription uses local faster-whisper weights downloaded on first audio use; audio is processed on-device. Read-aloud uses only browser voices marked local.
+Research uses Crossref and Wikipedia public APIs for source records. No API key is required and no paid model is called. A research query is sent to those public services when Research is selected. Voice transcription uses the optional local faster-whisper package and weights; audio is processed on-device. The launcher skips that optional package on Python 3.15 or newer, so other app features still install. Read-aloud uses only browser voices marked local.
 
 ## Target integration contracts
 
@@ -137,7 +137,7 @@ A result should include `schema_version`, `request_id`, `ok`, `status`, structur
 
 ## Local development
 
-TARA-App now includes the local Router, Chat, Code, Planner, Memory, Creative, Security, Action, Data, Vision, Voice, and Research packages in the same repository. Chat and Code remain distinct specialists. Code suggestions and plans are data only; the current module does not run commands or modify a workspace. Voice transcription uses local faster-whisper weights, and read-aloud uses installed local browser voices. Vision and Creative use local Ollama models; Data performs bounded, read-only CSV analysis.
+TARA-App now includes the local Router, Chat, Code, Planner, Memory, Creative, Security, Action, Data, Vision, Voice, and Research packages in the same repository. Chat and Code remain distinct specialists. Code suggestions and plans are data only; the current module does not run commands or modify a workspace. Voice transcription uses the optional local faster-whisper package when the Python runtime supports its dependencies; read-aloud uses installed local browser voices. Vision and Creative use local Ollama models; Data performs bounded, read-only CSV analysis.
 
 ### Run on Windows
 
@@ -160,12 +160,18 @@ The script creates a virtual environment, installs TARA-App, initializes the loc
 
 ```bash
 python -m pip install -e .
+python -m pip install -e ".[voice]"  # optional; omit on Python 3.15+
 cp tara-app.example.toml tara-app.toml
 python -m tara_app.handler_launcher prepare  # optional native C++ diagnostic; safe fallback works without it
 python -m tara_app --config tara-app.toml
 ```
 
 On Windows PowerShell, use `Copy-Item tara-app.example.toml tara-app.toml` in place of `cp`. The app binds to loopback. The Handler preparation command is explicit; normal app execution never builds native code. Research sends only the requested search text to Crossref and Wikipedia; it returns source links and snippets for review.
+
+
+### Python 3.15 and Voice transcription
+
+If installation previously stopped with `No matching distributions found for onnxruntime`, pull the latest `main` branch and rerun `run-tara.bat`. The core app no longer requires faster-whisper. The launcher skips its Voice transcription dependency on Python 3.15 or newer (and continues if optional Voice installation fails); Chat, Code, Vision, and other app features can still run. Local audio transcription needs a Python version with compatible faster-whisper/onnxruntime packages. Browser read-aloud remains available locally.
 
 ### Consolidation status
 
