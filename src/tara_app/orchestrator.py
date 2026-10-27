@@ -12,6 +12,7 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from threading import RLock
 from typing import Any, Mapping, Sequence
+from urllib.parse import urlsplit
 from uuid import uuid4
 
 from tara_app.adapters import RouterClient
@@ -454,9 +455,28 @@ class Orchestrator:
                 flags=re.IGNORECASE,
             )
             if website_match is not None:
-                url = website_match.group("url").rstrip(".,!?;:")
-                if not url.casefold().startswith(("http://", "https://")):
-                    url = "https://" + url
+                raw_url = website_match.group("url")
+                # Preserve punctuation in explicit URLs: it can be meaningful in
+                # query values/fragments. Only trim sentence punctuation from
+                # shorthand hosts where it cannot be part of an explicit URL.
+                if not raw_url.casefold().startswith(("http://", "https://")):
+                    raw_url = raw_url.rstrip(".,!?;:")
+                url = raw_url if raw_url.casefold().startswith(("http://", "https://")) else "https://" + raw_url
+                if len(url) > 2048 or any(ord(char) < 32 or ord(char) == 127 for char in url):
+                    raise ValueError("website address must contain 1 to 2048 valid characters")
+                try:
+                    parsed_url = urlsplit(url)
+                    port = parsed_url.port
+                except ValueError as exc:
+                    raise ValueError("website address is invalid") from exc
+                if (
+                    parsed_url.scheme.casefold() not in {"http", "https"}
+                    or not parsed_url.hostname
+                    or parsed_url.username is not None
+                    or parsed_url.password is not None
+                    or (port is not None and not 1 <= port <= 65535)
+                ):
+                    raise ValueError("only valid HTTP or HTTPS websites can be approved")
                 inputs.update({"operation": "desktop.url.open", "url": url})
                 return
             match = re.fullmatch(
