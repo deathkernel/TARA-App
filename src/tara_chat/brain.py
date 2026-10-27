@@ -1,4 +1,4 @@
-""""Conversation-only runtime for TARA."""
+"""Conversation-only runtime for TARA."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -122,3 +122,4 @@ class TARABrain:
             self.memory.remember(remember_key, prompt.strip(), importance=importance)
             self.memory.save()
         return BrainResponse(text=text.strip(), recalled=recalled)
+)
