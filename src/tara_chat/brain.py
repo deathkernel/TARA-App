@@ -122,4 +122,3 @@ class TARABrain:
             self.memory.remember(remember_key, prompt.strip(), importance=importance)
             self.memory.save()
         return BrainResponse(text=text.strip(), recalled=recalled)
-)
