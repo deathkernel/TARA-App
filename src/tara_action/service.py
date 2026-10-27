@@ -80,14 +80,9 @@ def _open_application(application: Any) -> tuple[str, dict[str, Any], str | None
             os.startfile(command[0])  # type: ignore[attr-defined]
         else:
             # Linux executable is resolved from a fixed per-app allowlist; no shell.
-            subprocess.Popen(
-                [executable, *command[1:]],
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                shell=False,
-                close_fds=True,
-            )
+            # spawnv does not invoke a shell; executable and argv are
+            # derived exclusively from the fixed _APP_COMMANDS allowlist.
+            os.spawnv(os.P_NOWAIT, executable, [executable, *command[1:]])
     except (OSError, ValueError, subprocess.SubprocessError):
         return "unavailable", {}, "the allowlisted application could not be opened"
     return "success", {"operation": "desktop.app.open", "application": application}, None
