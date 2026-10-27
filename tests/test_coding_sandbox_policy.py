@@ -10,7 +10,25 @@ class SandboxPolicyTests(unittest.TestCase):
         self.assertFalse(may_execute(caps, user_approved=False))
         self.assertTrue(may_execute(caps, user_approved=True))
 
-    def test_bounds_are_validated(self):
-        with self.assertRaises(ValueError): SandboxCapabilities(max_seconds=0)
+    def test_network_is_denied_unless_explicitly_enabled(self):
+        caps = SandboxCapabilities(isolated=True)
+        self.assertFalse(may_execute(caps, user_approved=True, requires_network=True))
+        enabled = SandboxCapabilities(isolated=True, network_enabled=True)
+        self.assertTrue(may_execute(enabled, user_approved=True, requires_network=True))
 
-if __name__ == "__main__": unittest.main()
+    def test_write_is_denied_unless_explicitly_enabled(self):
+        caps = SandboxCapabilities(isolated=True)
+        self.assertFalse(may_execute(caps, user_approved=True, requires_write=True))
+        enabled = SandboxCapabilities(isolated=True, write_enabled=True)
+        self.assertTrue(may_execute(enabled, user_approved=True, requires_write=True))
+
+    def test_capability_flags_must_be_booleans(self):
+        with self.assertRaises(ValueError):
+            SandboxCapabilities(isolated=1)
+
+    def test_bounds_are_validated(self):
+        with self.assertRaises(ValueError):
+            SandboxCapabilities(max_seconds=0)
+
+if __name__ == "__main__":
+    unittest.main()
