@@ -108,7 +108,7 @@ class TARAApplicationService:
             return ChatTurn(session_id, provider_id, model, message, response.strip())
         except ApplicationServiceError:
             raise
-        except (SessionError, RuntimeConfigurationError, AuditLogError, ValueError):
+        except (SessionError, RuntimeConfigurationError, AuditLogError, ValueError, RuntimeError):
             raise ApplicationServiceError("chat turn failed; inspect local provider status and session state") from None
 
     def dispatch_capability(self, request: CapabilityRequest) -> CapabilityResponse:
