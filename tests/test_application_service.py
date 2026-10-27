@@ -53,6 +53,41 @@ class ApplicationServiceTests(unittest.TestCase):
             self.service.chat(session_id=session.session_id, provider_id="ollama",
                               model="missing", message=" ")
 
+
+    def test_provider_failure_does_not_commit_partial_user_turn(self):
+        class FailingRuntime(FakeRuntime):
+            def chat(self, model, messages, provider_id="ollama"):
+                raise RuntimeError("provider unavailable")
+
+        self.service.runtime = FailingRuntime()
+        self.service.refresh_model_catalogue()
+        session = self.service.create_session()
+
+        with self.assertRaises(ApplicationServiceError):
+            self.service.chat(
+                session_id=session.session_id, provider_id="ollama",
+                model="test-model", message="first attempt",
+            )
+
+        self.assertEqual(self.service.sessions.history(session.session_id), [])
+
+    def test_empty_provider_response_does_not_commit_partial_user_turn(self):
+        class EmptyRuntime(FakeRuntime):
+            def chat(self, model, messages, provider_id="ollama"):
+                return "  "
+
+        self.service.runtime = EmptyRuntime()
+        self.service.refresh_model_catalogue()
+        session = self.service.create_session()
+
+        with self.assertRaises(ApplicationServiceError):
+            self.service.chat(
+                session_id=session.session_id, provider_id="ollama",
+                model="test-model", message="first attempt",
+            )
+
+        self.assertEqual(self.service.sessions.history(session.session_id), [])
+
     def test_close_session(self):
         session = self.service.create_session()
         self.assertTrue(self.service.close_session(session.session_id))
