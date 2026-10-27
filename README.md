@@ -127,7 +127,7 @@ Adapters should expose health, capabilities, and a structured execute operation.
 
 Use a versioned request with `schema_version`, `request_id`, `session_id`, `module`, `action`, structured `inputs`, `workspace_root` when applicable, `timeout_seconds`, and `approval_token` when a mutating operation requires approval.
 
-A result should include `schema_version`, `request_id`, `ok`, `status`, structured `data`, redacted `error`, duration, and audit references. Validate payload size, field types, allowable actions, workspace boundaries, and timeout limits before dispatch.
+A result should include `schema_version`, `request_id`, `ok`, `status`, structured `data`, redacted `error`, duration, and audit references. Validate payload size, field types, allowable actions, workspace boundaries, and timeout limits before dispatch. The serialized adapter-request payload limit is 50,000,000 bytes (about 50 MB) to accommodate larger attachment-bearing requests while retaining a hard resource bound; encoded attachment data may consume extra space.
 
 ## Initial milestones
 
