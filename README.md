@@ -32,7 +32,7 @@ TARA-App is being consolidated as a single Python monorepo. The current integrat
 - `tara_vision`: local Ollama image analysis; images stay on the device.
 - `tara_data`: deterministic, read-only CSV summaries.
 
-Voice and the native Handler implementation still need integration. The GitHub Action is inactive until credentials and a repository allowlist are configured.
+The native Handler implementation still needs integration. The GitHub Action remains inactive until credentials and a repository allowlist are configured.
 
 ## Target architecture
 
