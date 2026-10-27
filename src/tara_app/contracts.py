@@ -8,7 +8,9 @@ from dataclasses import dataclass, field
 from typing import Any, Mapping
 
 SCHEMA_VERSION = "1.0"
-MAX_PAYLOAD_BYTES = 1_000_000
+# Total serialized adapter-request payload limit. Allows larger attachments while
+# retaining a hard bound against resource exhaustion.
+MAX_PAYLOAD_BYTES = 50_000_000
 MAX_TIMEOUT_SECONDS = 600
 _NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_-]*$")
 
