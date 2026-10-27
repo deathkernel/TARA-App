@@ -31,9 +31,10 @@
       <section id="model-panel" class="model-panel" hidden aria-live="polite" aria-label="Local Ollama models">
         <div class="model-panel-header">
           <div>
-            <h2>Local models</h2>
-            <p id="model-service-status">TARA downloads only the model selected for a request when it is missing. Open this panel to view download progress. Downloads use disk and network.</p>
+            <h2>Local &amp; free models</h2>
+            <p id="model-service-status">This panel manages local Ollama models. Use the free Model Hub shortcut below to discover Gemini free-tier text models and OpenAI gpt-oss local options. Gemini prompts are sent to Google only when you explicitly select Gemini.</p>
           </div>
+          <button type="button" data-prompt="List all available free models">Free Model Hub</button>
           <button id="models-refresh" type="button">Refresh</button>
         </div>
         <ul id="model-list" class="model-list"></ul>
@@ -46,8 +47,14 @@
           <p>Chat, Code, Creative, and Vision use local models. Voice transcribes audio locally and can read answers aloud using installed device voices. Planner builds reviewable steps, Data reads CSV files, and Memory saves notes only after approval. Research can query public Crossref and Wikipedia APIs.</p>
           <div class="examples">
             <button type="button" data-prompt="Explain this concept in simple terms">Explain a concept</button>
+            <button type="button" data-prompt="Make notes from the attached chapter">Make study notes</button>
+            <button type="button" data-prompt="Create a quiz from the attached notes">Create a quiz</button>
+            <button type="button" data-prompt="Create flashcards from the attached notes">Make flashcards</button>
+            <button type="button" data-prompt="Create a 7 day study plan for biology">Study plan</button>
             <button type="button" data-prompt="Help me debug this code">Work on code</button>
             <button type="button" data-prompt="Research the latest sources about">Research a topic</button>
+            <button type="button" data-prompt="What's the weather like in Pune today?">Weather forecast</button>
+            <button type="button" data-prompt="List all available free models">Free model hub</button>
           </div>
         </article>
         <div id="messages" class="messages"></div>
@@ -55,7 +62,7 @@
 
       <form id="composer" class="composer">
         <label class="attachment-button" for="files" title="Attach an image, audio clip, CSV, or source-code file">+</label>
-        <input id="files" type="file" multiple accept="image/*,audio/*,.mp3,.wav,.m4a,.mp4,.webm,.ogg,.flac,.aac,audio/mpeg,audio/wav,audio/mp4,audio/webm,audio/ogg,audio/flac,audio/aac,.csv,text/csv,.py,.pyi,.js,.mjs,.cjs,.ts,.tsx,.jsx,.java,.go,.rs,.c,.h,.cc,.hh,.hpp,.cpp,.cxx,.cs,.rb,.php,.sh,.bash,.zsh,.ps1,.sql,.swift,.kt,.kts,.dart,.scala,.lua,.pl,.r" hidden>
+        <input id="files" type="file" multiple accept="image/*,audio/*,.txt,.md,.markdown,.rst,.pdf,application/pdf,text/plain,text/markdown,.mp3,.wav,.m4a,.mp4,.webm,.ogg,.flac,.aac,audio/mpeg,audio/wav,audio/mp4,audio/webm,audio/ogg,audio/flac,audio/aac,.csv,text/csv,.py,.pyi,.js,.mjs,.cjs,.ts,.tsx,.jsx,.java,.go,.rs,.c,.h,.cc,.hh,.hpp,.cpp,.cxx,.cs,.rb,.php,.sh,.bash,.zsh,.ps1,.sql,.swift,.kt,.kts,.dart,.scala,.lua,.pl,.r" hidden>
         <div class="input-wrap">
           <div id="edit-banner" class="edit-banner" hidden>
             <span id="edit-label">Editing your message</span>
@@ -65,7 +72,7 @@
           <textarea id="question" rows="1" maxlength="20000" placeholder="Message TARA..." aria-label="Message TARA"></textarea>
         </div>
         <button id="send" class="send-button" type="submit" aria-label="Send message">Send</button>
-        <p class="composer-note">Chat and Voice inference stays local. Research sends selected queries to public sources. Memory and GitHub changes require your approval.</p>
+        <p class="composer-note">Local inference stays on your device. Explicit Gemini requests send the prompt to Google; Weather uses public Open-Meteo endpoints. Free quotas and availability vary. Memory and GitHub changes require your approval.</p>
       </form>
       <footer>Chat and Code are separate specialists | TARA-App routes each request</footer>
     </main>

@@ -32,6 +32,12 @@ _POLICIES: dict[str, tuple[Capability, ...]] = {
     ),
     "vision": (Capability("vision", "analyze", "Analyze user supplied images using local inference", True),),
     "data": (Capability("data", "analyze", "Analyze bounded tabular input", True),),
+    "study": (Capability("study", "create", "Create source-grounded study notes, quizzes and flashcards or a bounded revision plan", True),),
+    "weather": (Capability("weather", "forecast", "Fetch current conditions and short forecasts from public Open-Meteo endpoints", True),),
+    "models": (
+        Capability("models", "catalog", "Discover free-tier Gemini text models and installed local models", True),
+        Capability("models", "generate", "Generate an answer with a selected free-tier Gemini model or installed local OpenAI gpt-oss model", True),
+    ),
     "creative": (Capability("creative", "write", "Generate writing using local inference", True),),
     "voice": (
         Capability("voice", "transcribe", "Transcribe user supplied audio", True),
@@ -40,7 +46,7 @@ _POLICIES: dict[str, tuple[Capability, ...]] = {
     "action": (Capability("action", "execute", "Open allowlisted local apps or websites and create allowlisted GitHub issues after explicit approval", False, True),),
     "handler": (Capability("handler", "diagnose", "Inspect the local developer environment", True),),
 }
-_REMOTE_MODULES = frozenset({"research", "voice"})
+_REMOTE_MODULES = frozenset({"research", "voice", "weather", "models"})
 _OLLAMA_DEFAULT_MODELS = {
     "chat": "llama3.2:3b",
     "code": "qwen2.5-coder:3b",

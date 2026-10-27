@@ -497,6 +497,15 @@
     return { name: file.name, media_type: audioTypeFor(file) || file.type || (file.name.toLowerCase().endsWith(".csv") ? "text/csv" : "application/octet-stream"), content_base64: encoded };
   }
 
+  function cleanAnswerText(value) {
+    return String(value || "")
+      .replace(/\r\n?/g, "\n")
+      .replace(/[\t ]+$/gm, "")
+      .replace(/^\s*([•●▪])\s+/gm, "- ")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
+
   function resultText(payload) {
     const data = payload?.result?.data || {};
     if (data.operation === "github.issue.create" && Number.isInteger(data.issue_number)) {
@@ -526,7 +535,7 @@
       return warnings.length ? planText + "\n\nNotes:\n" + warnings.join("\n") : planText;
     }
     for (const key of ["text", "summary", "description", "transcript"]) {
-      if (typeof data[key] === "string" && data[key]) return data[key];
+      if (typeof data[key] === "string" && data[key]) return cleanAnswerText(data[key]);
     }
     if (payload?.result?.error) return payload.result.error;
     if (payload?.status === "approval_required") return "TARA-Security reviewed this request. Nothing has run yet.";

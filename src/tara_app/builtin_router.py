@@ -16,6 +16,10 @@ _SIDE_EFFECT = re.compile(
 _CODE = re.compile(r"\b(?:code|coding|debug|bug|compile|refactor|function|class|script|program|repository|repo|pull request|test failure)\b", re.I)
 _RESEARCH = re.compile(r"\b(?:research|sources?|citations?|latest|current|recent|today|news|paper|studies|evidence|look up|search the web)\b", re.I)
 _PLANNER = re.compile(r"\b(?:plan|break down|roadmap|steps|schedule|milestones|prioritize)\b", re.I)
+_STUDY = re.compile(r"\b(?:study mode|make (?:me )?(?:notes|a quiz|flashcards?)|create (?:notes|a quiz|flashcards?)|generate (?:notes|a quiz|flashcards?)|(?:mcq|flashcards?) from|study plan|revision plan|quiz me on|summari[sz]e (?:this|these|the chapter|the notes))\b", re.I)
+_WEATHER = re.compile(r"\b(?:weather|forecast|temperature|rain(?:\s+chance)?|humidity|wind speed)\b", re.I)
+_MODELS_CATALOG = re.compile(r"\b(?:list|show|discover|available|catalogue|catalog)\b.{0,35}\b(?:models?|gemini|gpt-oss|openai)\b|\b(?:models?|gemini|gpt-oss)\b.{0,35}\b(?:free|available|catalogue|catalog)\b", re.I)
+_MODELS_USE = re.compile(r"\b(?:use|switch to|try|ask|run with)\s+(?:(?:the|openai)\s+)?(?P<model>gemini(?:-[a-z0-9.-]+)?|gpt-oss(?::[a-z0-9.-]+)?)\b", re.I)
 _CREATIVE = re.compile(r"\b(?:poem|story|lyrics|brainstorm|creative|rewrite|draft|write a|compose)\b", re.I)
 _MEMORY_STORE = re.compile(r"\b(?:remember|save to memory|store this)\b", re.I)
 _MEMORY_FORGET = re.compile(r"\b(?:forget|delete from memory|remove memory)\b", re.I)
@@ -142,6 +146,11 @@ class BuiltinRouter:
         elif any(kind.startswith("text/") or kind in {"application/octet-stream", "application/json"} for kind in media):
             target = ("code", "plan", "source_attachment", "Source files were attached.")
 
+        # Explicit study intent must take precedence over the generic text-attachment
+        # route so uploaded notes are passed to TARA-Study rather than TARA-Code.
+        if _STUDY.search(normalized):
+            target = ("study", "create", "study_intent", "The request asks for study notes, a quiz, flashcards, or a revision plan.")
+
         if target is None:
             if _MEMORY_STORE.search(normalized):
                 target = ("memory", "store", "memory_write", "The user requested explicit memory storage.")
@@ -151,6 +160,14 @@ class BuiltinRouter:
                 target = ("memory", "search", "memory_lookup", "The user asked about saved memory.")
             elif _VOICE_SPEAK.search(normalized):
                 target = ("voice", "speak", "read_aloud", "The user asked for local read-aloud.")
+            elif _MODELS_CATALOG.search(normalized):
+                target = ("models", "catalog", "model_catalog", "The user asks to discover available free-first models.")
+            elif _MODELS_USE.search(normalized):
+                target = ("models", "generate", "model_selection", "The user explicitly selected a model provider.")
+            elif _WEATHER.search(normalized):
+                target = ("weather", "forecast", "weather_lookup", "The user asks for current weather or a forecast.")
+            elif _STUDY.search(normalized):
+                target = ("study", "create", "study_intent", "The request asks for study notes, a quiz, flashcards, or a revision plan.")
             elif _RESEARCH.search(normalized):
                 target = ("research", "answer", "research_intent", "The request asks for current or sourced information.")
             elif _PLANNER.search(normalized):

@@ -622,6 +622,16 @@ class Orchestrator:
                 and item.get("content_base64")
             ][:1]
             return [dict(item) for item in audio]
+        if module == "study" and action == "create":
+            study_files = [
+                item for item in attachments
+                if item.get("content_base64") and (
+                    item.get("name", "").casefold().endswith((".txt", ".md", ".markdown", ".rst", ".csv", ".pdf"))
+                    or item.get("media_type", "").casefold().startswith("text/")
+                    or item.get("media_type", "").casefold() == "application/pdf"
+                )
+            ][:4]
+            return [dict(item) for item in study_files]
         if module == "data" and action == "analyze":
             csv_files = [
                 item for item in attachments

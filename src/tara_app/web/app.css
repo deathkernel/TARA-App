@@ -60,11 +60,16 @@ button, textarea { font: inherit; }
 .examples button { padding: 9px 12px; border: 1px solid #363943; border-radius: 12px; background: #191b20; color: #c3c5cd; cursor: pointer; }
 .examples button:hover { border-color: #78659a; color: var(--text); }
 .messages { width: 100%; padding: 26px 0; }
-.message { max-width: 790px; margin: 0 auto 23px; }
+.message { max-width: 900px; margin: 0 auto 25px; }
 .message.user { display: flex; justify-content: flex-end; }
 .bubble { max-width: min(82%, 700px); padding: 13px 16px; border: 1px solid var(--line); border-radius: 18px; background: var(--panel); white-space: pre-wrap; overflow-wrap: anywhere; }
 .user .bubble { border-color: #40364f; border-bottom-right-radius: 5px; background: #241f2d; }
-.answer .bubble { border-bottom-left-radius: 5px; }
+.answer .bubble { width: 100%; max-width: 100%; border-bottom-left-radius: 5px; padding: 19px 23px; }
+.answer-content { line-height: 1.72; }
+.markdown-content p { max-width: 78ch; }
+.markdown-content ul, .markdown-content ol { max-width: 82ch; }
+.markdown-content h1 { letter-spacing: -.02em; }
+.markdown-content h2 { padding-bottom: 4px; border-bottom: 1px solid var(--line); }
 .route { display: flex; align-items: center; gap: 8px; margin: 0 0 7px 5px; color: var(--muted); font-size: 11px; }
 .route strong { color: var(--accent); font-weight: 600; }
 .status { padding: 2px 7px; border: 1px solid #3c404a; border-radius: 10px; }
