@@ -45,7 +45,7 @@ Use these status labels carefully:
 
 | Area | Current documented scope | Important limit / verification gap |
 |---|---|---|
-| App and launchers | Python app; Windows `run-tara.bat`; macOS/Linux `run-tara.sh`; local configuration from `tara-app.example.toml` | Fresh installation and launch must be smoke-tested on a target computer |
+| App and launchers | Python app; Windows `run-tara.bat`; Linux `run-tara.sh`; local configuration from `tara-app.example.toml` | Windows/Linux are the current targets; fresh installation and launch still need target-machine smoke tests. macOS is outside the current target scope. |
 | Chat UI | Markdown replies, safe link handling, copy, edit/resend, regenerate, conversation context | Attached-file prompts have editing/regeneration limitations; browser visual QA is not established by docs alone |
 | Router and specialists | Local deterministic Router; Chat, Code, Planner, Creative, Security, Action, Memory, Research, Data, Vision, Voice, Study, Weather and Models areas are documented | Confirm each route and dependency against current code/tests; do not infer all are production-ready from the module list |
 | Local inference | Ollama profiles documented for Chat, Creative, Code and Vision; specialist models may be pulled on first use | Actual model download, hardware fit, latency, RAM/VRAM use and first response need machine-level verification |
@@ -84,6 +84,8 @@ This is a concise history of significant milestones visible in the repository's 
 | PR #23 — fail-closed coding sandbox capabilities | Added enforcement for declared sandbox capabilities and tests | Capability gates are valuable, but **not equivalent to a real OS/container sandbox** |
 | PR #24 — structured answers and monochrome chat UI | Improved structured responses and chat styling | UI changes need regression and browser verification |
 | PR #25 — chat workspace redesign | Redesigned sidebar, conversation area, welcome state, messages, composer and responsive CSS | CSS redesign is merged; visual/browser QA and any remaining parity work are still to be evidenced |
+| [PR #26 — living project roadmap](https://github.com/deathkernel/TARA-App/pull/26) | Added newcomer-friendly history, dependency-ordered roadmap, and scheduled-task evidence rules | Merged as `4d4c225aeba422cd30dfc272ca67d32bba942129` |
+| [PR #27 — structured TARA answers](https://github.com/deathkernel/TARA-App/pull/27) | Added task-adaptive response guidance and focused answer-style tests; fixed a syntax error found by CI before merge | PR CI passed on head `dd2f87295c6be934f867e96b4976dc592c575447`; merged as `c8b484c977ca31ac4f8396bd20c090fe580299ea` |
 
 Useful history links:
 
@@ -95,6 +97,8 @@ Useful history links:
 - [PR #23 merge commit](https://github.com/deathkernel/TARA-App/commit/9b1b1c7a20e2955db0ddffac4bc5939a873b8be7)
 - [PR #24 commit](https://github.com/deathkernel/TARA-App/commit/34da3dc38b5b2d7b9fd3bf7d423d42faddcf18d3)
 - [PR #25 commit](https://github.com/deathkernel/TARA-App/commit/c65f2ed2c980aa457b847bbb75ce768e002f5f44)
+- [PR #26 merge commit](https://github.com/deathkernel/TARA-App/commit/4d4c225aeba422cd30dfc272ca67d32bba942129)
+- [PR #27 merge commit](https://github.com/deathkernel/TARA-App/commit/c8b484c977ca31ac4f8396bd20c090fe580299ea)
 
 ## 4. What is still left
 
@@ -133,9 +137,9 @@ This roadmap is dependency-ordered. The daily development task should choose one
 
 - [ ] Finish the React + TypeScript migration only after typecheck/build and browser smoke tests pass; retain the existing UI fallback until the migration is verified.
 - [ ] Test responsive layout, keyboard navigation, focus states, accessibility, loading/error/empty states, message editing/regeneration and code-copy behavior.
-- [ ] Test local Voice/Vision dependencies and graceful fallback on supported Python versions and operating systems.
+- [ ] Test local Voice/Vision dependencies and graceful fallback on supported Python versions in Windows/Linux environments.
 - [ ] Expand Study Mode only with tests and clear source-grounding: OCR/scanned PDFs, stronger question generation, spaced repetition and progress tracking.
-- [ ] Verify Windows/macOS/Linux installation paths, optional native Handler compilation and Python diagnostic fallback.
+- [ ] Verify Windows/Linux installation paths, optional native Handler compilation and Python diagnostic fallback. macOS is outside the current supported/tested target scope unless explicitly requested.
 - [ ] Complete release packaging, versioning, installation notes and a target-machine acceptance checklist.
 
 ### P3 — Ecosystem expansion (only after core contracts are stable)
@@ -189,6 +193,7 @@ Append a dated entry after each meaningful, evidence-backed change. Keep entries
 | Date | Item | Evidence / PR | Result | Next |
 |---|---|---|---|---|
 | 2026-10-27 | Created initial project history and dependency-ordered roadmap | [Current main history](https://github.com/deathkernel/TARA-App/commits/main) | Baseline documentation drafted; runtime/test status still needs a fresh run | Establish current test/CI baseline |
+| 2026-10-27 | Scoped supported/tested platforms to Windows and Linux; removed macOS from the native Handler CI matrix | [PR #28](https://github.com/deathkernel/TARA-App/pull/28) | CI workflow and setup guide updated; final PR checks are the merge gate | Confirm latest Python, frontend, and Windows/Linux native Handler checks before merging |
 
 ## 8. Related documentation
 
