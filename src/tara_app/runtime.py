@@ -188,6 +188,8 @@ def _ollama_settings(value: Any) -> dict[str, dict[str, str]]:
         settings[module_id] = {model_env: model.strip(), url_env: base_url}
         if module_id == "chat":
             settings[module_id]["TARA_LLM_BACKEND"] = "ollama"
+            settings[module_id]["TARA_POWER_MODE"] = "balanced"
+            settings[module_id]["TARA_OLLAMA_KEEP_ALIVE"] = "15m"
     return settings
 
 
