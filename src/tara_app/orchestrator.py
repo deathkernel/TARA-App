@@ -96,6 +96,34 @@ class Orchestrator:
         self._pending_approvals: OrderedDict[str, PendingApproval] = OrderedDict()
         self._approval_lock = RLock()
 
+    def replace_conversation_history(self, session_id: str, history: Sequence[Mapping[str, str]]) -> None:
+        """Replace one session's bounded conversation context from the local UI."""
+        if not isinstance(session_id, str) or not session_id.strip() or len(session_id) > 128:
+            raise ValueError("session_id is invalid")
+        if not isinstance(history, Sequence) or isinstance(history, (str, bytes)) or len(history) > 24:
+            raise ValueError("history is invalid")
+        safe_history: list[dict[str, str]] = []
+        total_chars = 0
+        for turn in history:
+            if not isinstance(turn, Mapping) or set(turn) != {"role", "content"}:
+                raise ValueError("history turn is invalid")
+            role = turn.get("role")
+            content = turn.get("content")
+            if role not in {"user", "assistant"} or not isinstance(content, str) or not content.strip() or len(content) > 20_000:
+                raise ValueError("history turn is invalid")
+            total_chars += len(content)
+            if total_chars > 120_000:
+                raise ValueError("history is too large")
+            safe_history.append({"role": role, "content": content})
+        with self._history_lock:
+            if safe_history:
+                self._conversation_history[session_id] = safe_history
+                self._conversation_history.move_to_end(session_id)
+            else:
+                self._conversation_history.pop(session_id, None)
+            while len(self._conversation_history) > 512:
+                self._conversation_history.popitem(last=False)
+
     def handle_question(
         self,
         question: str,
