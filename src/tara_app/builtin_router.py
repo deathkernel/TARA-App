@@ -42,8 +42,8 @@ class BuiltinRouter:
         normalized = question.casefold()
         target: tuple[str, str, str, str] | None = None
         memory_write_action = (
-            "store" if _MEMORY_STORE.search(normalized)
-            else "forget" if _MEMORY_FORGET.search(normalized)
+            "forget" if _MEMORY_FORGET.search(normalized)
+            else "store" if _MEMORY_STORE.search(normalized) and not _MEMORY_SEARCH.search(normalized)
             else None
         )
         if memory_write_action is not None:
