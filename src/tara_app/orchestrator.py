@@ -520,6 +520,7 @@ class Orchestrator:
             raise ValueError("attachments are invalid")
         safe: list[dict[str, str]] = []
         total_content_bytes = 0
+        max_encoded_bytes = 4 * ((10_000_000 + 2) // 3)
         for item in attachments:
             if not isinstance(item, Mapping) or set(item) - {"media_type", "name", "content_base64"}:
                 raise ValueError("attachment metadata is invalid")
@@ -539,17 +540,17 @@ class Orchestrator:
             normalized = {"media_type": normalized_media_type, "name": name}
             content = item.get("content_base64")
             if content is not None:
-                if not isinstance(content, str) or not content or len(content) > 700_000:
+                if not isinstance(content, str) or not content or len(content) > max_encoded_bytes:
                     raise ValueError("attachment content is invalid")
                 try:
                     decoded = base64.b64decode(content, validate=True)
                 except (ValueError, binascii.Error) as exc:
                     raise ValueError("attachment content is invalid") from exc
-                if not decoded or len(decoded) > 512_000:
-                    raise ValueError("attachment content is outside the size limit")
+                if not decoded or len(decoded) > 10_000_000:
+                    raise ValueError("attachment content is outside the 10 MB size limit")
                 total_content_bytes += len(decoded)
-                if total_content_bytes > 512_000:
-                    raise ValueError("combined attachment content exceeds the size limit")
+                if total_content_bytes > 10_000_000:
+                    raise ValueError("combined attachment content exceeds the 10 MB per-message limit")
                 normalized["content_base64"] = base64.b64encode(decoded).decode("ascii")
             safe.append(normalized)
         return safe
