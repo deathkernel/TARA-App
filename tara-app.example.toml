@@ -84,3 +84,11 @@ working_directory = "."
 timeout_seconds = 30
 allow_remote = true # GitHub writes need a local token, an explicit repo allowlist, Security review, and your approval.
 environment = ["GITHUB_TOKEN", "TARA_ACTION_GITHUB_REPOSITORIES"]
+
+[[modules]]
+id = "voice"
+command = ["{python}", "-m", "tara_voice"]
+working_directory = "."
+timeout_seconds = 180
+allow_remote = true # Downloads open speech weights on demand; audio processing and read-aloud remain local.
+environment = ["TARA_VOICE_MODEL", "TARA_VOICE_DEVICE"]
