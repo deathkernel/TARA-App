@@ -103,7 +103,7 @@ See [runtime and development option notes](docs/runtime-evaluation.md) for the c
 
 ## Local Ollama model profiles
 
-TARA-App is the only user-facing process. It starts or reuses the local Ollama service, routes each request to Chat, Code, Planner, Creative, Data, Vision, Voice, Memory, or Research, and downloads only the selected local model the first time it is needed.
+TARA-App is the only user-facing process. It starts or reuses local Ollama, prepares the Chat model before the interface becomes ready, and routes each request to the matching specialist and its configured model. Other specialist models download on first use.
 
 | Specialist | Default model | Use |
 | --- | --- | --- |
@@ -113,7 +113,7 @@ TARA-App is the only user-facing process. It starts or reuses the local Ollama s
 | Code | `qwen2.5-coder:3b` | Local code analysis and proposed changes |
 | Vision | `gemma3:4b` | Local image understanding |
 
-These are free-to-download model weights served locally by Ollama; no paid inference API is configured. Model names can be changed in `[ollama.models]`. The app does not preload models at startup. Ollama may keep a recently used model in memory during its idle period.
+These are free-to-download model weights served locally by Ollama; no paid inference API is configured. Model names can be changed in `[ollama.models]`. On startup, TARA-App installs the Chat profile if needed and preloads it into Ollama memory, so the first chat request does not wait for model setup. Other specialist models are loaded when their tasks are selected. The Chat profile uses balanced CPU scheduling and stays loaded for 15 minutes after its last request, subject to available memory.
 
 ### Chat experience
 
@@ -149,7 +149,7 @@ TARA-App now includes the local Router, Chat, Code, Planner, Memory, Creative, S
 2. Clone this repository.
 3. Double-click `run-tara.bat`.
 
-The launcher creates a local virtual environment, installs this repository, creates `tara-app.toml` from the example when needed, prepares the optional native Handler diagnostic, and starts TARA-App. TARA-App starts or reuses Ollama and downloads the model for the selected specialist on first use.
+The launcher creates a local virtual environment, installs this repository, creates `tara-app.toml` from the example when needed, prepares the optional native Handler diagnostic, and starts TARA-App. TARA-App starts or reuses Ollama and prepares the Chat model before showing the ready message. The first launch may download Chat; other specialist models download only when that specialist is first selected.
 
 
 ### Run on macOS or Linux
