@@ -213,3 +213,63 @@ html, body { height: 100%; overflow: hidden; }
 .thinking-indicator span:nth-child(2) { animation-delay: .15s; }
 .thinking-indicator span:nth-child(3) { animation-delay: .3s; }
 @keyframes tara-thinking { 0%, 60%, 100% { opacity: .35; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-4px); } }
+
+
+/* Monochrome ChatGPT-inspired workspace: black, charcoal, and white */
+:root {
+  color-scheme: dark;
+  --bg: #212121;
+  --panel: #2f2f2f;
+  --panel-raised: #383838;
+  --line: #424242;
+  --text: #f7f7f8;
+  --muted: #b4b4b4;
+  --accent: #ffffff;
+  --accent-dark: #252525;
+}
+body { background: var(--bg); }
+.sidebar { background: #171717; border-right-color: #303030; }
+.brand-mark, .sidebar-mark {
+  color: #111111;
+  background: #ffffff;
+  box-shadow: none;
+}
+.local-badge { border-color: #3b3b3b; color: #d4d4d4; }
+.models-button, .model-panel-header button {
+  border-color: #454545; background: #2f2f2f; color: #f5f5f5;
+}
+.models-button:hover, .model-panel-header button:hover,
+.examples button:hover, .new-chat-button:hover {
+  border-color: #777777; color: #ffffff; background: #303030;
+}
+.model-panel { background: #242424; border-color: #3b3b3b; }
+.model-list li, .conversation-item.active { background: #2f2f2f; }
+.welcome-icon { border-color: #454545; background: #2b2b2b; color: #ffffff; }
+.examples button {
+  border-color: #414141; background: #262626; color: #e5e5e5;
+}
+.bubble { background: #2f2f2f; border-color: #3d3d3d; }
+.user .bubble { background: #303030; border-color: #454545; }
+.route strong, .answer a { color: #ffffff; }
+.composer {
+  border-color: #4a4a4a; background: #2f2f2f;
+  box-shadow: 0 8px 28px #00000022;
+}
+.attachment-button { background: transparent; color: #e5e5e5; }
+.attachment-button:hover { color: #ffffff; }
+.send-button { background: #ffffff; color: #111111; }
+.send-button:hover { background: #e7e7e7; }
+.new-chat-button { border-color: #414141; background: transparent; }
+.conversation-item { color: #d4d4d4; }
+.conversation-item:hover { background: #252525; }
+.conversation-item.active { border-color: #414141; color: #ffffff; }
+.sidebar-footer { border-top-color: #303030; }
+.markdown-content blockquote { border-left-color: #bdbdbd; }
+.code-block-wrap, .details pre, .inline-code { background: #191919; }
+.code-copy-button { border-color: #4b4b4b; background: #303030; color: #f0f0f0; }
+.message-action-button:hover { background: #383838; border-color: #4a4a4a; }
+.edit-banner button { color: #ffffff; }
+.model-list progress { accent-color: #ffffff; }
+@media (max-width: 700px) {
+  .sidebar { flex-basis: 190px; }
+}
