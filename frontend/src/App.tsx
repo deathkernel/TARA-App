@@ -1,4 +1,6 @@
 import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 type Message = { role: "user" | "assistant"; text: string; status?: string };
 type Conversation = { id: string; title: string; updatedAt: number; messages: Message[] };
@@ -245,7 +247,9 @@ export default function App() {
           <div className="messages">
             {(active?.messages ?? []).map((message, index) => <article key={`${active?.id}-${index}`} className={`message ${message.role}`}>
               <div className="message-label">{message.role === "user" ? "You" : "TARA"}{message.status && message.status !== "success" ? <span>{message.status}</span> : null}</div>
-              <div className="message-bubble">{message.text}</div>
+              <div className={`message-bubble ${message.role === "assistant" ? "markdown-body" : ""}`}>
+                {message.role === "assistant" ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.text}</ReactMarkdown> : message.text}
+              </div>
             </article>)}
             {sending && <div className="typing" role="status">TARA is thinking…</div>}
           </div>
