@@ -43,7 +43,7 @@
         <article class="welcome" id="welcome">
           <div class="welcome-icon" aria-hidden="true">*</div>
           <h2>What can I help with?</h2>
-          <p>Chat and Code use local Ollama models. Research looks up sources through Crossref and Wikipedia public APIs. TARA-App routes each request to the matching specialist.</p>
+          <p>Chat, Code, and Creative use local Ollama models. Planner builds reviewable steps. Vision analyzes images locally, Data reads CSV files, and Memory saves notes only after approval. Research can query public Crossref and Wikipedia APIs.</p>
           <div class="examples">
             <button type="button" data-prompt="Explain this concept in simple terms">Explain a concept</button>
             <button type="button" data-prompt="Help me debug this code">Work on code</button>
@@ -54,14 +54,14 @@
       </section>
 
       <form id="composer" class="composer">
-        <label class="attachment-button" for="files" title="Attach an image, audio clip, CSV, or source-code file">+</label>
-        <input id="files" type="file" multiple accept="image/*,.mp3,.wav,.m4a,.mp4,.webm,.ogg,.flac,.aac,audio/mpeg,audio/wav,audio/mp4,audio/webm,audio/ogg,audio/flac,audio/aac,.csv,text/csv,.py,.pyi,.js,.mjs,.cjs,.ts,.tsx,.jsx,.java,.go,.rs,.c,.h,.cc,.hh,.hpp,.cpp,.cxx,.cs,.rb,.php,.sh,.bash,.zsh,.ps1,.sql,.swift,.kt,.kts,.dart,.scala,.lua,.pl,.r" hidden>
+        <label class="attachment-button" for="files" title="Attach an image, CSV, or source-code file">+</label>
+        <input id="files" type="file" multiple accept="image/*,.csv,text/csv,.py,.pyi,.js,.mjs,.cjs,.ts,.tsx,.jsx,.java,.go,.rs,.c,.h,.cc,.hh,.hpp,.cpp,.cxx,.cs,.rb,.php,.sh,.bash,.zsh,.ps1,.sql,.swift,.kt,.kts,.dart,.scala,.lua,.pl,.r" hidden>
         <div class="input-wrap">
           <div id="file-list" class="file-list" hidden></div>
           <textarea id="question" rows="1" maxlength="20000" placeholder="Message TARA..." aria-label="Message TARA"></textarea>
         </div>
         <button id="send" class="send-button" type="submit" aria-label="Send message">Send</button>
-        <p class="composer-note">Chat and Code stay local. Research sends your query to free public sources. Side effects are never automatic.</p>
+        <p class="composer-note">Local models run on this device. Research sends queries to public sources. Memory and GitHub changes require your approval.</p>
       </form>
       <footer>Chat and Code are separate specialists | TARA-App routes each request</footer>
     </main>
