@@ -98,3 +98,25 @@ id = "handler"
 command = ["{python}", "-m", "tara_app.handler_launcher", "doctor"]
 working_directory = "."
 timeout_seconds = 120
+
+[[modules]]
+id = "study"
+command = ["{python}", "-m", "tara_study"]
+working_directory = "."
+timeout_seconds = 30
+# Optional PDF text extraction: install tara-app-core[study]. Text and Markdown work without it.
+
+[[modules]]
+id = "weather"
+command = ["{python}", "-m", "tara_weather"]
+working_directory = "."
+timeout_seconds = 20
+allow_remote = true # Public Open-Meteo geocoding/forecast API; no API key required.
+
+[[modules]]
+id = "models"
+command = ["{python}", "-m", "tara_models"]
+working_directory = "."
+timeout_seconds = 60
+allow_remote = true # Gemini sends the selected prompt to Google; local gpt-oss stays on Ollama.
+environment = ["GEMINI_API_KEY"]

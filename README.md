@@ -31,6 +31,9 @@ TARA-App is being consolidated as a single Python monorepo. The current integrat
 - `tara_voice`: optional faster-whisper transcription when compatible wheels are available; read-aloud uses installed local browser voices.
 - `tara_vision`: local Ollama image analysis; images stay on the device.
 - `tara_data`: deterministic, read-only CSV summaries.
+- `tara_study`: optional local-first study notes, fill-in-the-blank quizzes, flashcards, and bounded revision plans.
+- `tara_weather`: public Open-Meteo geocoding and weather forecasts, with attribution.
+- `tara_models`: a free-first model catalogue, Gemini free-tier API adapter, and local OpenAI gpt-oss via Ollama.
 
 TARA-Handler's C++17 source is included in TARA-App. The launchers explicitly prepare its optional native diagnostic before starting the app; only the environment-diagnosis command is exposed. If CMake or a C++ compiler is unavailable, the app uses read-only Python diagnostics. GitHub issue creation remains inactive until local credentials and a repository allowlist are configured.
 
@@ -184,3 +187,34 @@ If installation previously stopped with `No matching distributions found for onn
 ### Consolidation status
 
 The consolidated Router, Chat, Code, Planner, Memory, Creative, Security, Action, Data, Vision, Voice, and Research packages are merged into `main`. The native Handler source and on-demand adapter are included; the app exposes only environment diagnosis. GitHub issue creation requires local credentials, a repo allowlist, Security review, and one-time user approval. A final smoke run on the target computer is still needed to confirm Ollama availability and hardware-specific model performance.
+
+
+## Study Mode (free and local-first)
+
+TARA-App includes an optional, read-only Study specialist for source-grounded notes, fill-in-the-blank practice quizzes, flashcards, and bounded revision plans. It uses no paid API and does not need a model for these deterministic learning aids. Study requests are routed only when the `study.create` capability is configured. Copy the updated `tara-app.example.toml` into your local config to enable it.
+
+- Attach UTF-8 `.txt`, Markdown, or text-based PDF notes and ask TARA to make notes, a quiz, or flashcards from them.
+- Study answers derived from supplied material are marked source-grounded and include source-line hints for quiz/flashcard items. They are extracted from the source, not independently fact-checked.
+- Ask for a `7-day study plan for biology` to generate a bounded plan (1–30 days) without uploading a file.
+- PDF text extraction is optional: install `pip install -e '.[study]'` to add the free `pypdf` library. Scanned PDFs need OCR; OCR integration is a later batch.
+- Input limits: four study attachments, 200,000 combined source characters, 200 pages per PDF, 50 quiz/flashcard items. The app's existing 10 MB combined upload limit still applies.
+
+The first release intentionally avoids pretending deterministic sentence extraction is a full AI tutor. More advanced subject explanations, real MCQ distractors, spaced repetition, OCR, semantic search, and study progress tracking are follow-up batches.
+
+
+## Free Model Hub and Weather
+
+- **Gemini API:** when `GEMINI_API_KEY` is configured, TARA discovers the current available model list and exposes only the text models in its maintained free-tier allowlist. Free-tier quotas, eligibility, and model availability depend on the Google AI Studio project. Gemini requests send the selected prompt to Google; do not use this mode for sensitive data unless you accept that transfer.
+- **OpenAI open weights:** `gpt-oss:20b` and `gpt-oss:120b` can be run through local Ollama. They are not free OpenAI API models; model weights are free, but hardware, electricity, storage, and hosting can cost money. TARA does not automatically download these large models.
+- **Model Hub prompts:** ask `List all available free models`, `Use Gemini: ...`, `Use gemini-3.5-flash-lite: ...`, or `Use gpt-oss:20b: ...`. Only explicitly selected Gemini prompts go to the remote API.
+- **Weather:** ask `weather in Pune` or `forecast for London for the next 7 days`. TARA uses Open-Meteo's public geocoding and forecast APIs without an API key, includes attribution, and limits response size and network timeouts. Its free endpoint is for non-commercial use and subject to provider rate limits.
+- **Readable answers:** TARA normalizes excessive whitespace and bullet glyphs and uses wider answer cards, consistent line spacing, and clearer heading hierarchy.
+
+
+### Configure the optional Gemini free tier (PowerShell)
+
+1. Create an API key in [Google AI Studio](https://aistudio.google.com/apikey).
+2. In the same PowerShell window used to start TARA, set the environment variable: `$env:GEMINI_API_KEY = "your-key"`.
+3. Start TARA normally, then ask `List all available free models` or `Use Gemini: explain photosynthesis`.
+
+Keep the key local and never commit it. Gemini free-tier usage is subject to Google’s current model eligibility and quota. Without a key, the Model Hub still lists documented candidates but cannot verify access for your project.
