@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import re
 from typing import Any, Mapping
+from urllib.parse import urlsplit
 
 from tara_app.contracts import RouteDecision, SCHEMA_VERSION
 
@@ -30,6 +31,31 @@ _WEBSITE_OPEN = re.compile(
     r"""(?P<url>https?://[^\s<>\"']+|www\.[^\s<>\"']+|[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}\.)+[A-Za-z]{2,63}(?::\d{1,5})?(?:[/?#][^\s<>\"']*)?)\s*[.!?]?\s*""",
     re.I,
 )
+ 
+def _valid_website_open(question: str) -> bool:
+    """Validate website requests before they can enter the approval flow."""
+    match = _WEBSITE_OPEN.fullmatch(question.strip())
+    if match is None:
+        return False
+    raw_url = match.group("url")
+    if not raw_url.casefold().startswith(("http://", "https://")):
+        raw_url = raw_url.rstrip(".,!?;:")
+        raw_url = "https://" + raw_url
+    if len(raw_url) > 2048 or any(ord(char) < 32 or ord(char) == 127 for char in raw_url):
+        return False
+    try:
+        parsed = urlsplit(raw_url)
+        port = parsed.port
+    except ValueError:
+        return False
+    return (
+        parsed.scheme.casefold() in {"http", "https"}
+        and bool(parsed.hostname)
+        and parsed.username is None
+        and parsed.password is None
+        and (port is None or 1 <= port <= 65535)
+    )
+
 
 
 class BuiltinRouter:
@@ -72,7 +98,13 @@ class BuiltinRouter:
                 requires_approval=True,
                 policy_tags=("memory_write", "consent_required", "human_approval"),
             )
-        if _DESKTOP_APP_OPEN.fullmatch(question.strip()) or _WEBSITE_OPEN.fullmatch(question.strip()):
+        website_match = _WEBSITE_OPEN.fullmatch(question.strip())
+        if website_match is not None and not _valid_website_open(question):
+            return RouteDecision(
+                request_id, "invalid_request", None, None, "invalid_website_url",
+                "The website address is invalid or exceeds the 2048-character limit.",
+            )
+        if _DESKTOP_APP_OPEN.fullmatch(question.strip()) or website_match is not None:
             if "security.assess" not in available or "action.execute" not in available:
                 return RouteDecision(
                     request_id, "unavailable", None, None, "desktop_automation_unavailable",
