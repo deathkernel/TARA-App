@@ -21,4 +21,4 @@ tara-app = "tara_app.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-tara_app = ["web/*.html", "web/*.css", "web/*.js", "native/handler/CMakeLists.txt", "native/handler/UPSTREAM.md", "native/handler/include/handler/*.h", "native/handler/src/*.cpp"]
+tara_app = ["web/*.html", "web/*.css", "web/*.js", "web/react-dist/*", "web/react-dist/assets/*", "native/handler/CMakeLists.txt", "native/handler/UPSTREAM.md", "native/handler/include/handler/*.h", "native/handler/src/*.cpp"]
