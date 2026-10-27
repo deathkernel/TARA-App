@@ -12,7 +12,7 @@ def count_tokens(text: str, *, encoding_name: str = "o200k_base") -> int:
     try:
         import tiktoken
     except ImportError:
-        raise TokenizerUnavailable("install TARA-App with the optional 'token-count' extra") from None
+        raise TokenizerUnavailable("install the optional 'tiktoken' package") from None
     try:
         encoding = tiktoken.get_encoding(encoding_name)
     except (KeyError, ValueError):
