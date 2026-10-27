@@ -92,7 +92,7 @@ class _Handler(BaseHTTPRequestHandler):
             self._json(400, {"status": "invalid_request", "error": "request must be UTF-8 JSON"})
             return
         if endpoint == "/api/chat":
-            fields = {"question", "session_id", "attachments"}
+            fields = {"question", "session_id", "attachments", "history"}
         elif endpoint in {"/api/models/pull", "/api/models/unload", "/api/models/remove"}:
             fields = {"specialist"}
         else:
@@ -127,6 +127,15 @@ class _Handler(BaseHTTPRequestHandler):
             self._json(status_code, {"status": result_status, response_key: result})
             return
         if endpoint == "/api/chat":
+            if "history" in payload:
+                try:
+                    self.server.app.replace_conversation_history(
+                        payload.get("session_id", "default"),
+                        payload["history"],
+                    )
+                except ValueError:
+                    self._json(400, {"status": "invalid_request", "error": "conversation history is invalid"})
+                    return
             outcome = self.server.app.handle_question(
                 payload.get("question"),
                 session_id=payload.get("session_id", "default"),
