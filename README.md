@@ -28,6 +28,7 @@ TARA-App is being consolidated as a single Python monorepo. The current integrat
 - `tara_creative`: local Ollama writing, with no paid inference provider.
 - `tara_security`: deterministic policy assessment for sensitive capabilities.
 - `tara_action`: optional GitHub issue creation through the public API, gated by credentials, a repository allowlist, Security review, and explicit approval.
+- `tara_voice`: local faster-whisper transcription; read-aloud uses installed local browser voices.
 - `tara_vision`: local Ollama image analysis; images stay on the device.
 - `tara_data`: deterministic, read-only CSV summaries.
 
@@ -136,7 +137,7 @@ A result should include `schema_version`, `request_id`, `ok`, `status`, structur
 
 ## Local development
 
-TARA-App now includes the local Router, Chat, Code, Planner, Memory, Creative, Security, Action, Data, Vision, and Research packages in the same repository. Chat and Code remain distinct specialists. Code suggestions and plans are data only; the current module does not run commands or modify a workspace. Vision uses a configured local Ollama model. Data performs bounded, read-only CSV analysis.
+TARA-App now includes the local Router, Chat, Code, Planner, Memory, Creative, Security, Action, Data, Vision, Voice, and Research packages in the same repository. Chat and Code remain distinct specialists. Code suggestions and plans are data only; the current module does not run commands or modify a workspace. Voice transcription uses local faster-whisper weights, and read-aloud uses installed local browser voices. Vision and Creative use local Ollama models; Data performs bounded, read-only CSV analysis.
 
 ### Run on Windows
 
@@ -158,4 +159,4 @@ On Windows PowerShell, use `Copy-Item tara-app.example.toml tara-app.toml` in pl
 
 ### Consolidation status
 
-The draft PR now contains the local Router, Chat, Code, Planner, Memory, Creative, Security, Action, Data, Vision, and Research packages. Voice and native Handler integration remain in progress. GitHub issue creation requires local credentials, a repo allowlist, Security review, and one-time user approval.
+The draft PR now contains the local Router, Chat, Code, Planner, Memory, Creative, Security, Action, Data, Vision, Voice, and Research packages. Native Handler integration remains in progress. GitHub issue creation requires local credentials, a repo allowlist, Security review, and one-time user approval.
