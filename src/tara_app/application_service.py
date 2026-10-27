@@ -84,19 +84,28 @@ class TARAApplicationService:
             selected = self.catalogue.get(provider_id, model)
             if selected.provider_id != provider_id:
                 raise ApplicationServiceError("selected model/provider mismatch")
-            self.sessions.append_message(session_id, "user", message)
             history = self.sessions.history(session_id)
+            # Build the request with a tentative user turn. Commit both messages only
+            # after the provider returns a usable response, so provider failures do not
+            # leave an orphaned user message in the next turn's conversation context.
+            request_history = [
+                {"role": item.role, "content": item.content}
+                for item in history if item.role in {"system", "user", "assistant"}
+            ]
+            request_history.append({"role": "user", "content": message})
             response = self.runtime.chat(
                 model=model,
                 provider_id=provider_id,
-                messages=[{"role": item.role, "content": item.content}
-                          for item in history if item.role in {"system", "user", "assistant"}],
+                messages=request_history,
             )
-            self.sessions.append_message(session_id, "assistant", response)
+            if not isinstance(response, str) or not response.strip():
+                raise ApplicationServiceError("chat provider returned an empty or invalid response")
+            self.sessions.append_message(session_id, "user", message)
+            self.sessions.append_message(session_id, "assistant", response.strip())
             self.audit.record("chat_turn_completed", {
                 "session_id": session_id, "provider_id": provider_id, "model": model,
             })
-            return ChatTurn(session_id, provider_id, model, message, response)
+            return ChatTurn(session_id, provider_id, model, message, response.strip())
         except ApplicationServiceError:
             raise
         except (SessionError, RuntimeConfigurationError, AuditLogError, ValueError):
