@@ -32,7 +32,7 @@ TARA-App is being consolidated as a single Python monorepo. The current integrat
 - `tara_vision`: local Ollama image analysis; images stay on the device.
 - `tara_data`: deterministic, read-only CSV summaries.
 
-The native Handler implementation still needs integration. The GitHub Action remains inactive until credentials and a repository allowlist are configured.
+TARA-Handler's C++17 source is included in TARA-App. The launchers explicitly prepare its optional native diagnostic before starting the app; only the environment-diagnosis command is exposed. If CMake or a C++ compiler is unavailable, the app uses read-only Python diagnostics. GitHub issue creation remains inactive until local credentials and a repository allowlist are configured.
 
 ## Target architecture
 
@@ -99,7 +99,7 @@ This layout is a target, not a claim that those modules are already implemented.
 
 ## Runtime and development options
 
-See [runtime and development option notes](docs/runtime-evaluation.md) for the current scope of Amp, GitHub Copilot sandboxing, GitHub Package Firewall, and AWS TorchNeuron. These are optional references, not built-in TARA runtimes.
+See [runtime and development option notes](docs/runtime-evaluation.md) for the current scope of Amp, GitHub Copilot sandboxing, GitHub Package Firewall, and AWS TorchNeuron. These are optional references, not built-in TARA runtimes. The [native Handler integration notes](docs/native-handler.md) describe its explicit build step and read-only app boundary.
 
 ## Local Ollama model profiles
 
@@ -145,18 +145,28 @@ TARA-App now includes the local Router, Chat, Code, Planner, Memory, Creative, S
 2. Clone this repository.
 3. Double-click `run-tara.bat`.
 
-The launcher creates a local virtual environment, installs this repository, creates `tara-app.toml` from the example when needed, and starts TARA-App. TARA-App starts or reuses Ollama and downloads the model for the selected specialist on first use.
+The launcher creates a local virtual environment, installs this repository, creates `tara-app.toml` from the example when needed, prepares the optional native Handler diagnostic, and starts TARA-App. TARA-App starts or reuses Ollama and downloads the model for the selected specialist on first use.
+
+
+### Run on macOS or Linux
+
+1. Install Python 3.11 or newer and Ollama once.
+2. Clone this repository.
+3. Run `./run-tara.sh` from the repository folder.
+
+The script creates a virtual environment, installs TARA-App, initializes the local config, explicitly prepares the optional native Handler diagnostic, and starts the app. If a local CMake/C++ toolchain is missing, Handler keeps working through the read-only Python fallback.
 
 ### Run from a terminal
 
 ```bash
 python -m pip install -e .
 cp tara-app.example.toml tara-app.toml
+python -m tara_app.handler_launcher prepare  # optional native C++ diagnostic; safe fallback works without it
 python -m tara_app --config tara-app.toml
 ```
 
-On Windows PowerShell, use `Copy-Item tara-app.example.toml tara-app.toml` in place of `cp`. The app binds to loopback. Research sends only the requested search text to Crossref and Wikipedia; it returns source links and snippets for review.
+On Windows PowerShell, use `Copy-Item tara-app.example.toml tara-app.toml` in place of `cp`. The app binds to loopback. The Handler preparation command is explicit; normal app execution never builds native code. Research sends only the requested search text to Crossref and Wikipedia; it returns source links and snippets for review.
 
 ### Consolidation status
 
-The draft PR now contains the local Router, Chat, Code, Planner, Memory, Creative, Security, Action, Data, Vision, Voice, and Research packages. Native Handler integration remains in progress. GitHub issue creation requires local credentials, a repo allowlist, Security review, and one-time user approval.
+The draft PR now contains the local Router, Chat, Code, Planner, Memory, Creative, Security, Action, Data, Vision, Voice, and Research packages. The native Handler source and on-demand adapter are included; the app exposes only environment diagnosis. GitHub issue creation requires local credentials, a repo allowlist, Security review, and one-time user approval. A final smoke run on the target computer is still needed to confirm Ollama availability and hardware-specific model performance.

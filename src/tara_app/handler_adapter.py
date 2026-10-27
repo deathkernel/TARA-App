@@ -30,8 +30,14 @@ class HandlerProcessAdapter:
     ) -> None:
         if isinstance(command, (str, bytes)) or not command or any(not isinstance(arg, str) or not arg or "\x00" in arg for arg in command):
             raise ValueError("Handler command must be a non-empty argument list")
-        if len(command) != 2 or command[1].casefold() not in {"doctor", "health"}:
-            raise ValueError("Handler adapter only permits the doctor or health command")
+        packaged_launcher = (
+            len(command) == 4
+            and command[1:3] == ("-m", "tara_app.handler_launcher")
+            and command[3].casefold() in {"doctor", "health"}
+        )
+        direct_diagnostic = len(command) == 2 and command[1].casefold() in {"doctor", "health"}
+        if not (packaged_launcher or direct_diagnostic):
+            raise ValueError("Handler adapter only permits the packaged launcher or a doctor/health command")
         if not 1 <= timeout_seconds <= 120 or not 256 <= max_response_bytes <= 1_000_000:
             raise ValueError("Handler timeout or response limit is outside the allowed range")
         self.command = tuple(command)

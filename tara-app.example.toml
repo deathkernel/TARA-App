@@ -92,3 +92,9 @@ working_directory = "."
 timeout_seconds = 180
 allow_remote = true # Downloads open speech weights on demand; audio processing and read-aloud remain local.
 environment = ["TARA_VOICE_MODEL", "TARA_VOICE_DEVICE"]
+
+[[modules]]
+id = "handler"
+command = ["{python}", "-m", "tara_app.handler_launcher", "doctor"]
+working_directory = "."
+timeout_seconds = 120
