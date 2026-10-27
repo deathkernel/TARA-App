@@ -218,3 +218,20 @@ The first release intentionally avoids pretending deterministic sentence extract
 3. Start TARA normally, then ask `List all available free models` or `Use Gemini: explain photosynthesis`.
 
 Keep the key local and never commit it. Gemini free-tier usage is subject to Google’s current model eligibility and quota. Without a key, the Model Hub still lists documented candidates but cannot verify access for your project.
+
+
+## React + TypeScript frontend (migration in progress)
+
+The maintained frontend source is in `frontend/` and uses React, TypeScript, and Vite. The migration is incremental: the existing UI remains available as a fallback until the React build is generated.
+
+```bash
+cd frontend
+npm install
+npm run typecheck
+npm run build
+cd ..
+python -m pip install -e .
+tara-app
+```
+
+When `src/tara_app/web/react-dist/` exists, the local server serves the compiled React UI at `/` and its hashed assets from `/assets/`. Without a build, it serves the existing static UI. The Vite development server uses `127.0.0.1:5173` and proxies API requests to the local TARA-App server on `127.0.0.1:8765`.

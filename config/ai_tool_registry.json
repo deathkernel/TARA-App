@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "policy": {
+    "default_enabled": false,
+    "default_network_access": false,
+    "default_shell_access": false,
+    "paid_provider_opt_in_required": true,
+    "auto_install": false,
+    "auto_merge": false,
+    "review_required_before_activation": true
+  },
+  "selection_rules": {
+    "initial_local_inference": ["ollama", "ollama-python"],
+    "coding_execution_agents_require_hardened_sandbox": ["openhands", "open-interpreter"],
+    "choose_one_primary_speech_backend": ["whisper-cpp", "faster-whisper"],
+    "choose_one_primary_image_backend": ["comfyui", "automatic1111", "invokeai", "fooocus"],
+    "choose_one_workflow_engine": ["dify", "langflow", "flowise"],
+    "avoid_duplicate_chat_frontends": ["open-webui", "librechat", "lobechat"]
+  },
+  "tools": [
+    {"id":"ollama","name":"Ollama","repository":"https://github.com/ollama/ollama","placement":"tara-app.runtime","kind":"local_model_runtime","priority":"p0","status":"candidate","enabled":false,"adapter":"ollama_http","network_scope":"loopback_only","shell_access":false,"paid_calls":false},
+    {"id":"jan","name":"Jan","repository":"https://github.com/menloresearch/jan","placement":"tara-app.providers","kind":"local_provider","priority":"p2","status":"candidate","enabled":false,"adapter":"not_implemented","shell_access":false},
+    {"id":"anythingllm","name":"AnythingLLM","repository":"https://github.com/Mintplex-Labs/anything-llm","placement":"tara-chat.knowledge","kind":"rag_system","priority":"p2","status":"candidate","enabled":false,"adapter":"not_implemented","shell_access":false},
+    {"id":"llama-cpp","name":"llama.cpp","repository":"https://github.com/ggml-org/llama.cpp","placement":"tara-app.runtime","kind":"local_model_runtime","priority":"p2","status":"candidate","enabled":false,"adapter":"not_implemented","shell_access":false},
+    {"id":"aider","name":"Aider","repository":"https://github.com/Aider-AI/aider","placement":"tara-code.agents","kind":"coding_agent","priority":"p2","status":"candidate","enabled":false,"adapter":"not_implemented","requires_diff_review":true,"shell_access":false},
+    {"id":"comfyui","name":"ComfyUI","repository":"https://github.com/comfyanonymous/ComfyUI","placement":"tara-media.image","kind":"image_workflow","priority":"p3","status":"candidate","enabled":false,"adapter":"not_implemented","shell_access":false},
+    {"id":"whisper-cpp","name":"whisper.cpp","repository":"https://github.com/ggml-org/whisper.cpp","placement":"tara-chat.speech","kind":"speech_to_text","priority":"p3","status":"candidate","enabled":false,"adapter":"not_implemented","shell_access":false},
+    {"id":"continue","name":"Continue","repository":"https://github.com/continuedev/continue","placement":"tara-code.agents","kind":"coding_assistant","priority":"p2","status":"candidate","enabled":false,"adapter":"not_implemented","requires_diff_review":true,"shell_access":false},
+    {"id":"open-webui","name":"Open WebUI","repository":"https://github.com/open-webui/open-webui","placement":"reference.chat_ui","kind":"chat_frontend","priority":"p3","status":"reference_only","enabled":false,"adapter":"none","shell_access":false},
+    {"id":"gpt4all","name":"GPT4All","repository":"https://github.com/nomic-ai/gpt4all","placement":"tara-app.runtime","kind":"local_model_runtime","priority":"p2","status":"candidate","enabled":false,"adapter":"not_implemented","shell_access":false},
+    {"id":"localai","name":"LocalAI","repository":"https://github.com/mudler/LocalAI","placement":"tara-app.providers","kind":"openai_compatible_local_endpoint","priority":"p2","status":"candidate","enabled":false,"adapter":"not_implemented","shell_access":false},
+    {"id":"openhands","name":"OpenHands","repository":"https://github.com/All-Hands-AI/OpenHands","placement":"tara-code.agents","kind":"autonomous_coding_agent","priority":"p3","status":"blocked_pending_sandbox","enabled":false,"adapter":"not_implemented","requires_hardened_sandbox":true,"requires_diff_review":true,"shell_access":false},
+    {"id":"open-interpreter","name":"Open Interpreter","repository":"https://github.com/OpenInterpreter/open-interpreter","placement":"tara-code.agents","kind":"tool_execution_agent","priority":"p3","status":"blocked_pending_sandbox","enabled":false,"adapter":"not_implemented","requires_hardened_sandbox":true,"shell_access":false},
+    {"id":"automatic1111","name":"Stable Diffusion WebUI (AUTOMATIC1111)","repository":"https://github.com/AUTOMATIC1111/stable-diffusion-webui","placement":"tara-media.image","kind":"image_workflow","priority":"p3","status":"candidate","enabled":false,"adapter":"not_implemented","shell_access":false},
+    {"id":"text-generation-webui","name":"text-generation-webui","repository":"https://github.com/oobabooga/text-generation-webui","placement":"tara-app.runtime","kind":"local_model_server","priority":"p3","status":"candidate","enabled":false,"adapter":"not_implemented","shell_access":false},
+    {"id":"koboldcpp","name":"KoboldCpp","repository":"https://github.com/LostRuins/koboldcpp","placement":"tara-app.runtime","kind":"local_gguf_runtime","priority":"p3","status":"candidate","enabled":false,"adapter":"not_implemented","shell_access":false},
+    {"id":"privategpt","name":"PrivateGPT","repository":"https://github.com/zylon-ai/private-gpt","placement":"tara-chat.knowledge","kind":"private_rag","priority":"p3","status":"candidate","enabled":false,"adapter":"not_implemented","shell_access":false},
+    {"id":"librechat","name":"LibreChat","repository":"https://github.com/danny-avila/LibreChat","placement":"reference.chat_ui","kind":"chat_frontend","priority":"p3","status":"reference_only","enabled":false,"adapter":"none","shell_access":false},
+    {"id":"lobechat","name":"LobeChat","repository":"https://github.com/lobehub/lobehub","placement":"reference.chat_ui","kind":"chat_frontend","priority":"p3","status":"reference_only","enabled":false,"adapter":"none","shell_access":false},
+    {"id":"dify","name":"Dify","repository":"https://github.com/langgenius/dify","placement":"tara-app.workflows","kind":"workflow_engine","priority":"p3","status":"candidate","enabled":false,"adapter":"not_implemented","shell_access":false},
+    {"id":"langflow","name":"Langflow","repository":"https://github.com/langflow-ai/langflow","placement":"tara-app.workflows","kind":"visual_workflow_engine","priority":"p3","status":"candidate","enabled":false,"adapter":"not_implemented","shell_access":false},
+    {"id":"ragflow","name":"RAGFlow","repository":"https://github.com/infiniflow/ragflow","placement":"tara-chat.knowledge","kind":"rag_pipeline","priority":"p3","status":"candidate","enabled":false,"adapter":"not_implemented","shell_access":false},
+    {"id":"flowise","name":"Flowise","repository":"https://github.com/FlowiseAI/Flowise","placement":"tara-app.workflows","kind":"visual_workflow_engine","priority":"p3","status":"candidate","enabled":false,"adapter":"not_implemented","shell_access":false},
+    {"id":"fastgpt","name":"FastGPT","repository":"https://github.com/labring/FastGPT","placement":"tara-chat.knowledge","kind":"knowledge_workflow","priority":"p3","status":"candidate","enabled":false,"adapter":"not_implemented","shell_access":false},
+    {"id":"vllm","name":"vLLM","repository":"https://github.com/vllm-project/vllm","placement":"tara-app.runtime","kind":"high_throughput_model_server","priority":"p3","status":"candidate","enabled":false,"adapter":"not_implemented","hardware_note":"GPU/server-oriented; not default laptop runtime","shell_access":false},
+    {"id":"transformers","name":"Hugging Face Transformers","repository":"https://github.com/huggingface/transformers","placement":"tara-app.providers","kind":"model_library","priority":"p3","status":"candidate","enabled":false,"adapter":"not_implemented","shell_access":false},
+    {"id":"ollama-python","name":"Ollama Python","repository":"https://github.com/ollama/ollama-python","placement":"tara-app.adapters.ollama","kind":"python_client_library","priority":"p0","status":"candidate","enabled":false,"adapter":"ollama_http","shell_access":false},
+    {"id":"faster-whisper","name":"faster-whisper","repository":"https://github.com/SYSTRAN/faster-whisper","placement":"tara-chat.speech","kind":"speech_to_text","priority":"p3","status":"candidate","enabled":false,"adapter":"not_implemented","shell_access":false},
+    {"id":"invokeai","name":"InvokeAI","repository":"https://github.com/invoke-ai/InvokeAI","placement":"tara-media.image","kind":"image_workflow","priority":"p3","status":"candidate","enabled":false,"adapter":"not_implemented","shell_access":false},
+    {"id":"fooocus","name":"Fooocus","repository":"https://github.com/lllyasviel/Fooocus","placement":"tara-media.image","kind":"image_workflow","priority":"p3","status":"candidate","enabled":false,"adapter":"not_implemented","shell_access":false}
+  ]
+}

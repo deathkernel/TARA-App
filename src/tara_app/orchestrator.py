@@ -164,6 +164,39 @@ class Orchestrator:
         if decision.request_id != operation_id:
             return self._outcome(operation_id, "failed", decision, "invalid_router_response", "Router request ID did not match")
         if decision.status != "routed":
+            # Showing a local catalog is safe even when the optional remote
+            # model adapter is disabled. Cloud generation still requires an
+            # explicitly enabled adapter and explicit model selection.
+            if decision.intended_module == "models" and decision.intended_action == "catalog":
+                local_models = []
+                if self.model_catalog is not None:
+                    try:
+                        status = self.model_catalog.status()
+                        local_models = [item.get("id", "unknown") for item in status.get("models", []) if isinstance(item, Mapping)]
+                    except Exception:
+                        local_models = []
+                local_section = "\\n".join(f"- {model}" for model in local_models) or "- No local Ollama models detected."
+                catalog_text = (
+                    "# Free Model Hub\\n\\n"
+                    "## Gemini free-tier candidates (cloud; explicit selection required)\\n"
+                    "- gemini-3.5-flash-lite\\n- gemini-2.5-flash-lite\\n- gemini-3.1-flash-lite\\n\\n"
+                    "Actual free quota and model availability depend on your Google AI project. "
+                    "TARA does not send a prompt to Google merely to display this catalog.\\n\\n"
+                    "## Open-weight models for local Ollama\\n"
+                    "- gpt-oss:20b — verify memory requirements before installing.\\n"
+                    "- gpt-oss:120b — a large model; verify hardware requirements first.\\n\\n"
+                    "## Models installed on this device\\n" + local_section + "\\n\\n"
+                    "Cloud generation stays disabled unless the model adapter is explicitly enabled."
+                )
+                catalog_route = RouteDecision(
+                    operation_id, "routed", "models", "catalog", "local_model_catalog",
+                    "Displayed the local, non-network model catalog.",
+                )
+                return DispatchOutcome(
+                    "success", catalog_route,
+                    ModuleResult("success", {"text": catalog_text, "provider": "TARA local catalog", "remote_data_transfer": False}),
+                    operation_id,
+                )
             return self._outcome(operation_id, decision.status, decision, decision.reason_code, decision.reason)
         if decision.module is None or decision.action is None:
             return self._outcome(operation_id, "failed", decision, "invalid_router_response", "Router did not select a capability")

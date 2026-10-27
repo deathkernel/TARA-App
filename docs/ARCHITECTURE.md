@@ -62,3 +62,9 @@ The exact TARA model inventory and artifact formats are not established by the c
 ## Data boundaries
 
 Only pass the minimum context necessary to each module/model. Do not forward persistent chat memory, secrets, full environment dumps, or unrelated repository files automatically. Model output, tool output, and project content are untrusted. A model-generated plan can request a capability but cannot grant itself permission.
+
+## Implemented foundation: policy-gated dispatch
+
+The current head now includes `PermissionPolicy`, versioned `CapabilityRequest`/`CapabilityResponse` contracts, `CapabilityOrchestrator`, and a redacting JSONL audit sink. Dispatch requires both an explicitly allowlisted capability and a registered handler. Approval-gated capabilities return `approval_required` until the request carries explicit approval. Unknown capabilities and dangerous default-deny capabilities do not invoke handlers. The policy decision must be persisted before dispatch; if that audit write fails, dispatch stops.
+
+This does not yet implement sandboxed execution, persistent permission UI, real TARA-Chat/TARA-Code/TARA-Handler adapters, or a full application UI. Those remain separate follow-up work.

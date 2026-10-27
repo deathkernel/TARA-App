@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
-from typing import Any, Mapping
+from typing import Any, Mapping, Protocol
 
 SCHEMA_VERSION = "1.0"
 # Total serialized adapter-request payload limit. Allows larger attachments while
@@ -212,3 +212,72 @@ class RouteDecision:
             requires_approval=approval,
             policy_tags=tuple(tags),
         )
+
+
+# Provider and specialist adapter contracts retained from the TARA runtime foundation.
+
+CONTRACT_VERSION = 1
+
+
+@dataclass(frozen=True)
+class ModelInfo:
+    provider_id: str
+    name: str
+    size_bytes: int | None = None
+    digest: str | None = None
+    modified_at: str | None = None
+    family: str | None = None
+    parameter_size: str | None = None
+    quantization_level: str | None = None
+    model_format: str | None = None
+
+
+@dataclass(frozen=True)
+class ProviderStatus:
+    provider_id: str
+    configured: bool
+    healthy: bool
+    message: str
+
+
+class ModelProvider(Protocol):
+    """Minimal provider surface required by the first runtime-manager slice."""
+
+    def health(self) -> bool: ...
+
+    def list_models(self) -> list[object]: ...
+
+    def chat(self, model: str, messages: list[dict[str, str]]) -> str: ...
+
+
+SPECIALIST_CONTRACT_VERSION = 1
+
+
+@dataclass(frozen=True)
+class SpecialistRequest:
+    """Minimal versioned request sent to a TARA specialist adapter."""
+
+    request_id: str
+    capability: str
+    payload: dict[str, object]
+    contract_version: int = SPECIALIST_CONTRACT_VERSION
+
+
+@dataclass(frozen=True)
+class SpecialistResult:
+    """Normalized specialist response; proposed mutations remain uncommitted."""
+
+    request_id: str
+    status: str
+    output: object = None
+    proposed_changes: tuple[dict[str, object], ...] = ()
+    warnings: tuple[str, ...] = ()
+    contract_version: int = SPECIALIST_CONTRACT_VERSION
+
+
+class SpecialistAdapter(Protocol):
+    """Common boundary for TARA-Chat, TARA-Code, and TARA-Handler adapters."""
+
+    specialist_id: str
+
+    def handle(self, request: SpecialistRequest) -> SpecialistResult: ...

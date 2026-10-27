@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import mimetypes
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -48,16 +49,39 @@ class _Handler(BaseHTTPRequestHandler):
             }
             self._json(200, payload)
             return
-        asset = _ASSETS.get(endpoint)
-        if asset is None:
-            self._json(404, {"status": "unavailable", "error": "page not found"})
-            return
-        filename, content_type = asset
-        try:
-            content = (_WEB_ROOT / filename).read_bytes()
-        except OSError:
-            self._json(500, {"status": "failed", "error": "local app asset is unavailable"})
-            return
+        # Prefer the compiled React frontend when a build is present. The
+        # original static UI remains a safe fallback for source-only installs.
+        react_root = (_WEB_ROOT / "react-dist").resolve()
+        react_file: Path | None = None
+        if react_root.is_dir():
+            if endpoint == "/":
+                react_file = react_root / "index.html"
+            elif endpoint.startswith("/assets/"):
+                candidate = (react_root / endpoint.lstrip("/")).resolve()
+                if candidate.is_relative_to(react_root) and candidate.is_file():
+                    react_file = candidate
+        if react_file is not None:
+            try:
+                content = react_file.read_bytes()
+            except OSError:
+                self._json(500, {"status": "failed", "error": "compiled React asset is unavailable"})
+                return
+            content_type = mimetypes.guess_type(react_file.name)[0] or "application/octet-stream"
+            if content_type == "text/html":
+                content_type += "; charset=utf-8"
+            elif content_type in {"text/css", "text/javascript"}:
+                content_type += "; charset=utf-8"
+        else:
+            asset = _ASSETS.get(endpoint)
+            if asset is None:
+                self._json(404, {"status": "unavailable", "error": "page not found"})
+                return
+            filename, content_type = asset
+            try:
+                content = (_WEB_ROOT / filename).read_bytes()
+            except OSError:
+                self._json(500, {"status": "failed", "error": "local app asset is unavailable"})
+                return
         self.send_response(200)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(content)))
