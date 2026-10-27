@@ -61,14 +61,34 @@ def _open_application(application: Any) -> tuple[str, dict[str, Any], str | None
     if not executable:
         return "unavailable", {}, "the allowlisted application is not installed or available on PATH"
     try:
-        subprocess.Popen(
-            [executable, *command[1:]],
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            shell=False,
-        )
-    except (OSError, ValueError):
+        if platform == "darwin":
+            # The executable and app name come only from the fixed allowlist.
+            # Waiting for 'open -a' lets us report a missing/unlaunchable app.
+            completed = subprocess.run(
+                ["/usr/bin/open", *command[1:]],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                shell=False,
+                check=False,
+                timeout=10,
+            )
+            if completed.returncode != 0:
+                return "unavailable", {}, "the allowlisted application is not installed or could not be launched"
+        elif platform == "windows":
+            # Windows shell association is not used; start only the fixed app name.
+            os.startfile(command[0])  # type: ignore[attr-defined]
+        else:
+            # Linux executable is resolved from a fixed per-app allowlist; no shell.
+            subprocess.Popen(
+                [executable, *command[1:]],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                shell=False,
+                close_fds=True,
+            )
+    except (OSError, ValueError, subprocess.SubprocessError):
         return "unavailable", {}, "the allowlisted application could not be opened"
     return "success", {"operation": "desktop.app.open", "application": application}, None
 
@@ -106,10 +126,16 @@ def _open_website(value: Any) -> tuple[str, dict[str, Any], str | None]:
 
 
 def execute(action: str, inputs: dict[str, Any], *, approval_token: str | None = None) -> tuple[str, dict[str, Any], str | None]:
+    if not isinstance(inputs, dict):
+        return "invalid_request", {}, "action inputs must be an object"
     if action != "execute":
         return "permission_denied", {}, "unsupported action capability"
     if not isinstance(approval_token, str) or not approval_token.strip():
         return "approval_required", {}, "an explicit one-time approval token is required"
+    # These fields are orchestration metadata, not action arguments. Ignore them
+    # here, then continue to reject every unknown operation-specific input.
+    inputs = {key: value for key, value in inputs.items()
+              if key not in {"question", "attachments", "policy_tags"}}
     operation = inputs.get("operation")
     if operation == "desktop.app.open":
         if set(inputs) - {"operation", "application"}:
