@@ -41,6 +41,26 @@ class BuiltinRouter:
         available = set(capabilities)
         normalized = question.casefold()
         target: tuple[str, str, str, str] | None = None
+        memory_write_action = (
+            "store" if _MEMORY_STORE.search(normalized)
+            else "forget" if _MEMORY_FORGET.search(normalized)
+            else None
+        )
+        if memory_write_action is not None:
+            if "security.assess" not in available:
+                return RouteDecision(
+                    request_id, "unavailable", None, None, "security_unavailable",
+                    "Local memory changes need TARA-Security and your explicit approval.",
+                    intended_module="memory", intended_action=memory_write_action,
+                    policy_tags=("memory_write", "consent_required"),
+                )
+            return RouteDecision(
+                request_id, "routed", "security", "assess", "memory_write_approval",
+                "A local memory change needs your explicit approval.",
+                intended_module="memory", intended_action=memory_write_action,
+                requires_approval=True,
+                policy_tags=("memory_write", "consent_required", "human_approval"),
+            )
         if _SIDE_EFFECT.search(question):
             if "security.assess" in available:
                 return RouteDecision(
