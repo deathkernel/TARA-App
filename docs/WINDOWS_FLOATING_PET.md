@@ -9,12 +9,15 @@ This is the first integration slice, not the completed desktop automation engine
 ## Controls
 
 - Left-click the pet or select the compose icon: expand the floating window to show chat and the message composer below the toolbar.
+- Global Ctrl+Space: open quick chat; Ctrl+Shift+M: toggle mini mode.
 - Toolbar dropdown → Hide chat: collapse back to the compact pet and toolbar.
+- Status bell: green = ready/success, amber = working or needs input, red = blocked.
 - Voice icon: currently reports that voice input is not yet available.
 - Drag: move the pet.
 - Right-click: open the menu.
 - Escape or Ctrl+Q: exit the pet and local server.
-- The pet, toolbar, and expanded chat share one floating window; hiding chat leaves the compact pet and toolbar visible.
+- The pet, toolbar, and expanded chat share one floating window; hiding chat leaves the compact pet and toolbar visible. Chat collapses when focus leaves the companion window.
+- The animation is a local visual state indicator, not a claim that the AI can infer arbitrary task completion; success is shown after a successful chat response.
 - If the configured local port is busy, TARA automatically selects an available loopback port for this run.
 
 ## Network and privacy boundary
