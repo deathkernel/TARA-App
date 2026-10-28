@@ -2,7 +2,7 @@
 
 **TARA-App is an application/platform, not an AI model.** It is the central place where TARA's AI models and specialist systems will be installed, configured, selected, started, monitored, and used through one unified interface. It should support multiple model runtimes and providers rather than being tied to one model.
 
-TARA-Chat, TARA-Code, and TARA-Handler are parts of the TARA ecosystem that the app can coordinate; they are not necessarily all individual AI models. Chat is a conversation runtime, Code is a coding-engine project, and Handler is a deterministic native developer-environment tool. Actual model inventory and runtime support must be discovered/configured explicitly.
+Chat, Code, Handler, Router, and the other specialist capabilities are maintained as components inside this `TARA-App` repository. The app must not depend on deleted sibling model repositories or private cross-repository imports. Chat is a conversation runtime, Code is a coding specialist, and Handler is a deterministic native developer-environment tool; these are not all individual AI models. Actual model inventory and runtime support must be discovered/configured explicitly.
 
 > **Project handover & live roadmap:** New contributors and the daily development task should start with [Project History, Current Status & Roadmap](docs/PROJECT_STATUS_AND_ROADMAP.md). It tracks what happened, what is implemented versus unverified, the dependency-ordered remaining work, and the rules for updating progress.
 
@@ -18,7 +18,7 @@ TARA-Chat, TARA-Code, and TARA-Handler are parts of the TARA ecosystem that the 
 
 ## Current implementation state
 
-TARA-App is being consolidated as a single Python monorepo. The current integrated source packages are:
+TARA-App is being consolidated as a single Python monorepo. The current integrated source packages, all maintained within this repository, are:
 
 - `tara_app`: the local app, capability registry, approval flow, Ollama lifecycle manager, conversation controls, and safe Markdown chat UI.
 - `tara_router`: a deterministic local router included in this repository; it requires no API key or paid inference.
