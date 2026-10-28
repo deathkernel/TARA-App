@@ -37,6 +37,6 @@ if not exist "tara-app.toml" (
 
 ".venv\Scripts\python.exe" -m tara_app.handler_launcher prepare
 
-".venv\Scripts\python.exe" -m tara_app --config "tara-app.toml" --floating-pet
+".venv\Scripts\python.exe" -m tara_app --config "tara-app.toml"
 set "TARA_EXIT_CODE=%errorlevel%"
 endlocal & exit /b %TARA_EXIT_CODE%

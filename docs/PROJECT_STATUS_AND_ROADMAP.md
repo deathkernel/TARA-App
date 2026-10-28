@@ -102,6 +102,11 @@ Useful history links:
 
 ## 4. What is still left
 
+### Product direction decision — floating pet dropped
+
+The floating desktop pet is no longer a product goal. Do not spend future roadmap or scheduled development work on pet animations, pet chat panels, pet toolbars, or pet-specific overlay behavior. PR #32 was closed without merging. The existing pet implementation from PR #31 remains in the repository for now, but the default Windows launcher must open the regular browser UI. Removing the legacy optional pet code entirely is separate cleanup and should only be done in a dedicated reviewed change if requested.
+
+
 This roadmap is dependency-ordered. The daily development task should deliver a coherent, reviewable batch of multiple eligible items per run, avoid duplicate work, and update this document with evidence after meaningful progress.
 
 ### P0 — Establish a trustworthy baseline
@@ -192,6 +197,7 @@ Append a dated entry after each meaningful, evidence-backed change. Keep entries
 
 | Date | Item | Evidence / PR | Result | Next |
 |---|---|---|---|---|
+| 2026-10-28 | Dropped floating pet as a product direction; closed PR #32 and restored the normal browser UI as the Windows launcher default | [PR #32 closed](https://github.com/deathkernel/TARA-App/pull/32); launcher change in this PR | Pet UI is no longer on the roadmap; legacy optional code remains but is not launched by default | Continue with core app integration and verification |
 | 2026-10-27 | Created initial project history and dependency-ordered roadmap | [Current main history](https://github.com/deathkernel/TARA-App/commits/main) | Baseline documentation drafted; runtime/test status still needs a fresh run | Establish current test/CI baseline |
 | 2026-10-27 | Scoped supported/tested platforms to Windows and Linux; removed macOS from the native Handler CI matrix | [PR #28](https://github.com/deathkernel/TARA-App/pull/28); [CI run 40522975440](https://github.com/deathkernel/TARA-App/actions/runs/40522975440) | On head `95061e20577706c836e5c24b6cdb85351d1cd4ad`, package install, AI tool registry validation, `python -m unittest discover -s tests -v` (173 tests passed), `python -m compileall -q src`, frontend `npm install --no-audit --no-fund` + `npm run build`, and native Handler CMake configure/build on Ubuntu and Windows all passed. No macOS job ran. Any later head commit must pass its own checks before merge. | Confirm checks on the updated roadmap commit, then merge if green |
 
