@@ -9,6 +9,7 @@ from unittest.mock import patch
 from tara_app.windows_pet import (
     _LoopbackOnlyRedirectHandler,
     _create_local_server,
+    _pet_window_geometry,
     build_chat_payload,
     extract_answer,
     run_floating_pet,
@@ -196,6 +197,17 @@ class WindowsPetContractTests(unittest.TestCase):
         ):
             with self.assertRaisesRegex(RuntimeError, "could not bind its local chat server"):
                 _create_local_server(object(), 8765)
+
+
+    def test_chat_panel_expands_below_pet_without_moving_pet_center(self) -> None:
+        self.assertEqual(
+            _pet_window_geometry(expanded=True, pet_center_x=300, top_y=120),
+            "390x620+105+120",
+        )
+        self.assertEqual(
+            _pet_window_geometry(expanded=False, pet_center_x=300, top_y=120),
+            "132x150+234+120",
+        )
 
     def test_floating_pet_is_windows_only(self) -> None:
         with patch("tara_app.windows_pet.sys.platform", "linux"):
