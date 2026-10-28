@@ -88,6 +88,28 @@ class ApplicationServiceTests(unittest.TestCase):
 
         self.assertEqual(self.service.sessions.history(session.session_id), [])
 
+
+    def test_service_can_opt_into_persistent_sessions(self):
+        database = Path(self.temp.name) / "service-sessions.sqlite3"
+        first = TARAApplicationService(
+            runtime=FakeRuntime(), audit=self.audit, session_database_path=database,
+        )
+        session = first.create_session({"source": "test"})
+        first.sessions.append_message(session.session_id, "user", "persist this")
+
+        restarted = TARAApplicationService(
+            runtime=FakeRuntime(), audit=self.audit, session_database_path=database,
+        )
+        self.assertEqual(restarted.sessions.get(session.session_id).metadata, {"source": "test"})
+        self.assertEqual(restarted.sessions.history(session.session_id)[0].content, "persist this")
+
+    def test_service_rejects_ambiguous_session_storage_configuration(self):
+        with self.assertRaises(ValueError):
+            TARAApplicationService(
+                runtime=FakeRuntime(), audit=self.audit,
+                sessions=SessionStore(), session_database_path=Path(self.temp.name) / "sessions.sqlite3",
+            )
+
     def test_close_session(self):
         session = self.service.create_session()
         self.assertTrue(self.service.close_session(session.session_id))
