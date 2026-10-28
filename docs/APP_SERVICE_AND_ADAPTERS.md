@@ -23,3 +23,8 @@ Session content remains in process memory only. Audit events intentionally recor
 5. Connect these services to a UI/API entry point and then run the expanded test suite.
 
 No shell execution, patch application, model download, provider launch, auto-merge, or third-party installation is added by these adapters.
+
+
+## Local health endpoint
+
+The loopback web server exposes `GET /api/health` for local liveness checks. It reports the app name and API version, registered capability IDs, and whether a model catalogue is configured. It does not contact model providers or claim that a configured runtime is currently healthy. The endpoint uses the same local-origin validation as the model endpoint and rejects untrusted origins.
