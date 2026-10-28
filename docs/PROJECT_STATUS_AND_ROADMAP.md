@@ -172,7 +172,7 @@ Use this sequence unless fresh repository evidence shows a more urgent blocker:
 6. **Handler subprocess boundary, timeouts and cancellation.**
 7. **Runtime lifecycle, persistence and approval UX.**
 8. **React/browser QA and Windows/macOS/Linux smoke tests.**
-9. **Sibling repository integrations and optional provider/tool expansion.**
+9. **In-repository specialist verification and optional provider/tool evaluation.**
 10. **Release readiness and acceptance checklist.**
 
 The order can change if the current CI or code inspection identifies a confirmed blocker. Explain why in the PR and update the checklist here.
@@ -203,7 +203,7 @@ Append a dated entry after each meaningful, evidence-backed change. Keep entries
 | Date | Item | Evidence / PR | Result | Next |
 |---|---|---|---|---|
 | 2026-10-28 | Dropped floating pet as a product direction; closed PR #32 and restored the normal browser UI as the Windows launcher default | [PR #32 closed](https://github.com/deathkernel/TARA-App/pull/32); launcher change in this PR | Pet UI is no longer on the roadmap; legacy optional code remains but is not launched by default | Continue with core app integration and verification |
-| 2026-10-28 | Confirmed single-repository development boundary and removed floating pet from the product direction | [PR #34](https://github.com/deathkernel/TARA-App/pull/34), merged `1bf4fdff00d748acecbba4e50cda7483f82b9f4f`; all 5 CI jobs passed on its head | Default Windows launcher now opens the regular browser UI; pet upgrade PR #32 closed without merge. No actual desktop smoke test claimed. | Establish the current core test baseline and bind/verify in-repo Chat/Code specialist paths |
+| 2026-10-28 | Confirmed single-repository development boundary | [PR #35](https://github.com/deathkernel/TARA-App/pull/35), commit `2997f47bfdd8832c670438251f00897420e6e13b` | All 5 CI jobs passed on this PR head; launcher/pet evidence remains recorded separately under PR #34. No target-machine smoke test claimed. | Establish the current core test baseline and bind/verify in-repo Chat/Code specialist paths |
 | 2026-10-27 | Created initial project history and dependency-ordered roadmap | [Current main history](https://github.com/deathkernel/TARA-App/commits/main) | Baseline documentation drafted; runtime/test status still needs a fresh run | Establish current test/CI baseline |
 | 2026-10-27 | Scoped supported/tested platforms to Windows and Linux; removed macOS from the native Handler CI matrix | [PR #28](https://github.com/deathkernel/TARA-App/pull/28); [CI run 40522975440](https://github.com/deathkernel/TARA-App/actions/runs/40522975440) | On head `95061e20577706c836e5c24b6cdb85351d1cd4ad`, package install, AI tool registry validation, `python -m unittest discover -s tests -v` (173 tests passed), `python -m compileall -q src`, frontend `npm install --no-audit --no-fund` + `npm run build`, and native Handler CMake configure/build on Ubuntu and Windows all passed. No macOS job ran. Any later head commit must pass its own checks before merge. | Confirm checks on the updated roadmap commit, then merge if green |
 
