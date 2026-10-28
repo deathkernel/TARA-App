@@ -121,8 +121,11 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
         raise ValueError("port must be between 1024 and 65535")
     try:
         root = tk.Tk()
-    except tk.TclError as exc:
-        raise RuntimeError("Could not initialize the Windows floating pet UI.") from exc
+    except tk.TclError:
+        from tara_app.webapp import serve
+        print("Windows floating pet could not initialize; opening TARA's local web interface instead.", file=sys.stderr)
+        serve(app, port=port)
+        return
 
     root.title("TARA Floating Pet")
     root.geometry("132x150+120+120")
