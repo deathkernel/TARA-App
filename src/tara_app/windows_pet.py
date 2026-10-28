@@ -5,6 +5,7 @@ It does not execute desktop actions or model-generated commands in this first sl
 """
 from __future__ import annotations
 
+import errno
 import json
 import math
 import sys
@@ -128,6 +129,24 @@ def _post_chat(server_url: str, payload: dict[str, Any]) -> str:
     return extract_answer(result)
 
 
+
+def _create_local_server(app: Any, port: int) -> tuple[Any, int]:
+    """Bind the preferred loopback port, falling back to an OS-assigned port if busy."""
+    from tara_app.webapp import _Server
+
+    try:
+        server = _Server(("127.0.0.1", port), app)
+        return server, server.server_port
+    except OSError as exc:
+        # Windows reports WSAEADDRINUSE as 10048; POSIX uses errno.EADDRINUSE.
+        if exc.errno not in {errno.EADDRINUSE, 10048, getattr(errno, "WSAEADDRINUSE", 10048)}:
+            raise
+    try:
+        server = _Server(("127.0.0.1", 0), app)
+    except OSError as exc:
+        raise RuntimeError("TARA could not bind its local chat server. Check local network permissions and try again.") from exc
+    return server, server.server_port
+
 def run_floating_pet(app: Any, *, port: int = 8765) -> None:
     """Run the local TARA server in a background thread and the pet in the UI thread."""
     if sys.platform != "win32":
@@ -167,6 +186,8 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
     canvas.pack(fill="both", expand=True)
     session_id = f"windows-pet-{threading.get_ident()}"
     history: list[dict[str, str]] = []
+    shutdown_event = threading.Event()
+    chat_workers: set[threading.Thread] = set()
     chat_window: Any = None
     transcript: Any = None
     entry: Any = None
@@ -290,6 +311,8 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
 
             def finish() -> None:
                 nonlocal busy
+                if shutdown_event.is_set():
+                    return
                 busy = False
                 if send_button is not None and send_button.winfo_exists():
                     send_button.configure(state="normal", text="Send")
@@ -299,11 +322,14 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
                     append_transcript("Notice", outcome[1])
 
             try:
-                root.after(0, finish)
-            except tk.TclError:
+                if not shutdown_event.is_set():
+                    root.after(0, finish)
+            except (tk.TclError, RuntimeError):
                 pass
 
-        threading.Thread(target=worker, name="tara-pet-chat", daemon=True).start()
+        worker_thread = threading.Thread(target=worker, name="tara-pet-chat", daemon=True)
+        chat_workers.add(worker_thread)
+        worker_thread.start()
 
     def on_press(event: Any) -> None:
         drag.update(x=event.x_root, y=event.y_root, root_x=root.winfo_x(), root_y=root.winfo_y(), moved=False)
@@ -337,9 +363,17 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
     root.bind("<Control-q>", lambda _event: root.destroy())
     root.protocol("WM_DELETE_WINDOW", root.destroy)
 
-    from tara_app.webapp import _Server
-    server_url = validate_server_url(f"http://127.0.0.1:{port}")
-    server = _Server(("127.0.0.1", port), app)
+    try:
+        server, actual_port = _create_local_server(app, port)
+    except (OSError, RuntimeError):
+        root.destroy()
+        raise
+    server_url = validate_server_url(f"http://127.0.0.1:{actual_port}")
+    if actual_port != port:
+        print(
+            f"TARA's preferred port {port} is busy; using http://127.0.0.1:{actual_port} instead.",
+            flush=True,
+        )
     server_thread = threading.Thread(target=server.serve_forever, name="tara-local-server", daemon=True)
     server_thread.start()
 
@@ -347,8 +381,16 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
     try:
         root.mainloop()
     finally:
+        shutdown_event.set()
         try:
             server.shutdown()
         finally:
             server.server_close()
             server_thread.join(timeout=3)
+            for worker_thread in tuple(chat_workers):
+                if worker_thread is not threading.current_thread():
+                    worker_thread.join(timeout=0.2)
+            try:
+                root.destroy()
+            except tk.TclError:
+                pass
