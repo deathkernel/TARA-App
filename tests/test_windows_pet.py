@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
-from tara_app.windows_pet import build_chat_payload, extract_answer, validate_server_url
+from tara_app.windows_pet import build_chat_payload, extract_answer, run_floating_pet, validate_server_url
 
 
 class WindowsPetContractTests(unittest.TestCase):
@@ -41,6 +42,11 @@ class WindowsPetContractTests(unittest.TestCase):
         self.assertEqual(extract_answer({"result": {"data": {"text": "Hello"}}}), "Hello")
         self.assertEqual(extract_answer({"result": {"data": {"reply": "Hi"}}}), "Hi")
         self.assertEqual(extract_answer({"error": "unavailable"}), "unavailable")
+
+    def test_floating_pet_is_windows_only(self) -> None:
+        with patch("tara_app.windows_pet.sys.platform", "linux"):
+            with self.assertRaisesRegex(RuntimeError, "Windows only"):
+                run_floating_pet(None)
 
     def test_rejects_non_object_response(self) -> None:
         with self.assertRaises(ValueError):
