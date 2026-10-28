@@ -202,11 +202,11 @@ class WindowsPetContractTests(unittest.TestCase):
     def test_chat_panel_expands_below_pet_without_moving_pet_center(self) -> None:
         self.assertEqual(
             _pet_window_geometry(expanded=True, pet_center_x=300, top_y=120),
-            "390x620+105+120",
+            "430x470+85+120",
         )
         self.assertEqual(
             _pet_window_geometry(expanded=False, pet_center_x=300, top_y=120),
-            "132x150+234+120",
+            "180x204+210+120",
         )
 
     def test_floating_pet_is_windows_only(self) -> None:
