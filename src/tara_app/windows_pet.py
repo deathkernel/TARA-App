@@ -117,21 +117,11 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
         serve(app, port=port)
         return
 
-    from tara_app.webapp import _Server
-
     if not 1024 <= port <= 65535:
         raise ValueError("port must be between 1024 and 65535")
-    server = _Server(("127.0.0.1", port), app)
-    server_thread = threading.Thread(target=server.serve_forever, name="tara-local-server", daemon=True)
-    server_thread.start()
-    server_url = f"http://127.0.0.1:{port}"
-
     try:
         root = tk.Tk()
     except tk.TclError as exc:
-        server.shutdown()
-        server.server_close()
-        server_thread.join(timeout=2)
         raise RuntimeError("Could not initialize the Windows floating pet UI.") from exc
 
     root.title("TARA Floating Pet")
@@ -313,6 +303,12 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
     root.bind("<Escape>", lambda _event: root.destroy())
     root.bind("<Control-q>", lambda _event: root.destroy())
     root.protocol("WM_DELETE_WINDOW", root.destroy)
+
+    from tara_app.webapp import _Server
+    server_url = validate_server_url(f"http://127.0.0.1:{port}")
+    server = _Server(("127.0.0.1", port), app)
+    server_thread = threading.Thread(target=server.serve_forever, name="tara-local-server", daemon=True)
+    server_thread.start()
 
     draw_pet()
     try:
