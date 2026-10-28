@@ -326,6 +326,8 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
                     root.after(0, finish)
             except (tk.TclError, RuntimeError):
                 pass
+            finally:
+                chat_workers.discard(threading.current_thread())
 
         worker_thread = threading.Thread(target=worker, name="tara-pet-chat", daemon=True)
         chat_workers.add(worker_thread)
