@@ -16,7 +16,7 @@ from urllib.parse import urlsplit
 
 
 def validate_server_url(value: str) -> str:
-    """Accept only a loopback HTTP origin with an optional port."""
+    """Accept only a loopback HTTP origin with an explicit non-privileged port."""
     if not isinstance(value, str) or not value or len(value) > 256:
         raise ValueError("server URL is invalid")
     try:
