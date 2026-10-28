@@ -184,6 +184,10 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
     background = "#111116"
     panel_background = "#17171f"
     root.configure(bg=background)
+    try:
+        root.attributes("-transparentcolor", background)
+    except tk.TclError:
+        pass
 
     canvas = tk.Canvas(root, width=180, height=158, bg=background, highlightthickness=0, bd=0, cursor="hand2")
     canvas.pack(fill="x")
