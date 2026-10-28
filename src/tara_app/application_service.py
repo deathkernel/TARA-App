@@ -80,14 +80,14 @@ class TARAApplicationService:
         if not isinstance(message, str) or not message.strip():
             raise ApplicationServiceError("message must be non-empty")
         try:
-            session = self.sessions.get(session_id)
+            self.sessions.get(session_id)
             selected = self.catalogue.get(provider_id, model)
             if selected.provider_id != provider_id:
                 raise ApplicationServiceError("selected model/provider mismatch")
+            # Preflight capacity before inference; append_turn() checks again under
+            # the store lock so a complete user/assistant pair is committed atomically.
+            self.sessions.ensure_turn_capacity(session_id)
             history = self.sessions.history(session_id)
-            # Build the request with a tentative user turn. Commit both messages only
-            # after the provider returns a usable response, so provider failures do not
-            # leave an orphaned user message in the next turn's conversation context.
             request_history = [
                 {"role": item.role, "content": item.content}
                 for item in history if item.role in {"system", "user", "assistant"}
@@ -100,15 +100,17 @@ class TARAApplicationService:
             )
             if not isinstance(response, str) or not response.strip():
                 raise ApplicationServiceError("chat provider returned an empty or invalid response")
-            self.sessions.append_message(session_id, "user", message)
-            self.sessions.append_message(session_id, "assistant", response.strip())
+            answer = response.strip()
+            self.sessions.append_turn(session_id, message, answer)
             self.audit.record("chat_turn_completed", {
                 "session_id": session_id, "provider_id": provider_id, "model": model,
             })
-            return ChatTurn(session_id, provider_id, model, message, response.strip())
+            return ChatTurn(session_id, provider_id, model, message, answer)
         except ApplicationServiceError:
             raise
-        except (SessionError, RuntimeConfigurationError, AuditLogError, ValueError, RuntimeError):
+        except SessionError as exc:
+            raise ApplicationServiceError(str(exc)) from None
+        except (RuntimeConfigurationError, AuditLogError, ValueError, RuntimeError):
             raise ApplicationServiceError("chat turn failed; inspect local provider status and session state") from None
 
     def dispatch_capability(self, request: CapabilityRequest) -> CapabilityResponse:

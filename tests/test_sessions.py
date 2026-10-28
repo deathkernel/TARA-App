@@ -29,6 +29,29 @@ class SessionStoreTests(unittest.TestCase):
         with self.assertRaises(SessionError):
             store.append_message(session.session_id, "assistant", "again")
 
+    def test_append_turn_commits_user_and_assistant_as_a_pair(self):
+        store = SessionStore(max_messages_per_session=2)
+        session = store.create()
+
+        user_message, assistant_message = store.append_turn(
+            session.session_id, "hello", "hello back"
+        )
+
+        self.assertEqual((user_message.role, assistant_message.role), ("user", "assistant"))
+        self.assertEqual(
+            [(message.role, message.content) for message in store.history(session.session_id)],
+            [("user", "hello"), ("assistant", "hello back")],
+        )
+
+    def test_append_turn_is_atomic_when_capacity_is_insufficient(self):
+        store = SessionStore(max_messages_per_session=1)
+        session = store.create()
+
+        with self.assertRaisesRegex(SessionError, "two message slots"):
+            store.append_turn(session.session_id, "hello", "hello back")
+
+        self.assertEqual(store.history(session.session_id), [])
+
     def test_unknown_session_and_invalid_role_rejected(self):
         store = SessionStore()
         with self.assertRaises(SessionError):

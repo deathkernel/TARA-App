@@ -8,6 +8,8 @@ This batch adds a headless facade and narrow adapter boundaries. It is not a GUI
 
 Session content remains in process memory only. Audit events intentionally record identifiers and model/provider metadata rather than chat message text. A failed audit while creating a session closes the newly created session.
 
+Chat turns now require capacity for both the user message and assistant response. Capacity is checked before invoking the provider, then the pair is appended atomically under the session-store lock. If the session cannot fit the complete pair, the request fails without calling the provider or leaving an orphaned user message. The store does not silently truncate existing history to make room.
+
 ## Specialist adapters
 
 - `TaraChatAdapter` accepts an injected callable and validates a small `chat.reply` payload. It does not import TARA-CHAT internals, launch subprocesses, or install dependencies.

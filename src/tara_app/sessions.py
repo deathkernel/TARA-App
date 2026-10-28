@@ -69,13 +69,47 @@ class SessionStore:
                 raise SessionError("session not found")
             return self._snapshot(session)
 
-    def append_message(self, session_id: str, role: str, content: str) -> SessionMessage:
-        if role not in {"system", "user", "assistant", "tool"}:
+    def _validate_message(self, role: str, content: str) -> None:
+        if not isinstance(role, str) or role not in {"system", "user", "assistant", "tool"}:
             raise SessionError("role is not supported")
         if not isinstance(content, str) or not content.strip():
             raise SessionError("message content must be a non-empty string")
         if len(content) > self.max_content_chars:
             raise SessionError("message exceeds configured character limit")
+
+    def ensure_turn_capacity(self, session_id: str) -> None:
+        """Fail before inference if the session cannot store both sides of a chat turn."""
+        with self._lock:
+            session = self._sessions.get(session_id)
+            if session is None:
+                raise SessionError("session not found")
+            if len(session.messages) + 2 > self.max_messages_per_session:
+                raise SessionError(
+                    "session message capacity reached; a chat turn requires two message slots"
+                )
+
+    def append_turn(
+        self, session_id: str, user_content: str, assistant_content: str
+    ) -> tuple[SessionMessage, SessionMessage]:
+        """Append a complete user/assistant pair atomically or leave history unchanged."""
+        self._validate_message("user", user_content)
+        self._validate_message("assistant", assistant_content)
+        with self._lock:
+            session = self._sessions.get(session_id)
+            if session is None:
+                raise SessionError("session not found")
+            if len(session.messages) + 2 > self.max_messages_per_session:
+                raise SessionError(
+                    "session message capacity reached; a chat turn requires two message slots"
+                )
+            user_message = SessionMessage("user", user_content, self._now())
+            assistant_message = SessionMessage("assistant", assistant_content, self._now())
+            session.messages.extend((user_message, assistant_message))
+            session.updated_at = assistant_message.created_at
+            return user_message, assistant_message
+
+    def append_message(self, session_id: str, role: str, content: str) -> SessionMessage:
+        self._validate_message(role, content)
         with self._lock:
             session = self._sessions.get(session_id)
             if session is None:
