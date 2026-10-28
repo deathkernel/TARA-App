@@ -158,12 +158,13 @@ class WindowsPetContractTests(unittest.TestCase):
         class FakeServer:
             server_port = 8765
 
+        app = object()
         with patch("tara_app.webapp._Server", return_value=FakeServer()) as server_factory:
-            server, port = _create_local_server(object(), 8765)
+            server, port = _create_local_server(app, 8765)
 
         self.assertEqual(port, 8765)
         self.assertIsInstance(server, FakeServer)
-        server_factory.assert_called_once_with(("127.0.0.1", 8765))
+        server_factory.assert_called_once_with(("127.0.0.1", 8765), app)
 
     def test_local_server_falls_back_to_ephemeral_port_when_preferred_port_is_busy(self) -> None:
         class FakeServer:
