@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import contextmanager
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -85,12 +87,17 @@ class SessionStore:
             except (OSError, sqlite3.Error, ValueError, TypeError):
                 raise SessionError("persistent session store could not be initialized") from None
 
-    def _connect(self) -> sqlite3.Connection:
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
         if self.database_path is None:
             raise SessionError("persistent session storage is not configured")
         db = sqlite3.connect(str(self.database_path), timeout=5.0)
-        db.execute("PRAGMA foreign_keys = ON")
-        return db
+        try:
+            db.execute("PRAGMA foreign_keys = ON")
+            with db:
+                yield db
+        finally:
+            db.close()
 
     def _load_from_db(self, db: sqlite3.Connection) -> None:
         sessions = db.execute(
