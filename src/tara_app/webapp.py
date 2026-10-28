@@ -48,7 +48,7 @@ class _Handler(BaseHTTPRequestHandler):
                 "api_version": "1.0",
                 "capability_count": len(capabilities),
                 "capabilities": list(capabilities),
-                "model_runtime": "configured" if catalog is not None else "not_configured",
+                "model_runtime": "configured" if catalog is not None and catalog.profiles and catalog.base_url else "not_configured",
             })
             return
         if endpoint == "/api/models":
