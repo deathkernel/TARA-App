@@ -1,5 +1,6 @@
 """Tests for bounded, isolated in-memory sessions."""
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -28,6 +29,34 @@ class SessionStoreTests(unittest.TestCase):
         store.append_message(session.session_id, "user", "hello")
         with self.assertRaises(SessionError):
             store.append_message(session.session_id, "assistant", "again")
+
+
+    def test_opt_in_persistence_restores_sessions_and_messages(self):
+        with tempfile.TemporaryDirectory() as temp:
+            database = Path(temp) / "sessions.sqlite3"
+            first_store = SessionStore(database_path=database)
+            session = first_store.create({"purpose": "test"})
+            first_store.append_message(session.session_id, "user", "private test prompt")
+            first_store.append_message(session.session_id, "assistant", "private test answer")
+
+            restarted_store = SessionStore(database_path=database)
+            restored = restarted_store.get(session.session_id)
+            self.assertEqual(restored.metadata, {"purpose": "test"})
+            self.assertEqual(
+                [(message.role, message.content) for message in restarted_store.history(session.session_id)],
+                [("user", "private test prompt"), ("assistant", "private test answer")],
+            )
+
+            self.assertTrue(restarted_store.close(session.session_id))
+            after_close = SessionStore(database_path=database)
+            with self.assertRaises(SessionError):
+                after_close.get(session.session_id)
+
+    def test_persistence_is_disabled_by_default(self):
+        store = SessionStore()
+        session = store.create()
+        self.assertIsNone(store.database_path)
+        self.assertEqual(store.history(session.session_id), [])
 
     def test_unknown_session_and_invalid_role_rejected(self):
         store = SessionStore()
