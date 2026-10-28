@@ -466,6 +466,31 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
     root.bind("<Control-space>", lambda _event: open_chat())
     root.bind("<Control-Shift-m>", lambda _event: toggle_mini_mode())
 
+    def global_hotkey_worker() -> None:
+        # Windows-only polling keeps Ctrl+Space available even when another app has focus.
+        try:
+            import ctypes
+            user32 = ctypes.windll.user32
+        except (ImportError, AttributeError):
+            return
+        was_down = False
+        while not shutdown_event.wait(0.06):
+            try:
+                ctrl_down = bool(user32.GetAsyncKeyState(0x11) & 0x8000)
+                space_down = bool(user32.GetAsyncKeyState(0x20) & 0x8000)
+                is_down = ctrl_down and space_down
+                if is_down and not was_down:
+                    try:
+                        root.after(0, open_chat)
+                    except tk.TclError:
+                        return
+                was_down = is_down
+            except (OSError, AttributeError):
+                return
+
+    hotkey_thread = threading.Thread(target=global_hotkey_worker, name="tara-global-hotkey", daemon=True)
+    hotkey_thread.start()
+
     def dismiss_chat_on_focus_loss(_event: Any) -> None:
         if not expanded:
             return
@@ -512,6 +537,7 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
         finally:
             server.server_close()
             server_thread.join(timeout=3)
+            hotkey_thread.join(timeout=0.2)
             for worker_thread in tuple(chat_workers):
                 if worker_thread is not threading.current_thread():
                     worker_thread.join(timeout=0.2)
