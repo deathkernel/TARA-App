@@ -13,6 +13,7 @@ This is the first integration slice, not the completed desktop automation engine
 - Right-click: open the menu.
 - Escape or Ctrl+Q: exit the pet and local server.
 - Close the chat window: hide the chat window; the pet remains available.
+- If the configured local port is busy, TARA automatically selects an available loopback port for this run.
 
 ## Network and privacy boundary
 
@@ -26,4 +27,4 @@ This is the first integration slice, not the completed desktop automation engine
 
 ## Verification required
 
-Run the repository CI workflow, including the redirect-boundary, malformed-payload, and transcript-bound tests, and test the Windows launcher on a real Windows machine. In particular, verify Tk transparency behavior, window dragging, taskbar/window focus behavior, clean shutdown, and that the local chat endpoint remains loopback-only. Do not mark the desktop feature as production-ready based only on unit tests.
+Run the repository CI workflow, including redirect-boundary, malformed-payload, transcript-bound, and busy-port fallback tests, and test the Windows launcher on a real Windows machine. In particular, verify Tk transparency behavior, window dragging, taskbar/window focus behavior, clean shutdown, and that the local chat endpoint remains loopback-only. Do not mark the desktop feature as production-ready based only on unit tests.
