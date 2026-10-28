@@ -257,7 +257,7 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
         pet_state = state
         colors = {"ready": "#39d98a", "thinking": "#f4b942", "needs_input": "#f4b942", "blocked": "#ff5c68", "success": "#39d98a"}
         labels = {"ready": "Ready", "thinking": "Working", "needs_input": "Needs input", "blocked": "Blocked", "success": "Task completed"}
-        status_button.configure(fg=colors.get(state, "#39d98a"), text="●" if state not in {"thinking", "blocked"} else ("◌" if state == "thinking" else "!"))
+        status_button.configure(fg=colors.get(state, "#39d98a"), text="🔔")
         status_button.configure(command=lambda: show_status())
         root.title(f"TARA Floating Pet — {labels.get(state, state.title())}")
 
@@ -268,7 +268,7 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
         append_transcript("Notice", labels.get(pet_state, "Ready"))
 
     def toggle_mini_mode() -> None:
-        nonlocal mini_mode
+        nonlocal mini_mode, expanded
         mini_mode = not mini_mode
         if mini_mode:
             chat_area.pack_forget()
@@ -401,7 +401,10 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
             if mini_mode:
                 canvas.create_oval(7, 7, 47, 47, fill="#6b48b7", outline="#c6a5ff", width=2)
                 canvas.create_text(27, 27, text="T", fill="#ffffff", font=("Segoe UI", 16, "bold"))
-                canvas.create_oval(39, 4, 51, 16, fill={"ready": "#39d98a", "thinking": "#f4b942", "blocked": "#ff5c68", "success": "#39d98a"}.get(pet_state, "#39d98a"), outline="")
+                bell_color = {"ready": "#39d98a", "thinking": "#f4b942", "blocked": "#ff5c68", "success": "#39d98a"}.get(pet_state, "#39d98a")
+                if pet_state == "thinking" and animation_tick % 2:
+                    bell_color = "#ffe4a3"
+                canvas.create_oval(39, 4, 51, 16, fill=bell_color, outline="")
                 animation_tick += 1
                 root.after(250 if pet_state == "thinking" else 650, draw_pet)
                 return
@@ -462,6 +465,25 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
     root.bind("<Escape>", lambda _event: collapse_chat() if expanded else None)
     root.bind("<Control-space>", lambda _event: open_chat())
     root.bind("<Control-Shift-m>", lambda _event: toggle_mini_mode())
+
+    def dismiss_chat_on_focus_loss(_event: Any) -> None:
+        if not expanded:
+            return
+        def check_focus() -> None:
+            if not expanded or shutdown_event.is_set():
+                return
+            try:
+                focused = root.focus_get()
+                if focused is None:
+                    collapse_chat()
+            except tk.TclError:
+                pass
+        try:
+            root.after(180, check_focus)
+        except tk.TclError:
+            pass
+
+    root.bind("<FocusOut>", dismiss_chat_on_focus_loss, add="+")
     root.bind("<Control-q>", lambda _event: root.destroy())
     root.protocol("WM_DELETE_WINDOW", root.destroy)
 
