@@ -61,6 +61,15 @@ def build_chat_payload(question: str, session_id: str, history: list[dict[str, s
     }
 
 
+def trim_transcript_text(text: str, max_chars: int = 100_000) -> str:
+    """Keep the newest transcript content within a predictable memory bound."""
+    if not isinstance(text, str):
+        raise TypeError("transcript must be text")
+    if not isinstance(max_chars, int) or isinstance(max_chars, bool) or max_chars < 1:
+        raise ValueError("max_chars must be a positive integer")
+    return text[-max_chars:]
+
+
 def extract_answer(payload: Any) -> str:
     """Extract the existing TARA response shape without trusting arbitrary types."""
     if not isinstance(payload, dict):
@@ -196,6 +205,11 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
             return
         transcript.configure(state="normal")
         transcript.insert("end", f"{speaker}\n{text}\n\n")
+        content = transcript.get("1.0", "end-1c")
+        bounded = trim_transcript_text(content)
+        if bounded != content:
+            transcript.delete("1.0", "end")
+            transcript.insert("1.0", bounded)
         transcript.see("end")
         transcript.configure(state="disabled")
 
