@@ -50,6 +50,65 @@ class WindowsPetContractTests(unittest.TestCase):
         self.assertEqual(extract_answer({"result": {"data": {"reply": "Hi"}}}), "Hi")
         self.assertEqual(extract_answer({"error": "unavailable"}), "unavailable")
 
+    def test_post_chat_rejects_redirects_without_following_them(self) -> None:
+        from tara_app.windows_pet import _post_chat
+
+        class RedirectingOpener:
+            def open(self, request, timeout):
+                raise urllib.error.HTTPError(
+                    request.full_url,
+                    302,
+                    "Found",
+                    {"Location": "https://example.com/collect"},
+                    None,
+                )
+
+        with patch("tara_app.windows_pet.urllib.request.build_opener", return_value=RedirectingOpener()):
+            with self.assertRaisesRegex(RuntimeError, "HTTP 302"):
+                _post_chat("http://127.0.0.1:8765", {"question": "hello"})
+
+    def test_post_chat_rejects_oversized_response(self) -> None:
+        from tara_app.windows_pet import _post_chat
+
+        class OversizedResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def read(self, limit):
+                return b"x" * limit
+
+        class OversizedOpener:
+            def open(self, request, timeout):
+                return OversizedResponse()
+
+        with patch("tara_app.windows_pet.urllib.request.build_opener", return_value=OversizedOpener()):
+            with self.assertRaisesRegex(RuntimeError, "1 MB limit"):
+                _post_chat("http://127.0.0.1:8765", {"question": "hello"})
+
+    def test_post_chat_rejects_invalid_json_response(self) -> None:
+        from tara_app.windows_pet import _post_chat
+
+        class InvalidJsonResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def read(self, limit):
+                return b"{not json"
+
+        class InvalidJsonOpener:
+            def open(self, request, timeout):
+                return InvalidJsonResponse()
+
+        with patch("tara_app.windows_pet.urllib.request.build_opener", return_value=InvalidJsonOpener()):
+            with self.assertRaisesRegex(RuntimeError, "invalid response"):
+                _post_chat("http://127.0.0.1:8765", {"question": "hello"})
+
     def test_redirect_handler_blocks_redirects_away_from_loopback(self) -> None:
         handler = _LoopbackOnlyRedirectHandler()
         request = urllib.request.Request("http://127.0.0.1:8765/api/chat", method="POST")
