@@ -2,18 +2,19 @@
 
 ## Scope
 
-The Windows launcher starts TARA-App with a native, always-on-top companion. The pet's idle animation runs locally and does not call an AI provider. Clicking the pet expands the same floating window and displays the chat panel directly beneath the pet, connected to TARA-App's existing loopback \`/api/chat\` endpoint. The chat panel can be hidden again from its close control or the pet's right-click menu.
+The Windows launcher starts TARA-App with a native, always-on-top companion. The pet's idle animation runs locally and does not call an AI provider. A compact icon toolbar sits directly below the pet; selecting compose expands the same floating window to show the conversation and message composer inline, connected to TARA-App's existing loopback \`/api/chat\` endpoint.
 
 This is the first integration slice, not the completed desktop automation engine.
 
 ## Controls
 
-- Left-click: expand the floating window to show chat directly beneath the pet, or focus the chat input when already expanded.
-- Chat panel close control or right-click menu → Hide chat panel: collapse back to the compact pet.
+- Left-click the pet or select the compose icon: expand the floating window to show chat and the message composer below the toolbar.
+- Toolbar dropdown → Hide chat: collapse back to the compact pet and toolbar.
+- Voice icon: currently reports that voice input is not yet available.
 - Drag: move the pet.
 - Right-click: open the menu.
 - Escape or Ctrl+Q: exit the pet and local server.
-- The pet and chat share one floating window; hiding chat leaves the compact pet visible.
+- The pet, toolbar, and expanded chat share one floating window; hiding chat leaves the compact pet and toolbar visible.
 - If the configured local port is busy, TARA automatically selects an available loopback port for this run.
 
 ## Network and privacy boundary
