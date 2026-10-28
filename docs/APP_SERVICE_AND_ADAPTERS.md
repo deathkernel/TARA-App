@@ -27,4 +27,4 @@ No shell execution, patch application, model download, provider launch, auto-mer
 
 ## Local health endpoint
 
-The loopback web server exposes `GET /api/health` for local liveness checks. It reports the app/API version, registered capability IDs, and whether a model catalogue is configured. It does not contact model providers or claim that a configured runtime is currently healthy. The endpoint uses the same local-origin validation as the model endpoint and rejects untrusted origins.
+The loopback web server exposes `GET /api/health` for local liveness checks. It reports the app name and API version, registered capability IDs, and whether a model catalogue is configured. It does not contact model providers or claim that a configured runtime is currently healthy. The endpoint uses the same local-origin validation as the model endpoint and rejects untrusted origins.
