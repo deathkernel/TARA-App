@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import errno
 import unittest
 import urllib.error
 import urllib.request
@@ -7,6 +8,7 @@ from unittest.mock import patch
 
 from tara_app.windows_pet import (
     _LoopbackOnlyRedirectHandler,
+    _create_local_server,
     build_chat_payload,
     extract_answer,
     run_floating_pet,
@@ -151,6 +153,48 @@ class WindowsPetContractTests(unittest.TestCase):
         for value in (0, -1, True, 1.5):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 trim_transcript_text("hello", value)
+
+    def test_local_server_uses_preferred_port_when_available(self) -> None:
+        class FakeServer:
+            server_port = 8765
+
+        with patch("tara_app.webapp._Server", return_value=FakeServer()) as server_factory:
+            server, port = _create_local_server(object(), 8765)
+
+        self.assertEqual(port, 8765)
+        self.assertIsInstance(server, FakeServer)
+        server_factory.assert_called_once_with(("127.0.0.1", 8765))
+
+    def test_local_server_falls_back_to_ephemeral_port_when_preferred_port_is_busy(self) -> None:
+        class FakeServer:
+            server_port = 43210
+
+        busy = OSError(errno.EADDRINUSE, "address already in use")
+        with patch("tara_app.webapp._Server", side_effect=[busy, FakeServer()]) as server_factory:
+            server, port = _create_local_server(object(), 8765)
+
+        self.assertEqual(port, 43210)
+        self.assertIsInstance(server, FakeServer)
+        self.assertEqual(server_factory.call_args_list[0].args[0], ("127.0.0.1", 8765))
+        self.assertEqual(server_factory.call_args_list[1].args[0], ("127.0.0.1", 0))
+
+    def test_local_server_does_not_mask_unrelated_bind_errors(self) -> None:
+        with patch("tara_app.webapp._Server", side_effect=OSError(errno.EACCES, "permission denied")) as server_factory:
+            with self.assertRaises(OSError):
+                _create_local_server(object(), 8765)
+
+        server_factory.assert_called_once()
+
+    def test_local_server_reports_fallback_bind_failure(self) -> None:
+        with patch(
+            "tara_app.webapp._Server",
+            side_effect=[
+                OSError(errno.EADDRINUSE, "address already in use"),
+                OSError(errno.EACCES, "permission denied"),
+            ],
+        ):
+            with self.assertRaisesRegex(RuntimeError, "could not bind its local chat server"):
+                _create_local_server(object(), 8765)
 
     def test_floating_pet_is_windows_only(self) -> None:
         with patch("tara_app.windows_pet.sys.platform", "linux"):
