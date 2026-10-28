@@ -197,6 +197,8 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
     chat_workers: set[threading.Thread] = set()
     busy = False
     expanded = False
+    mini_mode = False
+    pet_state = "ready"
     animation_tick = 0
     drag = {"x": 0, "y": 0, "root_x": 0, "root_y": 0, "moved": False}
 
@@ -250,6 +252,36 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
         transcript.see("end")
         transcript.configure(state="disabled")
 
+    def set_pet_state(state: str) -> None:
+        nonlocal pet_state
+        pet_state = state
+        colors = {"ready": "#39d98a", "thinking": "#f4b942", "needs_input": "#f4b942", "blocked": "#ff5c68", "success": "#39d98a"}
+        labels = {"ready": "Ready", "thinking": "Working", "needs_input": "Needs input", "blocked": "Blocked", "success": "Task completed"}
+        status_button.configure(fg=colors.get(state, "#39d98a"), text="●" if state not in {"thinking", "blocked"} else ("◌" if state == "thinking" else "!"))
+        status_button.configure(command=lambda: show_status())
+        root.title(f"TARA Floating Pet — {labels.get(state, state.title())}")
+
+    def show_status() -> None:
+        labels = {"ready": "Ready", "thinking": "Working on your request…", "needs_input": "Needs your input", "blocked": "Blocked — check the chat for details", "success": "Task completed successfully"}
+        if not expanded:
+            open_chat()
+        append_transcript("Notice", labels.get(pet_state, "Ready"))
+
+    def toggle_mini_mode() -> None:
+        nonlocal mini_mode
+        mini_mode = not mini_mode
+        if mini_mode:
+            chat_area.pack_forget()
+            toolbar.pack_forget()
+            expanded = False
+            canvas.configure(width=54, height=54)
+            root.geometry(f"54x54+{root.winfo_x()}+{root.winfo_y()}")
+        else:
+            canvas.configure(width=180, height=158)
+            toolbar.pack(fill="x", padx=8, pady=(0, 5))
+            root.geometry(f"180x204+{root.winfo_x()}+{root.winfo_y()}")
+        root.lift()
+
     def collapse_chat() -> None:
         nonlocal expanded
         if not expanded:
@@ -263,6 +295,12 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
 
     def open_chat() -> None:
         nonlocal expanded
+        nonlocal mini_mode
+        if mini_mode:
+            mini_mode = False
+            canvas.configure(width=180, height=158)
+            toolbar.pack(fill="x", padx=8, pady=(0, 5))
+            root.geometry(f"180x204+{root.winfo_x()}+{root.winfo_y()}")
         if expanded:
             entry.focus_set()
             return
@@ -295,6 +333,7 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
         entry.delete(0, "end")
         append_transcript("You", question)
         busy = True
+        set_pet_state("thinking")
         send_button.configure(state="disabled", text="…")
         entry.configure(state="disabled")
 
@@ -321,6 +360,8 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
                     entry.configure(state="normal")
                     entry.focus_set()
                 append_transcript("TARA" if outcome[0] else "Notice", outcome[1])
+                set_pet_state("success" if outcome[0] else "blocked")
+                root.after(2400, lambda: set_pet_state("ready") if pet_state == "success" else None)
 
             try:
                 if not shutdown_event.is_set():
@@ -350,19 +391,35 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
 
     dropdown_button = tk.Button(toolbar, text="⌄", command=show_menu, **icon_button_style)
     dropdown_button.pack(side="left")
+    status_button = tk.Button(toolbar, text="●", command=lambda: show_status(), **icon_button_style)
+    status_button.pack(side="left", padx=(5, 0))
 
     def draw_pet() -> None:
         nonlocal animation_tick
         try:
             canvas.delete("all")
+            if mini_mode:
+                canvas.create_oval(7, 7, 47, 47, fill="#6b48b7", outline="#c6a5ff", width=2)
+                canvas.create_text(27, 27, text="T", fill="#ffffff", font=("Segoe UI", 16, "bold"))
+                canvas.create_oval(39, 4, 51, 16, fill={"ready": "#39d98a", "thinking": "#f4b942", "blocked": "#ff5c68", "success": "#39d98a"}.get(pet_state, "#39d98a"), outline="")
+                animation_tick += 1
+                root.after(250 if pet_state == "thinking" else 650, draw_pet)
+                return
             center_x = max(90, canvas.winfo_width() // 2)
-            bob = math.sin(animation_tick * 0.65) * 2.5
+            bob = math.sin(animation_tick * (1.15 if pet_state == "thinking" else 0.65)) * (4 if pet_state == "thinking" else 2.5)
             canvas.create_oval(center_x - 35, 105 + bob, center_x + 35, 121 + bob, fill="#050509", outline="")
             canvas.create_oval(center_x - 39, 32 + bob, center_x + 39, 108 + bob, fill="#6b48b7", outline="#c6a5ff", width=2)
             canvas.create_oval(center_x - 32, 38 + bob, center_x + 32, 100 + bob, fill="#9b78ed", outline="")
             canvas.create_oval(center_x - 23, 43 + bob, center_x + 7, 70 + bob, fill="#c9b5ff", outline="")
             canvas.create_oval(center_x - 17, 46 + bob, center_x - 5, 58 + bob, fill="#e7deff", outline="")
-            if animation_tick % 9 == 0:
+            if pet_state == "thinking":
+                canvas.create_arc(center_x - 24, 52 + bob, center_x + 24, 89 + bob, start=25, extent=290, style="arc", outline="#f4b942", width=3)
+                canvas.create_text(center_x, 70 + bob, text="···", fill="#fff0c2", font=("Segoe UI", 16, "bold"))
+            elif pet_state == "success":
+                canvas.create_text(center_x, 56 + bob, text="✦", fill="#ffe27a", font=("Segoe UI", 17, "bold"))
+                canvas.create_oval(center_x - 19, 63 + bob, center_x - 8, 76 + bob, fill="#211637", outline="")
+                canvas.create_oval(center_x + 8, 63 + bob, center_x + 19, 76 + bob, fill="#211637", outline="")
+            elif animation_tick % 9 == 0:
                 canvas.create_line(center_x - 19, 70 + bob, center_x - 9, 70 + bob, fill="#241b3d", width=3, capstyle="round")
                 canvas.create_line(center_x + 9, 70 + bob, center_x + 19, 70 + bob, fill="#241b3d", width=3, capstyle="round")
             else:
@@ -395,13 +452,16 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
     menu = tk.Menu(root, tearoff=0)
     menu.add_command(label="Open chat", command=open_chat)
     menu.add_command(label="Hide chat", command=collapse_chat)
+    menu.add_command(label="Toggle mini mode", command=toggle_mini_mode)
     menu.add_separator()
     menu.add_command(label="Exit TARA", command=root.destroy)
 
     canvas.bind("<ButtonPress-1>", on_press)
     canvas.bind("<B1-Motion>", on_drag)
     canvas.bind("<ButtonRelease-1>", on_release)
-    root.bind("<Escape>", lambda _event: root.destroy())
+    root.bind("<Escape>", lambda _event: collapse_chat() if expanded else None)
+    root.bind("<Control-space>", lambda _event: open_chat())
+    root.bind("<Control-Shift-m>", lambda _event: toggle_mini_mode())
     root.bind("<Control-q>", lambda _event: root.destroy())
     root.protocol("WM_DELETE_WINDOW", root.destroy)
 
