@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from tara_app.audit import AuditLogError, JsonlAuditLog
@@ -35,10 +36,13 @@ class TARAApplicationService:
         sessions: SessionStore | None = None,
         catalogue: ModelCatalogue | None = None,
         orchestrator: CapabilityOrchestrator | None = None,
+        session_database_path: str | Path | None = None,
     ) -> None:
         self.runtime = runtime
         self.audit = audit
-        self.sessions = sessions or SessionStore()
+        if sessions is not None and session_database_path is not None:
+            raise ValueError("pass either sessions or session_database_path, not both")
+        self.sessions = sessions or SessionStore(database_path=session_database_path)
         self.catalogue = catalogue or ModelCatalogue()
         self.orchestrator = orchestrator
 
