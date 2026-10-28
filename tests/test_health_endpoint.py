@@ -2,8 +2,13 @@
 from __future__ import annotations
 
 import json
+import sys
 import threading
 import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
