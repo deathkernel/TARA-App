@@ -36,6 +36,21 @@ class _Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         endpoint = urlsplit(self.path).path
+        if endpoint == "/api/health":
+            if not self._local_origin():
+                self._json(403, {"status": "permission_denied", "error": "request origin is not allowed"})
+                return
+            capabilities = tuple(self.server.app.registry.capability_ids())
+            catalog = self.server.app.model_catalog
+            self._json(200, {
+                "status": "ok" if capabilities else "degraded",
+                "app": "TARA-App",
+                "api_version": "1.0",
+                "capability_count": len(capabilities),
+                "capabilities": list(capabilities),
+                "model_runtime": "configured" if catalog is not None else "not_configured",
+            })
+            return
         if endpoint == "/api/models":
             if not self._local_origin():
                 self._json(403, {"status": "permission_denied", "error": "request origin is not allowed"})
