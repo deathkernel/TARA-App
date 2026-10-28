@@ -10,6 +10,7 @@ from tara_app.windows_pet import (
     build_chat_payload,
     extract_answer,
     run_floating_pet,
+    trim_transcript_text,
     validate_server_url,
 )
 
@@ -141,6 +142,15 @@ class WindowsPetContractTests(unittest.TestCase):
             build_chat_payload("hello", "", [])
         with self.assertRaises(ValueError):
             build_chat_payload("hello", "x" * 129, [])
+
+    def test_transcript_is_bounded_to_newest_content(self) -> None:
+        self.assertEqual(trim_transcript_text("abcdefgh", 4), "efgh")
+        self.assertEqual(trim_transcript_text("short", 10), "short")
+
+    def test_transcript_bound_must_be_positive_integer(self) -> None:
+        for value in (0, -1, True, 1.5):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                trim_transcript_text("hello", value)
 
     def test_floating_pet_is_windows_only(self) -> None:
         with patch("tara_app.windows_pet.sys.platform", "linux"):
