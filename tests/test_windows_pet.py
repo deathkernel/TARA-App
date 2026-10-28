@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+import urllib.error
 import urllib.request
 from unittest.mock import patch
 
