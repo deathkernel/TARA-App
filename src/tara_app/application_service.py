@@ -84,8 +84,8 @@ class TARAApplicationService:
             selected = self.catalogue.get(provider_id, model)
             if selected.provider_id != provider_id:
                 raise ApplicationServiceError("selected model/provider mismatch")
-            # Reserve the required capacity logically before inference. append_turn()
-            # repeats this check under the store lock to keep the commit atomic.
+            # Preflight capacity before inference; append_turn() checks again under
+            # the store lock so a complete user/assistant pair is committed atomically.
             self.sessions.ensure_turn_capacity(session_id)
             history = self.sessions.history(session_id)
             request_history = [
