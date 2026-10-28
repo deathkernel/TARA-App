@@ -9,6 +9,10 @@
 
 ## 1. Start here
 
+### Repository boundary
+
+`deathkernel/TARA-App` is the only active development repository for TARA. The user has deleted the other TARA model repositories. All remaining specialist/model integrations, adapters, runtime code, tests, and documentation must be implemented and maintained inside this repository. Do not plan work that requires cloning, importing, or coordinating with deleted sibling repositories. Any legacy references to sibling repositories are historical/contextual only unless the user explicitly restores one.
+
 TARA-App is the **user-facing host application and integration layer** for the TARA ecosystem. It is not itself an AI model. Its long-term job is to provide one interface for choosing models/providers, chatting, using specialist capabilities, reviewing proposed code changes, and managing approved local actions.
 
 The intended design keeps these concepts separate:
@@ -86,6 +90,7 @@ This is a concise history of significant milestones visible in the repository's 
 | PR #25 — chat workspace redesign | Redesigned sidebar, conversation area, welcome state, messages, composer and responsive CSS | CSS redesign is merged; visual/browser QA and any remaining parity work are still to be evidenced |
 | [PR #26 — living project roadmap](https://github.com/deathkernel/TARA-App/pull/26) | Added newcomer-friendly history, dependency-ordered roadmap, and scheduled-task evidence rules | Merged as `4d4c225aeba422cd30dfc272ca67d32bba942129` |
 | [PR #27 — structured TARA answers](https://github.com/deathkernel/TARA-App/pull/27) | Added task-adaptive response guidance and focused answer-style tests; fixed a syntax error found by CI before merge | PR CI passed on head `dd2f87295c6be934f867e96b4976dc592c575447`; merged as `c8b484c977ca31ac4f8396bd20c090fe580299ea` |
+| [PR #34 — drop floating pet](https://github.com/deathkernel/TARA-App/pull/34) | Restored the normal browser UI as the default Windows launcher and documented that the floating pet is no longer a product goal | Merged as `1bf4fdff00d748acecbba4e50cda7483f82b9f4f`; all 5 GitHub Actions jobs passed on PR head `0eff1fa8b0e1d4c99f964ccdc08ad600eb153c82` |
 
 Useful history links:
 
@@ -147,11 +152,11 @@ This roadmap is dependency-ordered. The daily development task should deliver a 
 - [ ] Verify Windows/macOS/Linux installation paths, optional native Handler compilation and Python diagnostic fallback.
 - [ ] Complete release packaging, versioning, installation notes and a target-machine acceptance checklist.
 
-### P3 — Ecosystem expansion (only after core contracts are stable)
+### P3 — In-repository ecosystem and optional tools (only after core contracts are stable)
 
-- [ ] Inventory each desired TARA sibling repository: purpose, owner/source, current branch, entry point, licence, dependencies, runtime, tests and status.
-- [ ] Integrate repositories through versioned adapters or documented service contracts—not private imports that silently break.
-- [ ] Verify each integration independently with contract tests, a health check and one end-to-end workflow.
+- [ ] Inventory the specialist packages and runtime adapters already inside this repository: entry point, dependencies, licence, tests and verification status.
+- [ ] Complete versioned adapter contracts between in-repository specialists; avoid private cross-repository imports.
+- [ ] Verify each specialist independently with contract tests, a health check and one end-to-end workflow.
 - [ ] Evaluate optional AI/developer tools one at a time. Confirm maintenance, licence, platform support, real free-tier terms and security before activation.
 - [ ] Keep optional paid/remote providers disabled unless the user explicitly configures them and accepts their data-transfer and quota terms.
 
@@ -198,6 +203,7 @@ Append a dated entry after each meaningful, evidence-backed change. Keep entries
 | Date | Item | Evidence / PR | Result | Next |
 |---|---|---|---|---|
 | 2026-10-28 | Dropped floating pet as a product direction; closed PR #32 and restored the normal browser UI as the Windows launcher default | [PR #32 closed](https://github.com/deathkernel/TARA-App/pull/32); launcher change in this PR | Pet UI is no longer on the roadmap; legacy optional code remains but is not launched by default | Continue with core app integration and verification |
+| 2026-10-28 | Confirmed single-repository development boundary and removed floating pet from the product direction | [PR #34](https://github.com/deathkernel/TARA-App/pull/34), merged `1bf4fdff00d748acecbba4e50cda7483f82b9f4f`; all 5 CI jobs passed on its head | Default Windows launcher now opens the regular browser UI; pet upgrade PR #32 closed without merge. No actual desktop smoke test claimed. | Establish the current core test baseline and bind/verify in-repo Chat/Code specialist paths |
 | 2026-10-27 | Created initial project history and dependency-ordered roadmap | [Current main history](https://github.com/deathkernel/TARA-App/commits/main) | Baseline documentation drafted; runtime/test status still needs a fresh run | Establish current test/CI baseline |
 | 2026-10-27 | Scoped supported/tested platforms to Windows and Linux; removed macOS from the native Handler CI matrix | [PR #28](https://github.com/deathkernel/TARA-App/pull/28); [CI run 40522975440](https://github.com/deathkernel/TARA-App/actions/runs/40522975440) | On head `95061e20577706c836e5c24b6cdb85351d1cd4ad`, package install, AI tool registry validation, `python -m unittest discover -s tests -v` (173 tests passed), `python -m compileall -q src`, frontend `npm install --no-audit --no-fund` + `npm run build`, and native Handler CMake configure/build on Ubuntu and Windows all passed. No macOS job ran. Any later head commit must pass its own checks before merge. | Confirm checks on the updated roadmap commit, then merge if green |
 
