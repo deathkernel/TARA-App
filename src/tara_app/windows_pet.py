@@ -138,8 +138,9 @@ def _create_local_server(app: Any, port: int) -> tuple[Any, int]:
         server = _Server(("127.0.0.1", port), app)
         return server, server.server_port
     except OSError as exc:
-        # Windows reports WSAEADDRINUSE as 10048; POSIX uses errno.EADDRINUSE.
-        if exc.errno not in {errno.EADDRINUSE, 10048, getattr(errno, "WSAEADDRINUSE", 10048)}:
+        # Windows reports WSAEADDRINUSE as winerror 10048; POSIX uses errno.EADDRINUSE.
+        address_in_use = {errno.EADDRINUSE, 10048, getattr(errno, "WSAEADDRINUSE", 10048)}
+        if exc.errno not in address_in_use and getattr(exc, "winerror", None) not in address_in_use:
             raise
     try:
         server = _Server(("127.0.0.1", 0), app)
