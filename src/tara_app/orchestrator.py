@@ -172,20 +172,20 @@ class Orchestrator:
                 if self.model_catalog is not None:
                     try:
                         status = self.model_catalog.status()
-                        local_models = [item.get("id", "unknown") for item in status.get("models", []) if isinstance(item, Mapping)]
+                        local_models = sorted({item["model"] for item in status.get("models", []) if isinstance(item, Mapping) and isinstance(item.get("model"), str) and item["model"]})
                     except Exception:
                         local_models = []
-                local_section = "\\n".join(f"- {model}" for model in local_models) or "- No local Ollama models detected."
+                local_section = "\n".join(f"- {model}" for model in local_models) or "- No local Ollama models detected."
                 catalog_text = (
-                    "# Free Model Hub\\n\\n"
-                    "## Gemini free-tier candidates (cloud; explicit selection required)\\n"
-                    "- gemini-3.5-flash-lite\\n- gemini-2.5-flash-lite\\n- gemini-3.1-flash-lite\\n\\n"
+                    "# Free Model Hub\n\n"
+                    "## Gemini free-tier candidates (cloud; explicit selection required)\n"
+                    "- gemini-3.5-flash-lite\n- gemini-2.5-flash-lite\n- gemini-3.1-flash-lite\n\n"
                     "Actual free quota and model availability depend on your Google AI project. "
-                    "TARA does not send a prompt to Google merely to display this catalog.\\n\\n"
-                    "## Open-weight models for local Ollama\\n"
-                    "- gpt-oss:20b — verify memory requirements before installing.\\n"
-                    "- gpt-oss:120b — a large model; verify hardware requirements first.\\n\\n"
-                    "## Models installed on this device\\n" + local_section + "\\n\\n"
+                    "TARA does not send a prompt to Google merely to display this catalog.\n\n"
+                    "## Open-weight models for local Ollama\n"
+                    "- gpt-oss:20b — verify memory requirements before installing.\n"
+                    "- gpt-oss:120b — a large model; verify hardware requirements first.\n\n"
+                    "## Models installed on this device\n" + local_section + "\n\n"
                     "Cloud generation stays disabled unless the model adapter is explicitly enabled."
                 )
                 catalog_route = RouteDecision(
