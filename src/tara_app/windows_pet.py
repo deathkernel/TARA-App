@@ -81,6 +81,21 @@ def extract_answer(payload: Any) -> str:
     return json.dumps(payload, ensure_ascii=False)[:20_000]
 
 
+class _LoopbackOnlyRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Refuse redirects so chat requests cannot escape the validated loopback origin."""
+
+    def redirect_request(
+        self,
+        req: urllib.request.Request,
+        fp: Any,
+        code: int,
+        msg: str,
+        headers: Any,
+        newurl: str,
+    ) -> None:
+        return None
+
+
 def _post_chat(server_url: str, payload: dict[str, Any]) -> str:
     request = urllib.request.Request(
         f"{server_url}/api/chat",
@@ -88,8 +103,9 @@ def _post_chat(server_url: str, payload: dict[str, Any]) -> str:
         headers={"Content-Type": "application/json"},
         method="POST",
     )
+    opener = urllib.request.build_opener(_LoopbackOnlyRedirectHandler)
     try:
-        with urllib.request.urlopen(request, timeout=45) as response:
+        with opener.open(request, timeout=45) as response:
             raw = response.read(1_000_001)
             if len(raw) > 1_000_000:
                 raise RuntimeError("TARA response exceeded the 1 MB limit")
