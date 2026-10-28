@@ -6,7 +6,7 @@ This batch adds a headless facade and narrow adapter boundaries. It is not a GUI
 
 `src/tara_app/application_service.py` coordinates the existing runtime manager, in-memory session store, model catalogue, JSONL audit log, and optional capability orchestrator. It provides session creation/closure, catalogue refresh, model listing, local chat turns, and capability dispatch for a future UI/API layer.
 
-Session content remains in process memory only. Audit events intentionally record identifiers and model/provider metadata rather than chat message text. A failed audit while creating a session closes the newly created session.
+Session content remains in process memory by default. `SessionStore(database_path=...)` opts into SQLite persistence for session metadata and bounded message history; it restores sessions after restart and removes persisted rows when a session is closed. Choose the database path explicitly and protect the file with OS permissions because it contains conversation content. Retention policy, schema migrations, and app-level configuration wiring remain follow-up work. Audit events intentionally record identifiers and model/provider metadata rather than chat message text. A failed audit while creating a session closes the newly created session.
 
 ## Specialist adapters
 
