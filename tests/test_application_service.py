@@ -15,10 +15,14 @@ from tara_app.sessions import SessionStore
 
 
 class FakeRuntime:
+    def __init__(self):
+        self.chat_calls = 0
+
     def list_models(self, provider_id="ollama"):
         return [ModelInfo(provider_id, "test-model", family="test")]
 
     def chat(self, model, messages, provider_id="ollama"):
+        self.chat_calls += 1
         return "reply:" + messages[-1]["content"]
 
 
@@ -53,6 +57,23 @@ class ApplicationServiceTests(unittest.TestCase):
             self.service.chat(session_id=session.session_id, provider_id="ollama",
                               model="missing", message=" ")
 
+    def test_chat_checks_for_two_free_slots_before_calling_provider(self):
+        runtime = FakeRuntime()
+        sessions = SessionStore(max_messages_per_session=1)
+        service = TARAApplicationService(
+            runtime=runtime, audit=self.audit, sessions=sessions, catalogue=self.catalogue,
+        )
+        self.assertEqual(service.refresh_model_catalogue(), 1)
+        session = service.create_session()
+
+        with self.assertRaisesRegex(ApplicationServiceError, "two message slots"):
+            service.chat(
+                session_id=session.session_id, provider_id="ollama",
+                model="test-model", message="hello",
+            )
+
+        self.assertEqual(runtime.chat_calls, 0)
+        self.assertEqual(sessions.history(session.session_id), [])
 
     def test_provider_failure_does_not_commit_partial_user_turn(self):
         class FailingRuntime(FakeRuntime):
