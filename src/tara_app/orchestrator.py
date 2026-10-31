@@ -716,58 +716,11 @@ class Orchestrator:
         if module == "security":
             return metadata(attachments)
         if module == "code" and action == "plan":
-            return [
+            code_attachments = [
                 dict(item)
                 for item in attachments
                 if item.get("content_base64")
                 and item.get("name", "").casefold().endswith((
-            ".py",
-            ".pyi",
-            ".js",
-            ".mjs",
-            ".cjs",
-            ".ts",
-            ".tsx",
-            ".jsx",
-            ".java",
-            ".go",
-            ".rs",
-            ".c",
-            ".h",
-            ".cc",
-            ".hh",
-            ".hpp",
-            ".cpp",
-            ".cxx",
-            ".cs",
-            ".rb",
-            ".php",
-            ".sh",
-            ".bash",
-            ".zsh",
-            ".ps1",
-            ".sql",
-            ".swift",
-            ".kt",
-            ".kts",
-            ".dart",
-            ".scala",
-            ".lua",
-            ".pl",
-            ".r",
-            ".json",
-            ".yaml",
-            ".yml",
-            ".toml",
-            ".md"
-        ))
-            ][:4]
-        total_source_bytes = sum(
-            len(base64.b64decode(item["content_base64"], validate=True))
-            for item in [
-                candidate for candidate in attachments
-                if candidate.get("content_base64")
-                and candidate.get("name", "").casefold().endswith((
                     ".py", ".pyi", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx",
                     ".java", ".go", ".rs", ".c", ".h", ".cc", ".hh", ".hpp",
                     ".cpp", ".cxx", ".cs", ".rb", ".php", ".sh", ".bash", ".zsh",
@@ -775,9 +728,13 @@ class Orchestrator:
                     ".lua", ".pl", ".r", ".json", ".yaml", ".yml", ".toml", ".md"
                 ))
             ][:4]
-        )
-        if total_source_bytes > 512_000:
-            raise ValueError("Code accepts at most 512 KB of combined source attachments")
+            total_source_bytes = sum(
+                len(base64.b64decode(item["content_base64"], validate=True))
+                for item in code_attachments
+            )
+            if total_source_bytes > 512_000:
+                raise ValueError("Code accepts at most 512 KB of combined source attachments")
+            return code_attachments
         if module == "vision" and action == "analyze":
             images = [
                 item for item in attachments
