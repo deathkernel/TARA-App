@@ -1,4 +1,7 @@
 """Tests for bounded, isolated in-memory sessions."""
+import os
+import sqlite3
+import stat
 import sys
 import tempfile
 import unittest
@@ -103,6 +106,25 @@ class SessionStoreTests(unittest.TestCase):
                     {"role": "assistant", "content": "Restored context"},
                 ],
             )
+
+
+    def test_sqlite_schema_is_versioned_and_database_is_private(self):
+        with tempfile.TemporaryDirectory() as temp:
+            database = Path(temp) / "sessions.sqlite3"
+            SessionStore(database_path=database)
+            with sqlite3.connect(database) as db:
+                self.assertEqual(db.execute("PRAGMA user_version").fetchone()[0], 1)
+            if os.name != "nt":
+                mode = stat.S_IMODE(database.stat().st_mode)
+                self.assertEqual(mode & 0o077, 0)
+
+    def test_unknown_sqlite_schema_version_fails_closed(self):
+        with tempfile.TemporaryDirectory() as temp:
+            database = Path(temp) / "sessions.sqlite3"
+            with sqlite3.connect(database) as db:
+                db.execute("PRAGMA user_version = 2")
+            with self.assertRaises(SessionError):
+                SessionStore(database_path=database)
 
     def test_persistence_is_disabled_by_default(self):
         store = SessionStore()
