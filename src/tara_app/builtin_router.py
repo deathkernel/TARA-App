@@ -13,6 +13,7 @@ _SIDE_EFFECT = re.compile(
     r"\b(?:send|publish|delete|remove|install|commit|merge|execute|run)\b",
     re.IGNORECASE,
 )
+_REPOSITORY_AUDIT_ONLY = re.compile(r"^\\s*(?:(?:please\\s+)?(?:run|perform|do)\\s+(?:a\\s+)?(?:repository|repo|project)\\s+audit|(?:please\\s+)?(?:audit|inspect|check)\\s+(?:(?:the|this|my|our)\\s+)?(?:repository|repo|project))\\s*[.!?]*$", re.I)
 _REPOSITORY_AUDIT = re.compile(r"\b(?:audit|inspect|check)\s+(?:(?:the|this|my|our)\s+)?(?:repository|repo|project)\b|\b(?:repository|repo|project)\s+(?:audit|health check)\b", re.I)
 _CODE = re.compile(r"\b(?:code|coding|debug|bug|compile|refactor|function|class|script|program|repository|repo|pull request|test failure)\b", re.I)
 _RESEARCH = re.compile(r"\b(?:research|sources?|citations?|latest|current|recent|today|news|paper|studies|evidence|look up|search the web)\b", re.I)
@@ -123,7 +124,7 @@ class BuiltinRouter:
                 intended_module="action", intended_action="execute", requires_approval=True,
                 policy_tags=("desktop_automation", "human_approval"),
             )
-        if _SIDE_EFFECT.search(question):
+        if _SIDE_EFFECT.search(question) and not _REPOSITORY_AUDIT_ONLY.fullmatch(question.strip()):
             if "security.assess" in available:
                 return RouteDecision(
                     request_id, "routed", "security", "assess", "approval_gate",
