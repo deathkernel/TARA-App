@@ -17,7 +17,7 @@ from tara_app.ollama_models import OllamaModelCatalog
 from tara_app.orchestrator import Orchestrator
 from tara_app.registry import CapabilityRegistry
 from tara_app.router_client import StdioRouterClient
-from tara_app.sessions import SessionStore
+from tara_app.sessions import SessionError, SessionStore
 
 _ENV_NAME = re.compile(r"^[A-Z][A-Z0-9_]{0,127}$")
 _POLICIES: dict[str, tuple[Capability, ...]] = {
@@ -173,12 +173,15 @@ def _session_store(value: Any, root: Path) -> SessionStore | None:
         path = path.resolve()
     except OSError as exc:
         raise RuntimeConfigurationError("sessions.database_path could not be resolved") from exc
-    return SessionStore(
-        database_path=path,
-        max_sessions=_integer(config.get("max_sessions", 100), "sessions.max_sessions", 1, 512),
-        max_messages_per_session=_integer(config.get("max_messages_per_session", 24), "sessions.max_messages_per_session", 1, 24),
-        max_content_chars=_integer(config.get("max_content_chars", 20_000), "sessions.max_content_chars", 1, 20_000),
-    )
+    try:
+        return SessionStore(
+            database_path=path,
+            max_sessions=_integer(config.get("max_sessions", 100), "sessions.max_sessions", 1, 512),
+            max_messages_per_session=_integer(config.get("max_messages_per_session", 24), "sessions.max_messages_per_session", 1, 24),
+            max_content_chars=_integer(config.get("max_content_chars", 20_000), "sessions.max_content_chars", 1, 20_000),
+        )
+    except SessionError as exc:
+        raise RuntimeConfigurationError("persistent session storage could not be initialized") from exc
 
 
 def _ollama_settings(value: Any) -> dict[str, dict[str, str]]:
