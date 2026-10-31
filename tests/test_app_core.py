@@ -299,7 +299,7 @@ class AppCoreTests(unittest.TestCase):
 
 
     def test_specialist_attachment_limits_are_enforced_before_dispatch(self) -> None:
-        oversized = self.encoded(b"x" * 300_000)
+        oversized = self.encoded(b"x" * 600_000)
         with self.assertRaises(ValueError):
             Orchestrator._specialist_attachments("vision", "analyze", [
                 {"name": "one.png", "media_type": "image/png", "content_base64": oversized},
