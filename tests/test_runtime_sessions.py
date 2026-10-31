@@ -48,10 +48,11 @@ class RuntimeSessionConfigurationTests(unittest.TestCase):
             self.assertIsNone(app.session_store)
 
     def test_invalid_session_limits_fail_closed(self):
-        with tempfile.TemporaryDirectory() as temp:
-            config = self.write_config(Path(temp), '[sessions]\ndatabase_path = "sessions.sqlite3"\nmax_sessions = 0\n')
-            with self.assertRaises(RuntimeConfigurationError):
-                create_application(config)
+        for setting in ("max_sessions = 0", "max_messages_per_session = 1"):
+            with self.subTest(setting=setting), tempfile.TemporaryDirectory() as temp:
+                config = self.write_config(Path(temp), f'[sessions]\ndatabase_path = "sessions.sqlite3"\n{setting}\n')
+                with self.assertRaises(RuntimeConfigurationError):
+                    create_application(config)
 
 
 if __name__ == "__main__":
