@@ -40,10 +40,10 @@ class BharatCodeProviderTests(unittest.TestCase):
 
     def test_missing_key_fails_before_network(self) -> None:
         with patch.dict(os.environ, {"BHARATCODE_API_KEY": ""}):
-            with patch("tara_app.providers.bharatcode.urlopen") as urlopen:
+            with patch("tara_app.providers.bharatcode.build_opener") as opener:
                 with self.assertRaisesRegex(BharatCodeError, "not configured"):
                     BharatCodeProvider().chat([{"role": "user", "content": "hi"}])
-                urlopen.assert_not_called()
+                opener.assert_not_called()
 
     def test_rejects_invalid_message_and_limits(self) -> None:
         provider = BharatCodeProvider()
