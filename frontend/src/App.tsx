@@ -2,7 +2,7 @@ import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-type Message = { role: "user" | "assistant"; text: string; status?: string };
+type Message = { role: "user" | "assistant"; text: string; status?: string; approval?: { approval_id: string; description: string } };
 type Conversation = { id: string; title: string; updatedAt: number; messages: Message[] };
 type LocalModel = {
   specialist: string;
@@ -92,6 +92,7 @@ export default function App() {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [approvalBusy, setApprovalBusy] = useState("");
   const activeRequestId = useRef<string | null>(null);
   const activeRequestSession = useRef<string | null>(null);
   const [modelsOpen, setModelsOpen] = useState(false);
@@ -103,7 +104,14 @@ export default function App() {
 
   useEffect(() => {
     if (!conversations.length) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([...conversations].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 12)));
+    const saved = [...conversations]
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, 12)
+      .map((item) => ({
+        ...item,
+        messages: item.messages.map(({ approval: _approval, ...message }) => message),
+      }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
   }, [conversations]);
 
   useEffect(() => {
@@ -144,9 +152,13 @@ export default function App() {
     };
   }, [modelsOpen, pullActive]);
 
+  function updateConversation(conversationId: string, transform: (conversation: Conversation) => Conversation) {
+    setConversations((items) => items.map((item) => item.id === conversationId ? transform(item) : item));
+  }
+
   function updateActive(transform: (conversation: Conversation) => Conversation) {
     if (!active) return;
-    setConversations((items) => items.map((item) => item.id === active.id ? transform(item) : item));
+    updateConversation(active.id, transform);
   }
 
   function startNewChat() {
@@ -181,7 +193,14 @@ export default function App() {
         body: JSON.stringify({ question, session_id: active.id, request_id: requestId, attachments: [], history }),
       });
       const text = answerText(payload);
-      const assistantMessage: Message = { role: "assistant", text, status: payload?.status ?? "success" };
+      const resultData = payload?.result?.data;
+      const approval = typeof resultData?.approval_id === "string" ? {
+        approval_id: resultData.approval_id,
+        description: typeof resultData.approval_description === "string"
+          ? resultData.approval_description
+          : "TARA-Security requires your approval before this operation can run.",
+      } : undefined;
+      const assistantMessage: Message = { role: "assistant", text, status: payload?.status ?? "success", approval };
       updateActive((item) => ({
         ...item, updatedAt: Date.now(),
         messages: [...item.messages, assistantMessage].slice(-24),
@@ -221,6 +240,57 @@ export default function App() {
       setNotice(error instanceof Error ? error.message : "Could not stop this request.");
     } finally {
       setCancelling(false);
+    }
+  }
+
+  async function approveAction(conversationId: string, messageIndex: number, approvalId: string) {
+    setApprovalBusy(approvalId);
+    try {
+      const result = await api<any>("/api/approve", {
+        method: "POST",
+        body: JSON.stringify({ approval_id: approvalId, session_id: conversationId }),
+      });
+      updateConversation(conversationId, (item) => ({
+        ...item,
+        updatedAt: Date.now(),
+        messages: item.messages.map((message, index) => index === messageIndex
+          ? { ...message, text: answerText(result), status: result?.status ?? "success", approval: undefined }
+          : message),
+      }));
+    } catch (error) {
+      updateConversation(conversationId, (item) => ({
+        ...item,
+        messages: item.messages.map((message, index) => index === messageIndex
+          ? { ...message, text: error instanceof Error ? error.message : "Approval could not be completed.", status: "unavailable", approval: undefined }
+          : message),
+      }));
+    } finally {
+      setApprovalBusy("");
+    }
+  }
+
+  async function cancelApproval(conversationId: string, messageIndex: number, approvalId: string) {
+    setApprovalBusy(approvalId);
+    try {
+      await api("/api/cancel", {
+        method: "POST",
+        body: JSON.stringify({ approval_id: approvalId, session_id: conversationId }),
+      });
+      updateConversation(conversationId, (item) => ({
+        ...item,
+        messages: item.messages.map((message, index) => index === messageIndex
+          ? { ...message, text: "Approval cancelled. No action was executed.", status: "cancelled", approval: undefined }
+          : message),
+      }));
+    } catch (error) {
+      updateConversation(conversationId, (item) => ({
+        ...item,
+        messages: item.messages.map((message, index) => index === messageIndex
+          ? { ...message, text: error instanceof Error ? error.message : "Approval could not be cancelled.", status: "unavailable", approval: undefined }
+          : message),
+      }));
+    } finally {
+      setApprovalBusy("");
     }
   }
 
@@ -303,6 +373,13 @@ export default function App() {
               <div className={`message-bubble ${message.role === "assistant" ? "markdown-body" : ""}`}>
                 {message.role === "assistant" ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.text}</ReactMarkdown> : message.text}
               </div>
+              {message.approval && <div className="approval-card">
+                <div><strong>Approval required</strong><p>{message.approval.description}</p><small>This is a one-time approval for this exact operation.</small></div>
+                <div className="approval-actions">
+                  <button onClick={() => void approveAction(active!.id, index, message.approval!.approval_id)} disabled={!!approvalBusy}>{approvalBusy === message.approval.approval_id ? "Working…" : "Approve once"}</button>
+                  <button className="secondary" onClick={() => void cancelApproval(active!.id, index, message.approval!.approval_id)} disabled={!!approvalBusy}>Cancel</button>
+                </div>
+              </div>}
             </article>)}
             {sending && <div className="typing" role="status">TARA is thinking…</div>}
           </div>
