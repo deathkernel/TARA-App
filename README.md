@@ -260,7 +260,7 @@ When `src/tara_app/web/react-dist/` exists, the local server serves the compiled
 
 ## Local repository audit (TARA-Chat interactive CLI)
 
-The interactive TARA-Chat CLI includes a read-only repository audit command. Start the chat CLI from the repository folder, then enter:
+The interactive TARA-Chat CLI includes a read-only repository audit command. From the repository folder, start the chat CLI with `python -m tara_chat` (after configuring its local language provider), then enter:
 
 ```text
 /audit
