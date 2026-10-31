@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import patch
 
 from tara_app.providers.bharatcode import BharatCodeProvider
+from tara_chat.brain import TARABrain
 
 
 class BharatCodeSpecialistRoutingTests(unittest.TestCase):
@@ -84,6 +85,54 @@ class BharatCodeSpecialistRoutingTests(unittest.TestCase):
         provider = provider_from_env()
         self.assertIsInstance(provider, BharatCodeProvider)
         self.assertEqual(provider.model, "qwen-3.8-27b")
+
+    def test_saved_memory_stays_local_for_remote_chat_by_default(self) -> None:
+        class Memory:
+            def retrieve(self, prompt, limit=5):
+                return [{"key": "private", "value": "secret memory"}]
+
+            def remember(self, *args, **kwargs):
+                raise AssertionError("memory writes are not expected")
+
+            def save(self):
+                raise AssertionError("memory writes are not expected")
+
+        class RemoteProvider:
+            remote = True
+
+            def __init__(self):
+                self.prompt = ""
+
+            def complete(self, prompt, **kwargs):
+                self.prompt = prompt
+                return "answer"
+
+        provider = RemoteProvider()
+        brain = TARABrain(memory=Memory(), llm_provider=provider)
+        response = brain.respond("hello")
+        self.assertEqual(response.recalled, ())
+        self.assertNotIn("secret memory", provider.prompt)
+
+    def test_saved_memory_requires_explicit_remote_consent(self) -> None:
+        class Memory:
+            def retrieve(self, prompt, limit=5):
+                return [{"key": "private", "value": "secret memory"}]
+
+        class RemoteProvider:
+            remote = True
+
+            def __init__(self):
+                self.prompt = ""
+
+            def complete(self, prompt, **kwargs):
+                self.prompt = prompt
+                return "answer"
+
+        with patch.dict(os.environ, {"TARA_CHAT_REMOTE_MEMORY": "true"}):
+            provider = RemoteProvider()
+            response = TARABrain(memory=Memory(), llm_provider=provider).respond("hello")
+        self.assertEqual(len(response.recalled), 1)
+        self.assertIn("secret memory", provider.prompt)
 
     def test_unknown_provider_fails_closed(self) -> None:
         from tara_chat.llm_provider_factory import provider_from_env
