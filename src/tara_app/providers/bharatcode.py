@@ -84,6 +84,7 @@ class BharatCodeProvider:
             raise ValueError("BharatCode timeout must be between 1 and 600 seconds")
         self.model = model.strip()
         self.timeout = float(timeout)
+        self.remote = True
         self.power_mode = "remote"
         self.num_ctx = "provider-managed"
         self.num_thread = "provider-managed"
