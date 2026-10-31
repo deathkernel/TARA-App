@@ -109,7 +109,9 @@ export default function App() {
       .slice(0, 12)
       .map((item) => ({
         ...item,
-        messages: item.messages.map(({ approval: _approval, ...message }) => message),
+        messages: item.messages.map(({ approval, ...message }) => approval
+          ? { ...message, text: "This approval was not saved across reloads. Submit the operation again if you still want to proceed." }
+          : message),
       }));
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
   }, [conversations]);
