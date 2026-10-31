@@ -5,6 +5,7 @@
 
 [ollama]
 base_url = "http://127.0.0.1:11434"
+max_concurrent_requests = 1 # 16 GB RAM default; allow at most 2 local model requests
 
 [ollama.models]
 chat = "llama3.2:3b"
