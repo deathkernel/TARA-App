@@ -245,7 +245,7 @@ export default function App() {
     }
   }
 
-  async function approveAction(conversationId: string, messageIndex: number, approvalId: string) {
+  async function approveAction(conversationId: string, approvalId: string) {
     setApprovalBusy(approvalId);
     try {
       const result = await api<any>("/api/approve", {
@@ -255,14 +255,14 @@ export default function App() {
       updateConversation(conversationId, (item) => ({
         ...item,
         updatedAt: Date.now(),
-        messages: item.messages.map((message, index) => index === messageIndex
+        messages: item.messages.map((message) => message.approval?.approval_id === approvalId
           ? { ...message, text: answerText(result), status: result?.status ?? "success", approval: undefined }
           : message),
       }));
     } catch (error) {
       updateConversation(conversationId, (item) => ({
         ...item,
-        messages: item.messages.map((message, index) => index === messageIndex
+        messages: item.messages.map((message) => message.approval?.approval_id === approvalId
           ? { ...message, text: error instanceof Error ? error.message : "Approval could not be completed.", status: "unavailable", approval: undefined }
           : message),
       }));
@@ -271,7 +271,7 @@ export default function App() {
     }
   }
 
-  async function cancelApproval(conversationId: string, messageIndex: number, approvalId: string) {
+  async function cancelApproval(conversationId: string, approvalId: string) {
     setApprovalBusy(approvalId);
     try {
       await api("/api/cancel", {
@@ -280,14 +280,14 @@ export default function App() {
       });
       updateConversation(conversationId, (item) => ({
         ...item,
-        messages: item.messages.map((message, index) => index === messageIndex
+        messages: item.messages.map((message) => message.approval?.approval_id === approvalId
           ? { ...message, text: "Approval cancelled. No action was executed.", status: "cancelled", approval: undefined }
           : message),
       }));
     } catch (error) {
       updateConversation(conversationId, (item) => ({
         ...item,
-        messages: item.messages.map((message, index) => index === messageIndex
+        messages: item.messages.map((message) => message.approval?.approval_id === approvalId
           ? { ...message, text: error instanceof Error ? error.message : "Approval could not be cancelled.", status: "unavailable", approval: undefined }
           : message),
       }));
@@ -378,8 +378,8 @@ export default function App() {
               {message.approval && <div className="approval-card">
                 <div><strong>Approval required</strong><p>{message.approval.description}</p><small>This is a one-time approval for this exact operation.</small></div>
                 <div className="approval-actions">
-                  <button onClick={() => void approveAction(active!.id, index, message.approval!.approval_id)} disabled={!!approvalBusy}>{approvalBusy === message.approval.approval_id ? "Working…" : "Approve once"}</button>
-                  <button className="secondary" onClick={() => void cancelApproval(active!.id, index, message.approval!.approval_id)} disabled={!!approvalBusy}>Cancel</button>
+                  <button onClick={() => void approveAction(active!.id, message.approval!.approval_id)} disabled={!!approvalBusy}>{approvalBusy === message.approval.approval_id ? "Working…" : "Approve once"}</button>
+                  <button className="secondary" onClick={() => void cancelApproval(active!.id, message.approval!.approval_id)} disabled={!!approvalBusy}>Cancel</button>
                 </div>
               </div>}
             </article>)}
