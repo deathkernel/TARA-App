@@ -22,7 +22,7 @@ id = "chat"
 command = ["{python}", "-m", "tara_chat.app_adapter"]
 working_directory = "."
 timeout_seconds = 180
-environment = ["TARA_LLM_BACKEND", "TARA_LLAMA_MODEL", "BHARATCODE_API_KEY", "BHARATCODE_MODEL", "OLLAMA_HOST", "TARA_POWER_MODE", "TARA_LLM_TIMEOUT_SECONDS", "TARA_CHAT_MEMORY_PATH"]
+environment = ["TARA_LLM_BACKEND", "TARA_LLAMA_MODEL", "BHARATCODE_API_KEY", "BHARATCODE_MODEL", "OLLAMA_HOST", "TARA_POWER_MODE", "TARA_LLM_TIMEOUT_SECONDS", "TARA_CHAT_MEMORY_PATH", "TARA_CHAT_REMOTE_MEMORY"]
 
 [[modules]]
 id = "code"
