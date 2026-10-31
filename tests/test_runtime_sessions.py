@@ -47,6 +47,27 @@ class RuntimeSessionConfigurationTests(unittest.TestCase):
             app = create_application(self.write_config(Path(temp)))
             self.assertIsNone(app.session_store)
 
+
+    def test_configured_history_limit_is_applied_by_orchestrator(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            config = self.write_config(
+                root,
+                '[sessions]\n'
+                'database_path = "sessions.sqlite3"\n'
+                'max_messages_per_session = 2\n',
+            )
+            app = create_application(config)
+            app.replace_conversation_history("session-limit", [
+                {"role": "user", "content": "one"},
+                {"role": "assistant", "content": "two"},
+                {"role": "user", "content": "three"},
+            ])
+            self.assertEqual(
+                [message.content for message in app.session_store.history("session-limit")],
+                ["two", "three"],
+            )
+
     def test_invalid_session_limits_fail_closed(self):
         for setting in ("max_sessions = 0", "max_messages_per_session = 1"):
             with self.subTest(setting=setting), tempfile.TemporaryDirectory() as temp:
