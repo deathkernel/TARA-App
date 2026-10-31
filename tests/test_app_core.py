@@ -124,10 +124,6 @@ class AppCoreTests(unittest.TestCase):
                 self.cancelled.append(request_id)
                 return True
 
-        adapter = CancellableAdapter()
-        registry = CapabilityRegistry()
-        registry.register(adapter)
-
         class SessionRouter:
             def route(self, payload):
                 return RouteDecision(payload["request_id"], "routed", "chat", "respond", "conversation", "Chat intent")

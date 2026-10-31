@@ -93,6 +93,7 @@ export default function App() {
   const [sending, setSending] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const activeRequestId = useRef<string | null>(null);
+  const activeRequestSession = useRef<string | null>(null);
   const [modelsOpen, setModelsOpen] = useState(false);
   const [modelStatus, setModelStatus] = useState<ModelStatus | null>(null);
   const [modelBusy, setModelBusy] = useState("");
@@ -157,6 +158,7 @@ export default function App() {
     setNotice("");
     const requestId = crypto.randomUUID();
     activeRequestId.current = requestId;
+    activeRequestSession.current = active.id;
     try {
       const payload = await api<any>("/api/chat", {
         method: "POST",
@@ -179,7 +181,10 @@ export default function App() {
         messages: [...item.messages, failureMessage].slice(-24),
       }));
     } finally {
-      if (activeRequestId.current === requestId) activeRequestId.current = null;
+      if (activeRequestId.current === requestId) {
+        activeRequestId.current = null;
+        activeRequestSession.current = null;
+      }
       setSending(false);
       setCancelling(false);
     }
@@ -187,12 +192,13 @@ export default function App() {
 
   async function stopMessage() {
     const requestId = activeRequestId.current;
-    if (!requestId || !active) return;
+    const requestSession = activeRequestSession.current;
+    if (!requestId || !requestSession) return;
     setCancelling(true);
     try {
       const result = await api<{status: string}>("/api/cancel-request", {
         method: "POST",
-        body: JSON.stringify({ request_id: requestId, session_id: active.id }),
+        body: JSON.stringify({ request_id: requestId, session_id: requestSession }),
       });
       if (result.status !== "cancelled") setNotice("This request could not be stopped at its current stage.");
     } catch (error) {
