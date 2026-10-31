@@ -144,7 +144,7 @@ class Orchestrator:
         """
         operation_id = request_id or str(uuid4())
         if isinstance(question, str) and isinstance(session_id, str):
-            fingerprint = hashlib.sha256(question.strip().casefold().encode("utf-8")).hexdigest()
+            fingerprint = hashlib.sha256(question.strip().casefold().encode("utf-8", errors="replace")).hexdigest()
             key = (session_id, fingerprint)
             with self._active_question_lock:
                 if key in self._active_questions:
