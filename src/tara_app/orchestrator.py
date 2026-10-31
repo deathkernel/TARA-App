@@ -95,11 +95,12 @@ class Orchestrator:
         self.router = router
         self.model_catalog = model_catalog
         self.session_store = session_store
+        self._history_limit = min(24, session_store.max_messages_per_session) if session_store is not None else 24
         self._conversation_history: OrderedDict[str, list[dict[str, str]]] = OrderedDict()
         if self.session_store is not None:
             for item in self.session_store.list_sessions():
                 session_id = item["session_id"]
-                messages = self.session_store.history(session_id, limit=24)
+                messages = self.session_store.history(session_id, limit=self._history_limit)
                 self._conversation_history[session_id] = [
                     {"role": message.role, "content": message.content}
                     for message in messages if message.role in {"user", "assistant"}
@@ -371,7 +372,7 @@ class Orchestrator:
                         {"role": "user", "content": question.strip()},
                         {"role": "assistant", "content": response_text.strip()},
                     ))
-                    del history[:-24]
+                    del history[:-self._history_limit]
                     if self.session_store is not None:
                         try:
                             self.session_store.replace_history(session_id, history)
