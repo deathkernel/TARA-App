@@ -136,7 +136,7 @@ def handle_request(request:Any)->dict[str,Any]:
         if not isinstance(model,str) or len(model)>100: return result(rid,"invalid_request",error="model name is invalid")
         if model == "qwen-3.8-27b":
             from tara_app.providers.bharatcode import BharatCodeError, BharatCodeProvider
-            provider = BharatCodeProvider.from_env()
+            provider = BharatCodeProvider(model=model)
             live_models = provider.list_models()
             if not any(item.get("id") == provider.model for item in live_models):
                 raise BharatCodeError("The selected BharatCode model is not present in the live account catalogue.")
