@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import base64
+import tempfile
 import unittest
+from pathlib import Path
 from threading import Event, Thread
 from typing import Mapping, Sequence
 
 from tara_app.contracts import AdapterHealth, Capability, ModuleRequest, ModuleResult, RouteDecision
 from tara_app.orchestrator import Orchestrator
 from tara_app.registry import CapabilityRegistry, RegistryError
+from tara_app.sessions import SessionStore
 
 
 class FakeAdapter:
@@ -60,6 +63,30 @@ class AppCoreTests(unittest.TestCase):
         self.assertEqual(history_a[-2]["content"], "Question 12")
         self.assertEqual(history_a[-1]["content"], "TARA reply")
         self.assertEqual(history_b, [])
+
+
+    def test_successful_chat_turn_is_saved_to_configured_session_store(self) -> None:
+        chat = FakeAdapter(
+            "chat",
+            (Capability("chat", "respond", "Conversation response", True),),
+            ModuleResult("success", {"text": "Persistent reply"}),
+        )
+        registry = CapabilityRegistry()
+        registry.register(chat)
+
+        class SessionRouter:
+            def route(self, payload):
+                return RouteDecision(payload["request_id"], "routed", "chat", "respond", "conversation", "Chat intent")
+
+        with tempfile.TemporaryDirectory() as temp:
+            store = SessionStore(database_path=Path(temp) / "sessions.sqlite3")
+            app = Orchestrator(registry, SessionRouter(), session_store=store)
+            result = app.handle_question("Persist this", session_id="session-db", request_id="req-db")
+            self.assertEqual(result.status, "success")
+            self.assertEqual(
+                [(message.role, message.content) for message in store.history("session-db")],
+                [("user", "Persist this"), ("assistant", "Persistent reply")],
+            )
 
     def test_duplicate_in_flight_question_is_rejected_per_session(self) -> None:
         started = Event()
