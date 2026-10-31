@@ -125,6 +125,8 @@ def handle_request(request: Any) -> dict[str, Any]:
             )
         except (BharatCodeError, OSError, RuntimeError, ValueError):
             return _result(request_id, "unavailable", error="BharatCode coding inference is unavailable; check provider access and capacity without exposing credentials", duration_ms=int((time.monotonic() - started) * 1000))
+        if len(text.encode("utf-8")) > MAX_RESPONSE_BYTES:
+            return _result(request_id, "failed", error="BharatCode returned an oversized coding response", duration_ms=int((time.monotonic() - started) * 1000))
         return _result(request_id, "success", {"text": text, "model": provider.model, "provider": "bharatcode", "remote_data_transfer": True, "execution_performed": False}, duration_ms=int((time.monotonic() - started) * 1000))
     try:
         origin = _ollama_origin()
