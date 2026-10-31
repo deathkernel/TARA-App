@@ -158,6 +158,7 @@ This roadmap is dependency-ordered. The daily development task should deliver a 
 - [ ] Complete versioned adapter contracts between in-repository specialists; avoid private cross-repository imports.
 - [ ] Verify each specialist independently with contract tests, a health check and one end-to-end workflow.
 - [ ] Evaluate optional AI/developer tools one at a time. Confirm maintenance, licence, platform support, real free-tier terms and security before activation.
+- [ ] Verify the opt-in BharatCode provider branch: unit/contract tests, live model discovery with an authorized key, task-wise Chat/Code/Creative/Vision smoke tests, and explicit remote-data consent. Keep Ollama as the local default and preserve deterministic Security/Handler boundaries.
 - [ ] Keep optional paid/remote providers disabled unless the user explicitly configures them and accepts their data-transfer and quota terms.
 
 ## 5. Recommended execution order
@@ -202,6 +203,7 @@ Append a dated entry after each meaningful, evidence-backed change. Keep entries
 
 | Date | Item | Evidence / PR | Result | Next |
 |---|---|---|---|---|
+| 2026-10-31 | Added opt-in BharatCode Qwen provider across Chat, Code, Creative, Vision and Model Hub, with per-specialist provider selection, secret forwarding, response limits, and remote-data disclosures | [Implementation branch](https://github.com/deathkernel/TARA-App/tree/feat/bharatcode-multi-specialist-routing) | Shared standard-library adapter, routing branches, configuration, and offline contract/routing tests added. No API key is committed. CI, live `/models` account access, image compatibility, and target-machine smoke tests are pending; Ollama remains the default local path. | Run CI, review provider behavior, then verify with an explicitly configured BharatCode key |
 | 2026-10-28 | Dropped floating pet as a product direction; closed PR #32 and restored the normal browser UI as the Windows launcher default | [PR #32 closed](https://github.com/deathkernel/TARA-App/pull/32); launcher change in this PR | Pet UI is no longer on the roadmap; legacy optional code remains but is not launched by default | Continue with core app integration and verification |
 | 2026-10-28 | Confirmed single-repository development boundary and corrected native Handler CI matrix | [PR #35](https://github.com/deathkernel/TARA-App/pull/35) | Removed the stale macOS native Handler job to match the Windows/Linux CI scope recorded under PR #28; corrected Windows/Linux matrix passed on the updated PR head before merge. | Continue with core application feature completion in bulk |
 | 2026-10-28 | Added opt-in SQLite persistence for bounded sessions and messages | [Bulk core feature batch branch](https://github.com/deathkernel/TARA-App/tree/feat/bulk-core-feature-batch) | SessionStore still defaults to memory-only; explicitly configured SQLite restores sessions across restart and deletes persisted records on close. Regression tests added; CI verification pending. Retention defaults, migrations, and application config wiring remain open. | Extend lifecycle/cancellation and API integration with tests |
