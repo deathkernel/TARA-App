@@ -128,7 +128,6 @@ class AppCoreTests(unittest.TestCase):
             def route(self, payload):
                 return RouteDecision(payload["request_id"], "routed", "chat", "respond", "conversation", "Chat intent")
 
-        app = Orchestrator(registry, SessionRouter())
         started = Event()
         release = Event()
 
