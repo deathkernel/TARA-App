@@ -98,6 +98,8 @@ class Orchestrator:
         self._approval_lock = RLock()
         self._active_question_lock = RLock()
         self._active_questions: dict[tuple[str, str], str] = {}
+        self._active_execution_lock = RLock()
+        self._active_executions: dict[str, tuple[str, Any]] = {}
 
     def replace_conversation_history(self, session_id: str, history: Sequence[Mapping[str, str]]) -> None:
         """Replace one session's bounded conversation context from the local UI."""
@@ -318,10 +320,15 @@ class Orchestrator:
             timeout_seconds=getattr(adapter, "timeout_seconds", 30),
             workspace_root=workspace_root,
         )
+        with self._active_execution_lock:
+            self._active_executions[operation_id] = (session_id, adapter)
         try:
             result = adapter.execute(module_request)
         except Exception:
             return self._outcome(operation_id, "failed", decision, "adapter_execution_failed", "Specialist execution failed")
+        finally:
+            with self._active_execution_lock:
+                self._active_executions.pop(operation_id, None)
         if not isinstance(result, ModuleResult):
             return self._outcome(operation_id, "failed", decision, "invalid_adapter_response", "Specialist returned an invalid result")
 
@@ -397,6 +404,27 @@ class Orchestrator:
             return DispatchOutcome("approval_required", decision, pending, operation_id)
 
         return DispatchOutcome(result.status, decision, result, operation_id)
+
+    def cancel_request(self, request_id: str, *, session_id: str) -> str:
+        """Cancel one active specialist process belonging to the given session."""
+        if not isinstance(request_id, str) or not request_id.strip() or len(request_id) > 128:
+            return "invalid_request"
+        if not isinstance(session_id, str) or not session_id.strip() or len(session_id) > 128:
+            return "invalid_request"
+        with self._active_execution_lock:
+            active = self._active_executions.get(request_id)
+        if active is None:
+            return "not_running"
+        active_session, adapter = active
+        if active_session != session_id:
+            return "permission_denied"
+        cancel = getattr(adapter, "cancel_request", None)
+        if not callable(cancel):
+            return "unsupported"
+        try:
+            return "cancelled" if cancel(request_id) else "not_running"
+        except Exception:
+            return "failed"
 
     def approve(self, approval_id: str, *, session_id: str) -> DispatchOutcome:
         """Execute one exact, session-bound operation after explicit user approval."""

@@ -73,3 +73,17 @@ not enqueue or silently discard the first request. Once the first request
 finishes, the same question can be submitted again as a normal retry. This is
 request de-duplication, not process cancellation or a guarantee that semantically
 similar prompts are identical.
+
+
+## Active request cancellation
+
+The local UI assigns a unique request ID to each chat submission and can send
+`POST /api/cancel-request` with that ID and its session ID. The orchestrator
+checks the session binding and delegates cancellation only to the adapter
+currently executing that request. The stdio adapter terminates the associated
+child process (and force-kills it if it does not exit promptly), then returns
+the normalized `cancelled` status. This does not cancel routing or health
+checks before specialist execution begins, and adapters that do not expose
+process cancellation report the operation as unsupported/not running. The
+existing `POST /api/cancel` endpoint remains dedicated to cancelling pending
+human approvals.

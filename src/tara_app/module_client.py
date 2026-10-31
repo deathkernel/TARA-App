@@ -6,6 +6,7 @@ import json
 import os
 import re
 import subprocess
+from threading import RLock
 from pathlib import Path
 from typing import Mapping, Sequence
 
@@ -57,6 +58,9 @@ class StdioModuleAdapter:
         self.timeout_seconds = timeout_seconds
         self.max_response_bytes = max_response_bytes
         self.environment = dict(environment or {})
+        self._process_lock = RLock()
+        self._active_processes: dict[str, subprocess.Popen[str]] = {}
+        self._cancelled_requests: set[str] = set()
         for name, value in self.environment.items():
             if not _ENV_NAME.fullmatch(name) or not isinstance(value, str) or "\x00" in value or len(value) > 4096:
                 raise ValueError("module environment contains an invalid entry")
@@ -93,6 +97,26 @@ class StdioModuleAdapter:
             return ModuleResult("approval_required", error="side-effecting capability requires an approval token")
         return self._invoke(request.to_payload(), timeout=min(self.timeout_seconds, request.timeout_seconds), request_id=request.request_id)
 
+    def cancel_request(self, request_id: str) -> bool:
+        """Terminate the child process for one currently executing request."""
+        if not isinstance(request_id, str) or not request_id or len(request_id) > 128:
+            return False
+        with self._process_lock:
+            process = self._active_processes.get(request_id)
+            if process is None or process.poll() is not None:
+                return False
+            self._cancelled_requests.add(request_id)
+        try:
+            process.terminate()
+            try:
+                process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=2)
+        except OSError:
+            return False
+        return True
+
     def _invoke(self, payload: Mapping[str, object], *, timeout: int, request_id: str | None = None) -> ModuleResult:
         try:
             encoded = json.dumps(dict(payload), ensure_ascii=False, separators=(",", ":"))
@@ -100,29 +124,48 @@ class StdioModuleAdapter:
             raise ModuleProcessError("module request is not valid JSON") from exc
         if len(encoded.encode("utf-8")) > MAX_PAYLOAD_BYTES:
             raise ModuleProcessError("module request exceeds the payload limit")
+        process: subprocess.Popen[str] | None = None
         try:
-            completed = subprocess.run(
+            process = subprocess.Popen(
                 self.command,
-                input=encoded,
-                capture_output=True,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
                 encoding="utf-8",
                 errors="replace",
                 cwd=self.working_directory,
                 env=self._safe_environment(),
-                timeout=timeout,
                 shell=False,
-                check=False,
             )
-        except (OSError, subprocess.TimeoutExpired) as exc:
+            if request_id is not None:
+                with self._process_lock:
+                    self._active_processes[request_id] = process
+            stdout, _stderr = process.communicate(input=encoded, timeout=timeout)
+        except subprocess.TimeoutExpired as exc:
+            if process is not None and process.poll() is None:
+                process.kill()
+                process.communicate()
             raise ModuleProcessError("module process is unavailable or timed out") from exc
-        if completed.returncode != 0:
+        except OSError as exc:
+            raise ModuleProcessError("module process is unavailable or timed out") from exc
+        finally:
+            if request_id is not None:
+                with self._process_lock:
+                    self._active_processes.pop(request_id, None)
+                    cancelled = request_id in self._cancelled_requests
+                    self._cancelled_requests.discard(request_id)
+            else:
+                cancelled = False
+        if cancelled:
+            return ModuleResult("cancelled", error="Request was cancelled by the user")
+        if process is None or process.returncode != 0:
             raise ModuleProcessError("module process returned a failure status")
-        output = completed.stdout.encode("utf-8")
+        output = stdout.encode("utf-8")
         if len(output) > self.max_response_bytes:
             raise ModuleProcessError("module response exceeds the configured limit")
         try:
-            response = json.loads(completed.stdout)
+            response = json.loads(stdout)
         except json.JSONDecodeError as exc:
             raise ModuleProcessError("module returned malformed JSON") from exc
         if not isinstance(response, dict) or set(response) - _RESULT_FIELDS:

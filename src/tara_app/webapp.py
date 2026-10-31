@@ -108,7 +108,7 @@ class _Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         endpoint = urlsplit(self.path).path
-        if endpoint not in {"/api/chat", "/api/approve", "/api/cancel", "/api/models/pull", "/api/models/unload", "/api/models/remove"}:
+        if endpoint not in {"/api/chat", "/api/approve", "/api/cancel", "/api/cancel-request", "/api/models/pull", "/api/models/unload", "/api/models/remove"}:
             self._json(404, {"status": "unavailable", "error": "endpoint not found"})
             return
         if not self._local_origin():
@@ -131,7 +131,9 @@ class _Handler(BaseHTTPRequestHandler):
             self._json(400, {"status": "invalid_request", "error": "request must be UTF-8 JSON"})
             return
         if endpoint == "/api/chat":
-            fields = {"question", "session_id", "attachments", "history"}
+            fields = {"question", "session_id", "attachments", "history", "request_id"}
+        elif endpoint == "/api/cancel-request":
+            fields = {"request_id", "session_id"}
         elif endpoint in {"/api/models/pull", "/api/models/unload", "/api/models/remove"}:
             fields = {"specialist"}
         else:
@@ -165,6 +167,14 @@ class _Handler(BaseHTTPRequestHandler):
             response_key = "pull" if endpoint == "/api/models/pull" else "model"
             self._json(status_code, {"status": result_status, response_key: result})
             return
+        if endpoint == "/api/cancel-request":
+            if set(payload) != {"request_id", "session_id"}:
+                self._json(400, {"status": "invalid_request", "error": "request_id and session_id are required"})
+                return
+            result = self.server.app.cancel_request(payload["request_id"], session_id=payload["session_id"])
+            status_code = 200 if result == "cancelled" else 409
+            self._json(status_code, {"status": result, "request_id": payload["request_id"]})
+            return
         if endpoint == "/api/chat":
             if "history" in payload:
                 try:
@@ -179,6 +189,7 @@ class _Handler(BaseHTTPRequestHandler):
                 payload.get("question"),
                 session_id=payload.get("session_id", "default"),
                 attachments=payload.get("attachments", []),
+                request_id=payload.get("request_id"),
             )
         elif endpoint == "/api/approve":
             outcome = self.server.app.approve(payload.get("approval_id"), session_id=payload.get("session_id"))

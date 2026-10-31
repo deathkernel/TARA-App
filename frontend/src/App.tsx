@@ -1,4 +1,4 @@
-import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -91,6 +91,8 @@ export default function App() {
   const [sessionId, setSessionId] = useState(() => localStorage.getItem(SESSION_KEY) ?? "");
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const activeRequestId = useRef<string | null>(null);
   const [modelsOpen, setModelsOpen] = useState(false);
   const [modelStatus, setModelStatus] = useState<ModelStatus | null>(null);
   const [modelBusy, setModelBusy] = useState("");
@@ -151,11 +153,14 @@ export default function App() {
     }));
     setDraft("");
     setSending(true);
+    setCancelling(false);
     setNotice("");
+    const requestId = crypto.randomUUID();
+    activeRequestId.current = requestId;
     try {
       const payload = await api<any>("/api/chat", {
         method: "POST",
-        body: JSON.stringify({ question, session_id: active.id, attachments: [], history }),
+        body: JSON.stringify({ question, session_id: active.id, request_id: requestId, attachments: [], history }),
       });
       const text = answerText(payload);
       const assistantMessage: Message = { role: "assistant", text, status: payload?.status ?? "success" };
@@ -174,7 +179,26 @@ export default function App() {
         messages: [...item.messages, failureMessage].slice(-24),
       }));
     } finally {
+      if (activeRequestId.current === requestId) activeRequestId.current = null;
       setSending(false);
+      setCancelling(false);
+    }
+  }
+
+  async function stopMessage() {
+    const requestId = activeRequestId.current;
+    if (!requestId || !active) return;
+    setCancelling(true);
+    try {
+      const result = await api<{status: string}>("/api/cancel-request", {
+        method: "POST",
+        body: JSON.stringify({ request_id: requestId, session_id: active.id }),
+      });
+      if (result.status !== "cancelled") setNotice("This request could not be stopped at its current stage.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Could not stop this request.");
+    } finally {
+      setCancelling(false);
     }
   }
 
@@ -257,7 +281,7 @@ export default function App() {
 
         <form className="composer" onSubmit={submit}>
           <textarea value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onComposerKeyDown} placeholder="Message TARA…" aria-label="Message TARA" rows={1} maxLength={20000} />
-          <button className="send" type="submit" disabled={sending || !draft.trim()} aria-label="Send message">{sending ? "…" : "↑"}</button>
+          {sending ? <button className="secondary" type="button" onClick={() => void stopMessage()} disabled={cancelling}>{cancelling ? "Stopping…" : "Stop"}</button> : <button className="send" type="submit" disabled={!draft.trim()} aria-label="Send message">↑</button>}
           <p>Local inference stays on your device. Cloud requests require explicit configuration.</p>
         </form>
         <footer>Chat and Code are separate specialists · TARA-App</footer>

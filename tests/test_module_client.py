@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
+import threading
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -62,6 +65,32 @@ class StdioModuleAdapterTests(unittest.TestCase):
         }
         with patch("tara_app.module_client.subprocess.run", return_value=self.completed(response)):
             self.assertEqual(adapter.health().status, "healthy")
+
+
+    def test_cancel_request_terminates_active_child_process(self) -> None:
+        adapter = StdioModuleAdapter(
+            "research",
+            (Capability("research", "answer", "Answer with sourced research", True),),
+            (sys.executable, "-c", "import time; time.sleep(30)"),
+            working_directory=Path(__file__).resolve().parent,
+            timeout_seconds=60,
+        )
+        request = ModuleRequest("req-cancel", "session-1", "research", "answer", {})
+        results = []
+        worker = threading.Thread(target=lambda: results.append(adapter.execute(request)))
+        worker.start()
+        deadline = time.monotonic() + 3
+        while time.monotonic() < deadline:
+            with adapter._process_lock:
+                active = "req-cancel" in adapter._active_processes
+            if active:
+                break
+            time.sleep(0.01)
+        self.assertTrue(active, "child process did not start")
+        self.assertTrue(adapter.cancel_request("req-cancel"))
+        worker.join(timeout=3)
+        self.assertFalse(worker.is_alive(), "cancelled child process did not exit")
+        self.assertEqual(results[0].status, "cancelled")
 
     def test_mismatched_request_id_is_rejected(self) -> None:
         adapter = self.adapter()

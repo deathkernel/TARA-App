@@ -105,7 +105,7 @@ class ModuleResult:
     schema_version: str = SCHEMA_VERSION
 
     _STATUSES = frozenset(
-        {"success", "unavailable", "invalid_request", "permission_denied", "approval_required", "timeout", "failed"}
+        {"success", "unavailable", "invalid_request", "permission_denied", "approval_required", "timeout", "cancelled", "failed"}
     )
 
     def __post_init__(self) -> None:

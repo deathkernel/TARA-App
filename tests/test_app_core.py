@@ -113,6 +113,50 @@ class AppCoreTests(unittest.TestCase):
         self.assertEqual(retry.status, "success")
         self.assertEqual(len(chat.calls), 2)
 
+
+    def test_cancel_request_is_session_scoped_and_delegates_to_adapter(self) -> None:
+        class CancellableAdapter(FakeAdapter):
+            def __init__(self):
+                super().__init__("chat", (Capability("chat", "respond", "Conversation response", True),))
+                self.cancelled = []
+
+            def cancel_request(self, request_id):
+                self.cancelled.append(request_id)
+                return True
+
+        adapter = CancellableAdapter()
+        registry = CapabilityRegistry()
+        registry.register(adapter)
+
+        class SessionRouter:
+            def route(self, payload):
+                return RouteDecision(payload["request_id"], "routed", "chat", "respond", "conversation", "Chat intent")
+
+        app = Orchestrator(registry, SessionRouter())
+        started = Event()
+        release = Event()
+
+        class WaitingAdapter(CancellableAdapter):
+            def execute(self, request):
+                self.calls.append(request)
+                started.set()
+                release.wait(timeout=3)
+                return ModuleResult("success", {"text": "done"})
+
+        waiting = WaitingAdapter()
+        registry = CapabilityRegistry()
+        registry.register(waiting)
+        app = Orchestrator(registry, SessionRouter())
+        worker = Thread(target=lambda: app.handle_question("Run", session_id="session-a", request_id="req-active"))
+        worker.start()
+        self.assertTrue(started.wait(timeout=2))
+        self.assertEqual(app.cancel_request("req-active", session_id="wrong-session"), "permission_denied")
+        self.assertEqual(app.cancel_request("req-active", session_id="session-a"), "cancelled")
+        self.assertEqual(waiting.cancelled, ["req-active"])
+        release.set()
+        worker.join(timeout=2)
+        self.assertFalse(worker.is_alive())
+
     def test_read_only_route_dispatches_to_its_own_adapter(self) -> None:
         chat = FakeAdapter("chat", (Capability("chat", "respond", "Conversation response", True),))
         registry = CapabilityRegistry()
