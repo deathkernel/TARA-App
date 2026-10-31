@@ -2,7 +2,7 @@ import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-type Message = { role: "user" | "assistant"; text: string; status?: string; approval?: { approval_id: string; description: string } };
+type Message = { role: "user" | "assistant"; text: string; status?: string; playback?: boolean; approval?: { approval_id: string; description: string } };
 type Attachment = { name: string; media_type: string; content_base64: string; size: number };
 type Conversation = { id: string; title: string; updatedAt: number; messages: Message[] };
 type LocalModel = {
@@ -113,6 +113,7 @@ export default function App() {
   const [sending, setSending] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [approvalBusy, setApprovalBusy] = useState("");
+  const [speaking, setSpeaking] = useState(false);
   const activeRequestId = useRef<string | null>(null);
   const activeRequestSession = useRef<string | null>(null);
   const [modelsOpen, setModelsOpen] = useState(false);
@@ -173,6 +174,24 @@ export default function App() {
       window.clearInterval(timer);
     };
   }, [modelsOpen, pullActive]);
+
+  function speakMessage(text: string) {
+    if (!("speechSynthesis" in window)) {
+      setNotice("This browser does not support local read-aloud.");
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.onstart = () => setSpeaking(true);
+    utterance.onend = () => setSpeaking(false);
+    utterance.onerror = () => setSpeaking(false);
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function stopSpeaking() {
+    window.speechSynthesis?.cancel();
+    setSpeaking(false);
+  }
 
   function updateConversation(conversationId: string, transform: (conversation: Conversation) => Conversation) {
     setConversations((items) => items.map((item) => item.id === conversationId ? transform(item) : item));
@@ -236,6 +255,7 @@ export default function App() {
     setDraft("");
     setSending(true);
     setCancelling(false);
+    stopSpeaking();
     setNotice("");
     const requestId = crypto.randomUUID();
     activeRequestId.current = requestId;
@@ -253,7 +273,7 @@ export default function App() {
           ? resultData.approval_description
           : "TARA-Security requires your approval before this operation can run.",
       } : undefined;
-      const assistantMessage: Message = { role: "assistant", text, status: payload?.status ?? "success", approval };
+      const assistantMessage: Message = { role: "assistant", text, status: payload?.status ?? "success", playback: resultData?.playback === "browser_local", approval };
       if (["success", "approval_required"].includes(payload?.status)) setAttachments([]);
       updateActive((item) => ({
         ...item, updatedAt: Date.now(),
@@ -427,6 +447,9 @@ export default function App() {
               <div className={`message-bubble ${message.role === "assistant" ? "markdown-body" : ""}`}>
                 {message.role === "assistant" ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.text}</ReactMarkdown> : message.text}
               </div>
+              {message.playback && <div className="voice-controls">
+                <button className="secondary" type="button" onClick={() => speaking ? stopSpeaking() : speakMessage(message.text)}>{speaking ? "Stop speaking" : "Play aloud"}</button>
+              </div>}
               {message.approval && <div className="approval-card">
                 <div><strong>Approval required</strong><p>{message.approval.description}</p><small>This is a one-time approval for this exact operation.</small></div>
                 <div className="approval-actions">
