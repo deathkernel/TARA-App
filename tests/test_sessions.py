@@ -52,6 +52,31 @@ class SessionStoreTests(unittest.TestCase):
             with self.assertRaises(SessionError):
                 after_close.get(session.session_id)
 
+
+    def test_replace_history_persists_and_evicts_oldest_session(self):
+        with tempfile.TemporaryDirectory() as temp:
+            database = Path(temp) / "sessions.sqlite3"
+            store = SessionStore(database_path=database, max_sessions=1, max_messages_per_session=2)
+            store.replace_history("session-one", [{"role": "user", "content": "first"}])
+            store.replace_history("session-two", [{"role": "user", "content": "second"}])
+            self.assertEqual([item["session_id"] for item in store.list_sessions()], ["session-two"])
+            restarted = SessionStore(database_path=database, max_sessions=1, max_messages_per_session=2)
+            self.assertEqual(restarted.history("session-two")[0].content, "second")
+            with self.assertRaises(SessionError):
+                restarted.get("session-one")
+
+    def test_replace_history_rejects_oversized_or_invalid_entries(self):
+        store = SessionStore(max_messages_per_session=1, max_content_chars=5)
+        with self.assertRaises(SessionError):
+            store.replace_history("session-a", [{"role": "user", "content": "too long"}])
+        with self.assertRaises(SessionError):
+            store.replace_history("session-a", [{"role": "system", "content": "hello"}])
+        with self.assertRaises(SessionError):
+            store.replace_history("session-a", [
+                {"role": "user", "content": "hello"},
+                {"role": "assistant", "content": "again"},
+            ])
+
     def test_persistence_is_disabled_by_default(self):
         store = SessionStore()
         session = store.create()
