@@ -47,11 +47,11 @@ def _run_repository_audit_command(command_text: str) -> str | None:
         return 'Usage: /audit [relative-folder] (quote folder names containing spaces)'
     if len(argument) > 2048:
         return "Audit path is too long."
-    from pathlib import Path
+    from pathlib import Path, PureWindowsPath
 
     workspace = Path.cwd().resolve()
     requested = Path(argument).expanduser() if argument else Path(".")
-    if requested.is_absolute():
+    if requested.is_absolute() or (argument and PureWindowsPath(argument).is_absolute()):
         return "Audit accepts a relative folder inside the current working directory only."
     try:
         root = (workspace / requested).resolve(strict=True)
