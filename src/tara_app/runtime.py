@@ -177,7 +177,7 @@ def _session_store(value: Any, root: Path) -> SessionStore | None:
         return SessionStore(
             database_path=path,
             max_sessions=_integer(config.get("max_sessions", 100), "sessions.max_sessions", 1, 512),
-            max_messages_per_session=_integer(config.get("max_messages_per_session", 24), "sessions.max_messages_per_session", 1, 24),
+            max_messages_per_session=_integer(config.get("max_messages_per_session", 24), "sessions.max_messages_per_session", 2, 24),
             max_content_chars=_integer(config.get("max_content_chars", 20_000), "sessions.max_content_chars", 1, 20_000),
         )
     except SessionError as exc:
