@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from tara_chat.app_adapter import CAPABILITIES, handle_request
 from tara_chat.repository_audit import AuditIssue, AuditReport
+from tara_app.runtime import _POLICIES
 
 
 def request(**overrides):
@@ -20,6 +21,11 @@ def request(**overrides):
 
 
 class ChatRepositoryAuditAdapterTests(unittest.TestCase):
+    def test_runtime_registers_repository_audit_as_read_only(self):
+        capability = next(item for item in _POLICIES["chat"] if item.action == "audit_repository")
+        self.assertTrue(capability.read_only)
+        self.assertFalse(capability.requires_approval)
+
     def test_audit_capability_is_declared(self):
         self.assertIn("audit_repository", CAPABILITIES)
 
