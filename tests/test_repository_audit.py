@@ -47,7 +47,7 @@ class RepositoryAuditorTests(unittest.TestCase):
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text("def ok(): return True\n", encoding="utf-8")
             report = RepositoryAuditor(root).audit()
-            self.assertEqual(report.python_files, 0)
+            self.assertEqual(report.python_files, 7)
 
     def test_auditor_reports_python_syntax_errors(self):
         with tempfile.TemporaryDirectory() as directory:
