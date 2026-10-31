@@ -20,7 +20,7 @@ from tara_app.router_client import StdioRouterClient
 
 _ENV_NAME = re.compile(r"^[A-Z][A-Z0-9_]{0,127}$")
 _POLICIES: dict[str, tuple[Capability, ...]] = {
-    "chat": (Capability("chat", "respond", "Conversation and bounded session context", True),),
+    "chat": (\n        Capability("chat", "respond", "Conversation and bounded session context", True),\n        Capability("chat", "audit_repository", "Read-only static audit of the configured local repository", True),\n    ),
     "code": (Capability("code", "plan", "Non-executing code task planning", True),),
     "security": (Capability("security", "assess", "Assess a requested capability against policy", True),),
     "planner": (Capability("planner", "plan", "Create a non-executing task plan", True),),
