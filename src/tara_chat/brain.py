@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
 
 from .memory import LongTermMemory
 
@@ -88,7 +89,11 @@ class TARABrain:
         if isinstance(max_new_tokens, bool) or not isinstance(max_new_tokens, int) or max_new_tokens <= 0:
             raise ValueError("max_new_tokens must be a positive integer")
 
-        recalled = tuple(self.memory.retrieve(prompt, limit=5))
+        remote_memory_enabled = os.getenv("TARA_CHAT_REMOTE_MEMORY", "").strip().lower() in {"1", "true", "yes"}
+        if getattr(self.llm_provider, "remote", False) and not remote_memory_enabled:
+            recalled = ()
+        else:
+            recalled = tuple(self.memory.retrieve(prompt, limit=5))
         sections = []
         if recalled:
             memory_lines = [
