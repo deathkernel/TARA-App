@@ -327,6 +327,8 @@ class Orchestrator:
         with self._active_execution_lock:
             if self._shutting_down:
                 return self._outcome(operation_id, "unavailable", decision, "app_shutting_down", "TARA-App is shutting down and cannot start specialist execution")
+            if operation_id in self._active_executions:
+                return self._outcome(operation_id, "unavailable", decision, "duplicate_request_id", "This request ID is already active")
             self._active_executions[operation_id] = (session_id, adapter)
         try:
             result = adapter.execute(module_request)
@@ -486,6 +488,8 @@ class Orchestrator:
         with self._active_execution_lock:
             if self._shutting_down:
                 return self._outcome(pending.request_id, "unavailable", pending.route, "app_shutting_down", "TARA-App is shutting down and cannot start the approved operation")
+            if pending.request_id in self._active_executions:
+                return self._outcome(pending.request_id, "unavailable", pending.route, "duplicate_request_id", "This request ID is already active")
             self._active_executions[pending.request_id] = (pending.session_id, adapter)
         try:
             result = adapter.execute(request)
