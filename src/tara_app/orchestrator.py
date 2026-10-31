@@ -19,6 +19,7 @@ from tara_app.adapters import RouterClient
 from tara_app.contracts import AdapterHealth, Capability, ModuleRequest, ModuleResult, RouteDecision
 from tara_app.ollama_models import OllamaModelCatalog
 from tara_app.registry import CapabilityRegistry
+from tara_app.sessions import SessionError, SessionStore
 
 _AUDIO_MEDIA_TYPES = frozenset({
     "audio/mpeg", "audio/wav", "audio/mp4", "audio/webm", "audio/ogg", "audio/flac", "audio/aac",
@@ -88,11 +89,21 @@ class Orchestrator:
         router: RouterClient,
         *,
         model_catalog: OllamaModelCatalog | None = None,
+        session_store: SessionStore | None = None,
     ) -> None:
         self.registry = registry
         self.router = router
         self.model_catalog = model_catalog
+        self.session_store = session_store
         self._conversation_history: OrderedDict[str, list[dict[str, str]]] = OrderedDict()
+        if self.session_store is not None:
+            for item in self.session_store.list_sessions():
+                session_id = item["session_id"]
+                messages = self.session_store.history(session_id, limit=24)
+                self._conversation_history[session_id] = [
+                    {"role": message.role, "content": message.content}
+                    for message in messages if message.role in {"user", "assistant"}
+                ]
         self._history_lock = RLock()
         self._pending_approvals: OrderedDict[str, PendingApproval] = OrderedDict()
         self._approval_lock = RLock()
@@ -129,6 +140,14 @@ class Orchestrator:
                 self._conversation_history.pop(session_id, None)
             while len(self._conversation_history) > 512:
                 self._conversation_history.popitem(last=False)
+        if self.session_store is not None:
+            try:
+                if safe_history:
+                    self.session_store.replace_history(session_id, safe_history)
+                else:
+                    self.session_store.close(session_id)
+            except SessionError as exc:
+                raise ValueError("persistent conversation history could not be updated") from exc
 
     def handle_question(
         self,
@@ -356,6 +375,12 @@ class Orchestrator:
                     self._conversation_history.move_to_end(session_id)
                     while len(self._conversation_history) > 512:
                         self._conversation_history.popitem(last=False)
+                    persisted_history = [dict(turn) for turn in history]
+                if self.session_store is not None:
+                    try:
+                        self.session_store.replace_history(session_id, persisted_history)
+                    except SessionError:
+                        return self._outcome(operation_id, "failed", decision, "session_persistence_failed", "Conversation history could not be saved")
 
         if decision.requires_approval:
             verdict = result.data.get("decision") if isinstance(result.data, Mapping) else None

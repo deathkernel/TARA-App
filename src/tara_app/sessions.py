@@ -7,7 +7,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from contextlib import contextmanager
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -193,6 +193,59 @@ class SessionStore:
             session.messages.append(message)
             session.updated_at = message.created_at
             return message
+
+    def replace_history(self, session_id: str, messages: Sequence[Mapping[str, str]]) -> Session:
+        """Replace a bounded conversation history, creating or retaining its session ID."""
+        if not isinstance(session_id, str) or not session_id.strip() or len(session_id) > 128:
+            raise SessionError("session ID is invalid")
+        if not isinstance(messages, Sequence) or isinstance(messages, (str, bytes)):
+            raise SessionError("session history must be a sequence")
+        if len(messages) > self.max_messages_per_session:
+            raise SessionError("session message capacity reached")
+        now = self._now()
+        safe_messages: list[SessionMessage] = []
+        for item in messages:
+            if not isinstance(item, Mapping) or set(item) != {"role", "content"}:
+                raise SessionError("session history entry is invalid")
+            role, content = item.get("role"), item.get("content")
+            if role not in {"user", "assistant"} or not isinstance(content, str) or not content.strip():
+                raise SessionError("session history entry is invalid")
+            if len(content) > self.max_content_chars:
+                raise SessionError("message exceeds configured character limit")
+            safe_messages.append(SessionMessage(role, content, now))
+
+        with self._lock:
+            existing = self._sessions.get(session_id)
+            created_at = existing.created_at if existing is not None else now
+            metadata = dict(existing.metadata) if existing is not None else {}
+            session = Session(session_id, created_at, now, metadata, safe_messages)
+            evicted_id: str | None = None
+            if existing is None and len(self._sessions) >= self.max_sessions:
+                evicted_id = min(self._sessions.values(), key=lambda value: value.updated_at).session_id
+            if self.database_path is not None:
+                try:
+                    with self._connect() as db:
+                        if evicted_id is not None:
+                            db.execute("DELETE FROM sessions WHERE session_id = ?", (evicted_id,))
+                        db.execute(
+                            """INSERT INTO sessions(session_id, created_at, updated_at, metadata_json)
+                               VALUES (?, ?, ?, ?)
+                               ON CONFLICT(session_id) DO UPDATE SET updated_at = excluded.updated_at""",
+                            (session_id, created_at, now, json.dumps(metadata, ensure_ascii=False, separators=(",", ":"))),
+                        )
+                        db.execute("DELETE FROM session_messages WHERE session_id = ?", (session_id,))
+                        db.executemany(
+                            """INSERT INTO session_messages(session_id, position, role, content, created_at)
+                               VALUES (?, ?, ?, ?, ?)""",
+                            [(session_id, index, item.role, item.content, item.created_at)
+                             for index, item in enumerate(safe_messages)],
+                        )
+                except (sqlite3.Error, OSError):
+                    raise SessionError("session history could not be persisted") from None
+            if evicted_id is not None:
+                self._sessions.pop(evicted_id, None)
+            self._sessions[session_id] = session
+            return self._snapshot(session)
 
     def history(self, session_id: str, *, limit: int | None = None) -> list[SessionMessage]:
         with self._lock:
