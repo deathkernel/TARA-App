@@ -105,3 +105,14 @@ When the local server stops, TARA-App stops accepting new orchestration and
 approval work, requests cancellation of active specialist process trees, and
 then waits for HTTP worker threads to close. The app does not claim that
 non-cancellable external operations (such as model preparation) are interrupted.
+
+
+## UI file attachments
+
+The local chat UI reads selected files in the browser and sends bounded base64
+attachments only with the user's submitted message. The HTTP request is capped
+at 15 MB and the decoded attachment total at 10 MB across at most 20 files.
+The orchestrator forwards only attachment types relevant to the selected
+specialist and enforces the narrower Code, Vision, Voice, and Data input
+limits before dispatch. Study receives at most four supported text/PDF files;
+its module applies its own 200,000-character extracted-source limit.
