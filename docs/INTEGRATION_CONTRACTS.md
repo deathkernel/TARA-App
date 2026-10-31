@@ -134,3 +134,14 @@ closed rather than being silently rewritten. The database file is restricted
 to owner read/write permissions on POSIX systems. SQLite content is not
 encrypted at rest; choose a local path protected by the operating system's
 user permissions. Browser history remains limited to the 12 most recent chats.
+
+
+## Local inference concurrency
+
+When Ollama model profiles are configured, Chat, Code, Creative and Vision share
+a bounded execution semaphore. The default is one active local model request;
+`ollama.max_concurrent_requests` may be set to two. Requests that arrive when
+all slots are occupied return `unavailable` without starting another
+specialist process, so they can be retried instead of overcommitting local
+memory. Specialist health checks remain available while an inference slot is
+occupied.

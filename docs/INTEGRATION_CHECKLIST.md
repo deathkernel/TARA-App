@@ -12,6 +12,7 @@
 - [x] Stop new orchestration/approval work during shutdown and cancel active specialist process trees before closing the local server.
 - [x] Attach bounded files through the chat composer and route supported media/source files to the matching specialist.
 - [x] Display local model-pull progress and prevent conflicting model lifecycle actions while a pull is active.
+- [x] Bound concurrent local Ollama inference to one active request by default (configurable to two) across Chat, Code, Creative and Vision.
 - [x] Expose browser-local read-aloud controls for TARA Voice responses.
 - [x] Wire opt-in SQLite session persistence through the trusted TOML runtime config, with bounded retention and schema-version checks.
 - [x] Enforce Code, Vision, Voice, and Data attachment limits before dispatch; keep Code execution disabled.
