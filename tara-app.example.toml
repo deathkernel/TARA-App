@@ -22,14 +22,14 @@ id = "chat"
 command = ["{python}", "-m", "tara_chat.app_adapter"]
 working_directory = "."
 timeout_seconds = 180
-environment = ["TARA_LLM_BACKEND", "TARA_LLAMA_MODEL", "OLLAMA_HOST", "TARA_POWER_MODE", "TARA_LLM_TIMEOUT_SECONDS", "TARA_CHAT_MEMORY_PATH"]
+environment = ["TARA_LLM_BACKEND", "TARA_LLAMA_MODEL", "BHARATCODE_API_KEY", "BHARATCODE_MODEL", "OLLAMA_HOST", "TARA_POWER_MODE", "TARA_LLM_TIMEOUT_SECONDS", "TARA_CHAT_MEMORY_PATH"]
 
 [[modules]]
 id = "code"
 command = ["{python}", "-m", "tara_code"]
 working_directory = "."
 timeout_seconds = 180
-environment = ["TARA_CODE_MODEL", "TARA_CODE_OLLAMA_URL"]
+environment = ["TARA_CODE_MODEL", "TARA_CODE_OLLAMA_URL", "TARA_CODE_PROVIDER", "BHARATCODE_API_KEY", "BHARATCODE_CODE_MODEL"]
 
 [[modules]]
 id = "research"
@@ -49,7 +49,7 @@ id = "vision"
 command = ["{python}", "-m", "tara_vision"]
 working_directory = "."
 timeout_seconds = 180
-environment = ["TARA_VISION_MODEL", "TARA_VISION_OLLAMA_URL"]
+environment = ["TARA_VISION_MODEL", "TARA_VISION_OLLAMA_URL", "TARA_VISION_PROVIDER", "BHARATCODE_API_KEY", "BHARATCODE_VISION_MODEL"]
 
 [[modules]]
 id = "planner"
@@ -75,7 +75,7 @@ id = "creative"
 command = ["{python}", "-m", "tara_creative"]
 working_directory = "."
 timeout_seconds = 180
-environment = ["TARA_CREATIVE_MODEL", "TARA_CREATIVE_OLLAMA_URL"]
+environment = ["TARA_CREATIVE_MODEL", "TARA_CREATIVE_OLLAMA_URL", "TARA_CREATIVE_PROVIDER", "BHARATCODE_API_KEY", "BHARATCODE_CREATIVE_MODEL"]
 
 [[modules]]
 id = "action"
@@ -119,4 +119,4 @@ command = ["{python}", "-m", "tara_models"]
 working_directory = "."
 timeout_seconds = 60
 allow_remote = true # Gemini sends the selected prompt to Google; local gpt-oss stays on Ollama.
-environment = ["GEMINI_API_KEY"]
+environment = ["GEMINI_API_KEY", "BHARATCODE_API_KEY", "BHARATCODE_MODEL"]
