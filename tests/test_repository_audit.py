@@ -15,6 +15,15 @@ class RepositoryAuditorTests(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("# fixture\n", encoding="utf-8")
 
+    def test_current_repository_checkout_has_no_missing_required_paths(self):
+        repository_root = Path(__file__).resolve().parents[1]
+        report = RepositoryAuditor(repository_root).audit()
+        missing = [
+            issue.path for issue in report.issues
+            if issue.code == "MISSING_REQUIRED_FILE"
+        ]
+        self.assertEqual(missing, [])
+
     def test_current_monorepo_required_paths_are_accepted(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
