@@ -235,3 +235,5 @@ Append a dated entry after each meaningful, evidence-backed change. Keep entries
 
 
 - Session persistence follow-up: added a trusted `[sessions]` runtime configuration table, Orchestrator restore/replace integration, bounded LRU-style eviction, schema versioning, and POSIX file permissions. Added restart, eviction, configuration, schema-version and permission tests. The feature remains opt-in; no SQLite database is created unless `database_path` is explicitly configured.
+
+- Local inference resource guard: Chat, Code, Creative and Vision share one bounded semaphore when Ollama profiles are configured. The default is one active request; the trusted `ollama.max_concurrent_requests` setting allows at most two. Saturated requests return `unavailable` without spawning another specialist process, and the slot is released on success, cancellation, timeout or process-start failure.
