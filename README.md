@@ -123,6 +123,33 @@ See [runtime and development option notes](docs/runtime-evaluation.md) for the c
 - **Capacity:** student requests use shared capacity and may queue, time out, or be delayed during busy periods. The 10M/day allowance is not unlimited throughput or a service-level guarantee.
 - **Security:** keep `BHARATCODE_API_KEY` on the server side, never in browser bundles, desktop frontend code, source control, or logs. Remote inference sends the submitted prompt/context (and any supported image input) to BharatCode; do not send secrets or sensitive workspace contents without explicit user consent.
 - **TARA integration design:** make hosted inference an explicit opt-in provider profile. Keep local Ollama available as the local/offline option and fallback. Do not silently upload repository files, memory, desktop data, or tool output. Route tool calls back to TARA's local capability registry; validate arguments with TARA-Security and require the existing approval flow for mutations. The model must never execute host commands directly.
+
+### BharatCode task-wise provider setup
+
+The BharatCode adapter is shared by compatible text/image specialists. It uses the fixed HTTPS endpoint above, standard-library HTTP transport, bounded request/response sizes, disabled redirects, and redacted provider errors. No API key is stored in TOML or sent to the browser.
+
+Set the key in the same local environment that launches TARA-App. On Windows PowerShell:
+
+```powershell
+$env:BHARATCODE_API_KEY = "your-bharatcode-key"
+$env:TARA_LLM_BACKEND = "bharatcode"       # Chat: bharatcode or ollama
+$env:TARA_CODE_PROVIDER = "bharatcode"     # Code: bharatcode or ollama
+$env:TARA_CREATIVE_PROVIDER = "bharatcode" # Creative: bharatcode or ollama
+$env:TARA_VISION_PROVIDER = "bharatcode"   # Vision: bharatcode or ollama
+.\run-tara.bat
+```
+
+Each specialist is independently selectable; omit a provider variable or set it to `ollama` to keep local inference. Chat uses `BHARATCODE_MODEL`; Code, Creative, and Vision can override it with `BHARATCODE_CODE_MODEL`, `BHARATCODE_CREATIVE_MODEL`, and `BHARATCODE_VISION_MODEL`. All default to `qwen-3.8-27b`. The example TOML forwards the secret only to the selected module processes; it never contains the secret value.
+
+- **Chat:** uses the existing bounded conversation history assembled by TARA and sends it as a stateless request.
+- **Code:** sends the user's prompt and any attached source text to BharatCode only when `TARA_CODE_PROVIDER=bharatcode`. Code remains review-first; it cannot execute commands or modify files.
+- **Creative:** sends the writing brief to BharatCode only when `TARA_CREATIVE_PROVIDER=bharatcode`.
+- **Vision:** sends supported image data and the question to BharatCode only when `TARA_VISION_PROVIDER=bharatcode`. This transfers the images off-device; keep Ollama selected for local-only image analysis.
+- **Research, Planner, Study, Handler, Security, Memory, and deterministic data/actions:** remain local or source-first. They are not silently switched to remote inference. Future AI-backed Planner/Study actions can adopt the same provider interface after their input/privacy contracts are defined.
+
+Remote mode sends the selected specialist's submitted prompt/context (and images for Vision) to BharatCode. Do not enable it for confidential source, secrets, personal data, or workspace content unless you explicitly accept that transfer. TARA's Security and approval boundary remains local; BharatCode does not receive permission to execute local tools. A response ending with `finish_reason=length` is treated as incomplete and is never accepted as a complete answer or tool call.
+
+To verify account access and the current model ID, call `GET https://bharatcode.ai/api/model/v1/models` with the bearer key. TARA's adapter does not assume that a student allowance guarantees immediate capacity: shared requests can queue, time out, or be rate-limited.
 - **Cost classification:** free only for verified student Qwen access within its daily allowance. Lite/Pro are paid subscriptions. Do not describe all BharatCode models or all API calls as free.
 
 Official references: [BharatCode model/API guide](https://auth.bharatcode.ai/build), [BharatCode pricing and student terms](https://www.bharatcode.ai/), and [BharatCode Terms of Service](https://auth.bharatcode.ai/terms).
