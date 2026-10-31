@@ -132,7 +132,7 @@ This roadmap is dependency-ordered. The daily development task should deliver a 
 - [x] Specify and implement the narrow TARA-Handler subprocess protocol with fixed arguments, `shell=False`, timeouts, bounded output and an explicit command allowlist.
 - [x] Add duplicate-request protection, process-tree cancellation for Stdio/Handler specialists, bounded timeouts and graceful shutdown. Routing/model preparation before specialist execution is not cancellable yet.
 - [ ] Verify runtime lifecycle behavior: health checks, load/unload, missing model/provider, download failure, resource limits, concurrent requests and recovery.
-- [ ] Finish session persistence policy: define retention/deletion defaults, migration strategy, and app-level configuration wiring. Opt-in SQLite persistence and restart/close regression tests are implemented; persistence is not enabled by default.
+- [x] Wire opt-in SQLite session persistence through `[sessions].database_path`; backend defaults to memory-only while browser history remains local. Retention defaults to 100 sessions / 24 messages / 20,000 characters, with least-recently-updated eviction at capacity and no time-based expiry. SQLite schema version 1 fails closed on unknown versions; POSIX database file permissions are restricted. SQLite content is not encrypted at rest.
 - [x] Expose one-time approvals in the React UI; keep approvals session-bound, operation-scoped, expiring and non-reusable, with explicit Approve once / Cancel controls.
 
 ### P1 — Coding safety (blocking before execution is enabled)
@@ -231,3 +231,6 @@ Append a dated entry after each meaningful, evidence-backed change. Keep entries
 - Added explicit one-time approval controls in the React chat UI. Approval tokens are intentionally excluded from browser persistence. Added model-pull progress polling and local browser read-aloud controls.
 - CI evidence: [commit 6704ac5](https://github.com/deathkernel/TARA-App/commit/6704ac5b26303c9612fcbfde5243af187f74baad) passed Python tests, frontend build, and native Handler builds on Windows and Linux. Later upload/approval changes are on `feat/bulk-core-feature-batch`; at `2bef868`, Python tests passed while frontend and native CI jobs were still running. No real target-machine Ollama/browser smoke test has been claimed.
 - Still pending: app-level SQLite session persistence configuration/retention policy, real Windows machine smoke testing, browser QA, remaining runtime recovery/resource checks, and release packaging.
+
+
+- Session persistence follow-up: added a trusted `[sessions]` runtime configuration table, Orchestrator restore/replace integration, bounded LRU-style eviction, schema versioning, and POSIX file permissions. Added restart, eviction, configuration, schema-version and permission tests. The feature remains opt-in; no SQLite database is created unless `database_path` is explicitly configured.

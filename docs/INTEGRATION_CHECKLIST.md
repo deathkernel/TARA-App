@@ -13,6 +13,7 @@
 - [x] Attach bounded files through the chat composer and route supported media/source files to the matching specialist.
 - [x] Display local model-pull progress and prevent conflicting model lifecycle actions while a pull is active.
 - [x] Expose browser-local read-aloud controls for TARA Voice responses.
+- [x] Wire opt-in SQLite session persistence through the trusted TOML runtime config, with bounded retention and schema-version checks.
 - [x] Enforce Code, Vision, Voice, and Data attachment limits before dispatch; keep Code execution disabled.
 - [x] Keep Research on free Crossref/Wikipedia public APIs and disclose when a selected query leaves the device.
 - [x] Include native TARA-Handler C++17 source and an explicit pre-launch build step; expose only read-only environment diagnosis.

@@ -116,3 +116,20 @@ The orchestrator forwards only attachment types relevant to the selected
 specialist and enforces the narrower Code, Vision, Voice, and Data input
 limits before dispatch. Study receives at most four supported text/PDF files;
 its module applies its own 200,000-character extracted-source limit.
+
+
+## Conversation session persistence
+
+Backend SQLite persistence is opt-in through the `[sessions]` table in
+`tara-app.toml`. Without `sessions.database_path`, the backend keeps session
+history in memory and the React UI keeps its existing local browser history.
+The configured store persists at most 100 sessions by default, with up to 24
+messages per session and 20,000 characters per message. When capacity is
+reached, the least-recently-updated session is evicted; there is no time-based
+expiry. Closing a session deletes its rows.
+
+The SQLite schema uses `PRAGMA user_version = 1`; unknown future versions fail
+closed rather than being silently rewritten. The database file is restricted
+to owner read/write permissions on POSIX systems. SQLite content is not
+encrypted at rest; choose a local path protected by the operating system's
+user permissions. Browser history remains limited to the 12 most recent chats.
