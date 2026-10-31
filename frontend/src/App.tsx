@@ -381,7 +381,7 @@ export default function App() {
         <p className="section-label">RECENT CHATS</p>
         <nav className="conversation-list" aria-label="Recent chats">
           {conversations.slice().sort((a, b) => b.updatedAt - a.updatedAt).map((item) => (
-            <button key={item.id} className={item.id === active?.id ? "conversation active" : "conversation"} onClick={() => setSessionId(item.id)}>
+            <button key={item.id} className={item.id === active?.id ? "conversation active" : "conversation"} onClick={() => { setSessionId(item.id); setAttachments([]); }}>
               {item.title}
             </button>
           ))}
