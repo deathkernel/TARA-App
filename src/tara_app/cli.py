@@ -44,8 +44,10 @@ def main() -> int:
         print(f"TARA-App could not start: {exc}", file=sys.stderr)
         return 2
     finally:
-        if app is not None and app.model_catalog is not None:
-            app.model_catalog.close()
+        if app is not None:
+            app.shutdown()
+            if app.model_catalog is not None:
+                app.model_catalog.close()
     return 0
 
 
