@@ -119,6 +119,8 @@ def handle_request(request: Any) -> dict[str, Any]:
             )
         except (BharatCodeError, OSError, RuntimeError, ValueError):
             return _result(request_id, "unavailable", error="BharatCode vision inference is unavailable; check provider image support and account capacity", duration_ms=int((time.monotonic() - started) * 1000))
+        if len(text.encode("utf-8")) > MAX_RESPONSE_BYTES:
+            return _result(request_id, "failed", error="BharatCode returned an oversized vision response", duration_ms=int((time.monotonic() - started) * 1000))
         return _result(request_id, "success", {"text": text, "model": provider.model, "provider": "bharatcode", "images_sent_to_remote": True}, duration_ms=int((time.monotonic() - started) * 1000))
     try:
         origin = _ollama_origin()
