@@ -29,8 +29,7 @@ class AuditReport:
 
 
 class RepositoryAuditor:
-    # These paths describe the current TARA-App monorepo layout, not the
-    # legacy standalone TARA-Chat package layout.
+    # Paths required by the current TARA-App monorepo.
     REQUIRED_FILES = (
         "pyproject.toml",
         "src/tara_app/__init__.py",
@@ -42,6 +41,12 @@ class RepositoryAuditor:
         "tests/test_app_core.py",
         ".github/workflows/ci.yml",
     )
+
+    IGNORED_DIRECTORIES = frozenset({
+        ".git", ".venv", "venv", "__pycache__", ".pytest_cache",
+        ".mypy_cache", ".ruff_cache", "node_modules", "build", "dist",
+        "coverage", ".tox",
+    })
 
     def __init__(self, root: str | Path):
         self.root = Path(root).resolve()
@@ -108,9 +113,13 @@ class RepositoryAuditor:
                     severity="warning",
                 ))
 
-    @staticmethod
-    def _ignored(path: Path) -> bool:
-        return any(part in {".git", ".venv", "venv", "__pycache__"} for part in path.parts)
+    def _ignored(self, path: Path) -> bool:
+        """Return whether a candidate path is inside a known generated tree."""
+        try:
+            relative = path.relative_to(self.root)
+        except ValueError:
+            return True
+        return any(part in self.IGNORED_DIRECTORIES for part in relative.parts)
 
 
 def main() -> int:
