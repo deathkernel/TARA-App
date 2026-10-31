@@ -7,7 +7,7 @@ import os
 import re
 import signal
 import subprocess
-from threading import RLock
+from threading import BoundedSemaphore, RLock
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -75,6 +75,7 @@ class StdioModuleAdapter:
         timeout_seconds: int = 30,
         max_response_bytes: int = 1_000_000,
         environment: Mapping[str, str] | None = None,
+        execution_semaphore: BoundedSemaphore | None = None,
     ) -> None:
         if not isinstance(module_id, str) or not module_id:
             raise ValueError("module_id must be non-empty")
@@ -95,6 +96,7 @@ class StdioModuleAdapter:
         self.timeout_seconds = timeout_seconds
         self.max_response_bytes = max_response_bytes
         self.environment = dict(environment or {})
+        self.execution_semaphore = execution_semaphore
         self._process_lock = RLock()
         self._active_processes: dict[str, subprocess.Popen[str]] = {}
         self._cancelled_requests: set[str] = set()
@@ -132,7 +134,20 @@ class StdioModuleAdapter:
             return ModuleResult("approval_required", error="capability requires an approval token")
         if not capability.read_only and not request.approval_token:
             return ModuleResult("approval_required", error="side-effecting capability requires an approval token")
-        return self._invoke(request.to_payload(), timeout=min(self.timeout_seconds, request.timeout_seconds), request_id=request.request_id)
+        acquired = False
+        if self.execution_semaphore is not None:
+            acquired = self.execution_semaphore.acquire(blocking=False)
+            if not acquired:
+                return ModuleResult("unavailable", error="local model capacity is full; retry after the active request finishes")
+        try:
+            return self._invoke(
+                request.to_payload(),
+                timeout=min(self.timeout_seconds, request.timeout_seconds),
+                request_id=request.request_id,
+            )
+        finally:
+            if acquired and self.execution_semaphore is not None:
+                self.execution_semaphore.release()
 
     def cancel_request(self, request_id: str) -> bool:
         """Terminate the child process for one currently executing request."""

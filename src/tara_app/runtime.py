@@ -6,6 +6,7 @@ import os
 import re
 import sys
 import tomllib
+from threading import BoundedSemaphore
 from pathlib import Path
 from typing import Any, Mapping
 from urllib.parse import urlsplit
@@ -85,6 +86,7 @@ def create_application(config_path: str | Path) -> Orchestrator:
 
     root = config_file.parent
     ollama_settings = _ollama_settings(config.get("ollama"))
+    local_model_semaphore = BoundedSemaphore(_ollama_max_concurrent(config.get("ollama"))) if ollama_settings else None
     session_store = _session_store(config.get("sessions"), root)
     router_config = _table(config.get("router"), "router")
     if set(router_config) - {"command", "working_directory", "timeout_seconds", "max_response_bytes"}:
@@ -136,6 +138,7 @@ def create_application(config_path: str | Path) -> Orchestrator:
                 _POLICIES[module_id],
                 _command(item.get("command")),
                 max_response_bytes=_integer(item.get("max_response_bytes", 1_000_000), f"modules[{index}].max_response_bytes", 256, 1_000_000),
+                execution_semaphore=local_model_semaphore if module_id in _OLLAMA_MODULE_ENV else None,
                 **adapter_args,
             )
         registry.register(adapter)
@@ -184,11 +187,18 @@ def _session_store(value: Any, root: Path) -> SessionStore | None:
         raise RuntimeConfigurationError("persistent session storage could not be initialized") from exc
 
 
+def _ollama_max_concurrent(value: Any) -> int:
+    if value is None:
+        return 1
+    config = _table(value, "ollama")
+    return _integer(config.get("max_concurrent_requests", 1), "ollama.max_concurrent_requests", 1, 2)
+
+
 def _ollama_settings(value: Any) -> dict[str, dict[str, str]]:
     if value is None:
         return {}
     config = _table(value, "ollama")
-    if set(config) - {"base_url", "models"}:
+    if set(config) - {"base_url", "models", "max_concurrent_requests"}:
         raise RuntimeConfigurationError("ollama contains unsupported settings")
     base_url = config.get("base_url", "http://127.0.0.1:11434")
     if not isinstance(base_url, str) or not base_url.strip() or len(base_url) > 2048:
