@@ -297,6 +297,7 @@ class AppCoreTests(unittest.TestCase):
         self.assertEqual(outcome.route.action, "catalog")
         self.assertIn("gemini-3.5-flash-lite", outcome.result.data["text"])
         self.assertIn("gpt-oss:20b", outcome.result.data["text"])
+        self.assertIn("qwen-3.8-27b", outcome.result.data["text"])
         self.assertFalse(outcome.result.data["remote_data_transfer"])
 
 
