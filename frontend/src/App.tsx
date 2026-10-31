@@ -242,11 +242,12 @@ export default function App() {
     }
   }
 
-  async function sendMessage(textOverride?: string) {
+  async function sendMessage(textOverride?: string, includeAttachments = true) {
     const question = (textOverride ?? draft).trim();
     if (!question || sending || !active) return;
     const history = active.messages.slice(-20).map(({ role, text }) => ({ role, content: text }));
-    const userMessage: Message = { role: "user", text: attachments.length ? `${question}\n\nAttachments: ${attachments.map((file) => file.name).join(", ")}` : question };
+    const messageAttachments = includeAttachments ? attachments : [];
+    const userMessage: Message = { role: "user", text: messageAttachments.length ? `${question}\n\nAttachments: ${messageAttachments.map((file) => file.name).join(", ")}` : question };
     updateActive((item) => ({
       ...item,
       title: item.title === "New chat" ? question.replace(/\s+/g, " ").slice(0, 48) : item.title,
@@ -264,7 +265,7 @@ export default function App() {
     try {
       const payload = await api<any>("/api/chat", {
         method: "POST",
-        body: JSON.stringify({ question, session_id: active.id, request_id: requestId, attachments: attachments.map(({ name, media_type, content_base64 }) => ({ name, media_type, content_base64 })), history }),
+        body: JSON.stringify({ question, session_id: active.id, request_id: requestId, attachments: messageAttachments.map(({ name, media_type, content_base64 }) => ({ name, media_type, content_base64 })), history }),
       });
       const text = answerText(payload);
       const resultData = payload?.result?.data;
@@ -275,7 +276,7 @@ export default function App() {
           : "TARA-Security requires your approval before this operation can run.",
       } : undefined;
       const assistantMessage: Message = { role: "assistant", text, status: payload?.status ?? "success", playback: resultData?.playback === "browser_local", approval };
-      if (["success", "approval_required"].includes(payload?.status)) setAttachments([]);
+      if (includeAttachments && ["success", "approval_required"].includes(payload?.status)) setAttachments([]);
       updateActive((item) => ({
         ...item, updatedAt: Date.now(),
         messages: [...item.messages, assistantMessage].slice(-24),
@@ -434,7 +435,7 @@ export default function App() {
               {model.installed && <button className="danger" onClick={() => void modelAction("remove", model.specialist)} disabled={!!modelBusy || pullActive}>Remove</button>}
             </div>
           </div>)}
-          <div className="free-hub"><div><strong>Free Model Hub</strong><p>Browse free model options without sending a prompt to a cloud provider.</p></div><button onClick={() => void sendMessage(FREE_MODELS_PROMPT)} disabled={sending}>List free models</button></div>
+          <div className="free-hub"><div><strong>Free Model Hub</strong><p>Browse free model options without sending a prompt to a cloud provider.</p></div><button onClick={() => void sendMessage(FREE_MODELS_PROMPT, false)} disabled={sending}>List free models</button></div>
         </section>}
 
         {notice && <div className="notice" role="status">{notice}<button onClick={() => setNotice("")} aria-label="Dismiss notice">×</button></div>}
