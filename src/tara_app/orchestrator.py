@@ -133,6 +133,14 @@ class Orchestrator:
                 raise ValueError("history is too large")
             safe_history.append({"role": role, "content": content})
         with self._history_lock:
+            if self.session_store is not None:
+                try:
+                    if safe_history:
+                        self.session_store.replace_history(session_id, safe_history)
+                    else:
+                        self.session_store.close(session_id)
+                except SessionError as exc:
+                    raise ValueError("persistent conversation history could not be updated") from exc
             if safe_history:
                 self._conversation_history[session_id] = safe_history
                 self._conversation_history.move_to_end(session_id)
@@ -140,14 +148,6 @@ class Orchestrator:
                 self._conversation_history.pop(session_id, None)
             while len(self._conversation_history) > 512:
                 self._conversation_history.popitem(last=False)
-        if self.session_store is not None:
-            try:
-                if safe_history:
-                    self.session_store.replace_history(session_id, safe_history)
-                else:
-                    self.session_store.close(session_id)
-            except SessionError as exc:
-                raise ValueError("persistent conversation history could not be updated") from exc
 
     def handle_question(
         self,
@@ -366,21 +366,21 @@ class Orchestrator:
             response_text = result.data.get("text") if isinstance(result.data, Mapping) else None
             if isinstance(response_text, str) and response_text.strip():
                 with self._history_lock:
-                    history = self._conversation_history.setdefault(session_id, [])
+                    history = [dict(turn) for turn in self._conversation_history.get(session_id, [])]
                     history.extend((
                         {"role": "user", "content": question.strip()},
                         {"role": "assistant", "content": response_text.strip()},
                     ))
                     del history[:-24]
+                    if self.session_store is not None:
+                        try:
+                            self.session_store.replace_history(session_id, history)
+                        except SessionError:
+                            return self._outcome(operation_id, "failed", decision, "session_persistence_failed", "Conversation history could not be saved")
+                    self._conversation_history[session_id] = history
                     self._conversation_history.move_to_end(session_id)
                     while len(self._conversation_history) > 512:
                         self._conversation_history.popitem(last=False)
-                    persisted_history = [dict(turn) for turn in history]
-                if self.session_store is not None:
-                    try:
-                        self.session_store.replace_history(session_id, persisted_history)
-                    except SessionError:
-                        return self._outcome(operation_id, "failed", decision, "session_persistence_failed", "Conversation history could not be saved")
 
         if decision.requires_approval:
             verdict = result.data.get("decision") if isinstance(result.data, Mapping) else None
