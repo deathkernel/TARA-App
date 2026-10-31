@@ -50,6 +50,25 @@ class StdioModuleAdapterTests(unittest.TestCase):
         self.assertEqual(result.data["summary"], "Evidence-backed answer")
         self.assertFalse(popen.call_args.kwargs["shell"])
 
+
+    def test_execution_semaphore_rejects_parallel_local_model_request(self) -> None:
+        semaphore = threading.BoundedSemaphore(1)
+        semaphore.acquire()
+        adapter = StdioModuleAdapter(
+            "research",
+            (Capability("research", "answer", "Answer with sourced research", True),),
+            ("python", "-m", "tara_research"),
+            working_directory=Path(__file__).resolve().parent,
+            execution_semaphore=semaphore,
+        )
+        request = ModuleRequest("req-busy", "session-1", "research", "answer", {"question": "busy?"})
+        with patch("tara_app.module_client.subprocess.Popen") as popen:
+            result = adapter.execute(request)
+        self.assertEqual(result.status, "unavailable")
+        self.assertIn("capacity is full", result.error or "")
+        popen.assert_not_called()
+        semaphore.release()
+
     def test_side_effect_action_requires_token_before_starting_process(self) -> None:
         cap = Capability("research", "answer", "Side effect", False, True)
         adapter = self.adapter(cap)
