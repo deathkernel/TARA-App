@@ -13,6 +13,7 @@
 - [x] Attach bounded files through the chat composer and route supported media/source files to the matching specialist.
 - [x] Display local model-pull progress and prevent conflicting model lifecycle actions while a pull is active.
 - [x] Bound concurrent local Ollama inference to one active request by default (configurable to two) across Chat, Code, Creative and Vision.
+- [x] Retry local Ollama startup before model ensure, pull, preload, unload and remove operations when the service is unavailable.
 - [x] Expose browser-local read-aloud controls for TARA Voice responses.
 - [x] Wire opt-in SQLite session persistence through the trusted TOML runtime config, with bounded retention and schema-version checks.
 - [x] Enforce Code, Vision, Voice, and Data attachment limits before dispatch; keep Code execution disabled.

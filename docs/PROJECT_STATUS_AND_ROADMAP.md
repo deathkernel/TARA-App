@@ -131,7 +131,8 @@ This roadmap is dependency-ordered. The daily development task should deliver a 
 - [x] Bind TARA-Code planning/review through its versioned JSON-over-stdio adapter; keep proposed changes as data until a secure patch-review workflow exists. A real local Ollama review remains a target-machine check.
 - [x] Specify and implement the narrow TARA-Handler subprocess protocol with fixed arguments, `shell=False`, timeouts, bounded output and an explicit command allowlist.
 - [x] Add duplicate-request protection, process-tree cancellation for Stdio/Handler specialists, bounded timeouts and graceful shutdown. Routing/model preparation before specialist execution is not cancellable yet.
-- [ ] Verify runtime lifecycle behavior: health checks, load/unload, missing model/provider, download failure, resource limits, concurrent requests and recovery.
+- [x] Implement runtime lifecycle handling: health checks, model install/pull progress and failure state, preload/unload/remove, automatic local Ollama startup recovery, bounded local inference concurrency and graceful process shutdown.
+- [ ] Verify real Ollama restart/recovery, model pull failure/retry, unload and concurrent requests on the target Windows machine after the feature set is complete.
 - [x] Wire opt-in SQLite session persistence through `[sessions].database_path`; backend defaults to memory-only while browser history remains local. Retention defaults to 100 sessions / 24 messages / 20,000 characters, with least-recently-updated eviction at capacity and no time-based expiry. SQLite schema version 1 fails closed on unknown versions; POSIX database file permissions are restricted. SQLite content is not encrypted at rest.
 - [x] Expose one-time approvals in the React UI; keep approvals session-bound, operation-scoped, expiring and non-reusable, with explicit Approve once / Cancel controls.
 

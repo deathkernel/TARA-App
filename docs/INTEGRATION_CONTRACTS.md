@@ -145,3 +145,13 @@ all slots are occupied return `unavailable` without starting another
 specialist process, so they can be retried instead of overcommitting local
 memory. Specialist health checks remain available while an inference slot is
 occupied.
+
+
+## Ollama service recovery
+
+If the configured local Ollama endpoint is unavailable, model readiness,
+manual pull, preload, unload and removal operations first attempt to start the
+local service through the configured `ollama` executable. Startup is
+single-flight within the app process. TARA-App only terminates an Ollama
+process it started itself; an independently running user service is never
+stopped during shutdown.
