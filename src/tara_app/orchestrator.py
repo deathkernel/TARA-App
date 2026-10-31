@@ -448,6 +448,9 @@ class Orchestrator:
 
     def approve(self, approval_id: str, *, session_id: str) -> DispatchOutcome:
         """Execute one exact, session-bound operation after explicit user approval."""
+        with self._active_execution_lock:
+            if self._shutting_down:
+                return self._outcome("unknown", "unavailable", None, "app_shutting_down", "TARA-App is shutting down and cannot process approvals")
         if not isinstance(approval_id, str) or not approval_id or len(approval_id) > 128:
             return self._outcome("unknown", "invalid_request", None, "invalid_approval", "approval ID is invalid")
         if not isinstance(session_id, str) or not session_id.strip() or len(session_id) > 128:
@@ -480,10 +483,17 @@ class Orchestrator:
             workspace_root=pending.workspace_root,
             approval_token=approval_id,
         )
+        with self._active_execution_lock:
+            if self._shutting_down:
+                return self._outcome(pending.request_id, "unavailable", pending.route, "app_shutting_down", "TARA-App is shutting down and cannot start the approved operation")
+            self._active_executions[pending.request_id] = (pending.session_id, adapter)
         try:
             result = adapter.execute(request)
         except Exception:
             return self._outcome(pending.request_id, "failed", pending.route, "approved_action_failed", "Approved specialist execution failed")
+        finally:
+            with self._active_execution_lock:
+                self._active_executions.pop(pending.request_id, None)
         if not isinstance(result, ModuleResult):
             return self._outcome(pending.request_id, "failed", pending.route, "invalid_adapter_response", "Specialist returned an invalid result")
         approved_route = RouteDecision(
