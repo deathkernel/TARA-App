@@ -95,6 +95,16 @@ def handle_request(request:Any)->dict[str,Any]:
                 {"id":model,"provider":"gemini","label":model,"free":"Documented free-tier text candidate; set GEMINI_API_KEY to verify live project availability"}
                 for model in GEMINI_FREE_TEXT_MODELS
             ]
+            bharatcode_entry={"id":"qwen-3.8-27b","provider":"bharatcode","label":"BharatCode Qwen 3.8 27B","free":"Candidate model; requires BHARATCODE_API_KEY and eligible student or paid account access","live_verified":False}
+            if os.environ.get("BHARATCODE_API_KEY","").strip():
+                try:
+                    from tara_app.providers.bharatcode import BharatCodeProvider
+                    live_models=BharatCodeProvider.from_env().list_models()
+                    bharatcode_entry["live_verified"]=any(item.get("id")==bharatcode_entry["id"] for item in live_models)
+                    if bharatcode_entry["live_verified"]:
+                        bharatcode_entry["free"]="Verified in the live BharatCode model catalogue; account quota and capacity still apply"
+                except (RuntimeError,ValueError,OSError):
+                    pass
             gemini_lines="\\n".join("- "+item["id"]+" — "+item["free"] for item in catalog_models)
             sections=[
                 "# Free Model Hub",
@@ -104,14 +114,14 @@ def handle_request(request:Any)->dict[str,Any]:
                 "## Gemini API free-tier text models",
                 gemini_lines,
                 "## BharatCode hosted model (explicit opt-in)",
-                "- qwen-3.8-27b — BharatCode Qwen 3.8 27B; requires BHARATCODE_API_KEY and verified account access",
+                "- qwen-3.8-27b — BharatCode Qwen 3.8 27B; "+bharatcode_entry["free"],
                 "## Existing OpenAI-origin local capability",
                 "- Whisper transcription is available through TARA-Voice's optional faster-whisper backend; it runs locally after model setup.",
                 "## Installed local Ollama models",
                 "\\n".join("- "+item["id"] for item in local) if local else "- Ollama is not running or no local models are installed.",
                 "Free limits change; Gemini quotas and availability depend on your project. No paid OpenAI API is called."
             ]
-            return result(rid,"success",{"text":"\\n\\n".join(sections),"models":catalog_models+[{"id":"qwen-3.8-27b","provider":"bharatcode","label":"BharatCode Qwen 3.8 27B","free":"Student access requires verified eligibility; paid plans also available"}]+list(OPENAI_OPEN_WEIGHT_MODELS)+local,"provider":"TARA Model Hub"})
+            return result(rid,"success",{"text":"\\n\\n".join(sections),"models":catalog_models+[bharatcode_entry]+list(OPENAI_OPEN_WEIGHT_MODELS)+local,"provider":"TARA Model Hub"})
         if action!="generate": return result(rid,"permission_denied",error="unsupported model capability")
         question=inputs.get("question")
         if not isinstance(question,str) or not question.strip() or len(question)>20000: return result(rid,"invalid_request",error="question is invalid")
@@ -125,8 +135,11 @@ def handle_request(request:Any)->dict[str,Any]:
             if model=="gpt-oss": model="gpt-oss:20b"
         if not isinstance(model,str) or len(model)>100: return result(rid,"invalid_request",error="model name is invalid")
         if model == "qwen-3.8-27b":
-            from tara_app.providers.bharatcode import BharatCodeProvider
+            from tara_app.providers.bharatcode import BharatCodeError, BharatCodeProvider
             provider = BharatCodeProvider.from_env()
+            live_models = provider.list_models()
+            if not any(item.get("id") == provider.model for item in live_models):
+                raise BharatCodeError("The selected BharatCode model is not present in the live account catalogue.")
             text = provider.complete(question, system="You are TARA, a helpful assistant. Answer clearly and directly.", max_completion_tokens=4096, temperature=0.4)
             return result(rid,"success",{"text":text,"provider":"BharatCode","model":provider.model,"remote_data_transfer":True})
         if model.startswith("gemini-"):
@@ -141,6 +154,7 @@ def handle_request(request:Any)->dict[str,Any]:
             return result(rid,"success",{"text":text,"provider":"Ollama (local)","model":model,"remote_data_transfer":False})
         raise ValueError("Select a supported free Gemini text model or installed local gpt-oss model.")
     except ValueError as exc: return result(rid,"unavailable",error=str(exc))
+    except RuntimeError as exc: return result(rid,"unavailable",error=str(exc)[:500])
     except Exception: return result(rid,"failed",error="Model request failed safely. Check provider availability and local logs without exposing API keys.")
 
 def main()->int:
