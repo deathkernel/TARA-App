@@ -297,6 +297,23 @@ class AppCoreTests(unittest.TestCase):
         self.assertTrue(all("content_base64" not in item for item in router.payloads[0]["attachments"]))
 
 
+
+    def test_specialist_attachment_limits_are_enforced_before_dispatch(self) -> None:
+        oversized = self.encoded(b"x" * 300_000)
+        with self.assertRaises(ValueError):
+            Orchestrator._specialist_attachments("vision", "analyze", [
+                {"name": "one.png", "media_type": "image/png", "content_base64": oversized},
+                {"name": "two.png", "media_type": "image/png", "content_base64": oversized},
+            ])
+        with self.assertRaises(ValueError):
+            Orchestrator._specialist_attachments("voice", "transcribe", [
+                {"name": "clip.wav", "media_type": "audio/wav", "content_base64": oversized},
+            ])
+        with self.assertRaises(ValueError):
+            Orchestrator._specialist_attachments("data", "analyze", [
+                {"name": "table.csv", "media_type": "text/csv", "content_base64": oversized},
+            ])
+
     def test_code_rejects_source_attachments_over_specialist_limit(self) -> None:
         code = FakeAdapter("code", (Capability("code", "plan", "Coding plan", True),))
         registry = CapabilityRegistry()

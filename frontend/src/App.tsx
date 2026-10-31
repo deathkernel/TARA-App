@@ -226,7 +226,7 @@ export default function App() {
     const question = (textOverride ?? draft).trim();
     if (!question || sending || !active) return;
     const history = active.messages.slice(-20).map(({ role, text }) => ({ role, content: text }));
-    const userMessage: Message = { role: "user", text: attachments.length ? `${question}\\n\\nAttachments: ${attachments.map((file) => file.name).join(", ")}` : question };
+    const userMessage: Message = { role: "user", text: attachments.length ? `${question}\n\nAttachments: ${attachments.map((file) => file.name).join(", ")}` : question };
     updateActive((item) => ({
       ...item,
       title: item.title === "New chat" ? question.replace(/\s+/g, " ").slice(0, 48) : item.title,
