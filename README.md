@@ -35,7 +35,7 @@ TARA-App is being consolidated as a single Python monorepo. The current integrat
 - `tara_data`: deterministic, read-only CSV summaries.
 - `tara_study`: optional local-first study notes, fill-in-the-blank quizzes, flashcards, and bounded revision plans.
 - `tara_weather`: public Open-Meteo geocoding and weather forecasts, with attribution.
-- `tara_models`: a free-first model catalogue, Gemini free-tier API adapter, and local OpenAI gpt-oss via Ollama.
+- `tara_models`: a free-first model catalogue, Gemini free-tier API adapter, BharatCode Qwen hosted inference, and local OpenAI gpt-oss via Ollama.
 
 TARA-Handler's C++17 source is included in TARA-App. The launchers explicitly prepare its optional native diagnostic before starting the app; only the environment-diagnosis command is exposed. If CMake or a C++ compiler is unavailable, the app uses read-only Python diagnostics. GitHub issue creation remains inactive until local credentials and a repository allowlist are configured.
 
@@ -113,7 +113,7 @@ See [runtime and development option notes](docs/runtime-evaluation.md) for the c
 
 ## Optional BharatCode hosted model (integration planned)
 
-**Recommended hosted model for TARA: BharatCode Qwen 3.8 27B** (`qwen-3.8-27b`). This is a hosted model accessed through BharatCode; BharatCode is the API platform, not the model itself. This provider is a documented integration target, not a claim that the current TARA build already has a BharatCode adapter.
+**Recommended hosted model for TARA: BharatCode Qwen 3.8 27B** (`qwen-3.8-27b`). This is a hosted model accessed through BharatCode; BharatCode is the API platform, not the model itself. The shared provider adapter is implemented on the `feat/bharatcode-multi-specialist-routing` branch; its CI and target-machine verification are pending before merge.
 
 - **Student access:** verified eligible Indian students receive up to 10,000,000 total Qwen tokens per IST day. Input, cached input, output, and reasoning tokens count; the allowance resets at midnight IST.
 - **Other access:** Qwen API access is included in BharatCode Lite and Pro paid plans. DeepSeek V4.1 Flash (`deepseek-v4.1-flash`) is Pro-only; it is not part of the free student Qwen allowance.
