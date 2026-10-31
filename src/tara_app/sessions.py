@@ -65,6 +65,9 @@ class SessionStore:
             try:
                 self.database_path.parent.mkdir(parents=True, exist_ok=True)
                 with self._connect() as db:
+                    schema_version = db.execute("PRAGMA user_version").fetchone()[0]
+                    if schema_version not in {0, 1}:
+                        raise SessionError("persistent session database schema version is unsupported")
                     db.execute("""
                         CREATE TABLE IF NOT EXISTS sessions (
                             session_id TEXT PRIMARY KEY,
@@ -84,6 +87,8 @@ class SessionStore:
                         )
                     """)
                     db.execute("PRAGMA foreign_keys = ON")
+                    if schema_version == 0:
+                        db.execute("PRAGMA user_version = 1")
                     self._load_from_db(db)
                 if os.name != "nt":
                     os.chmod(self.database_path, 0o600)
