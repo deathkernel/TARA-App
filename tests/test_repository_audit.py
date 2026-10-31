@@ -9,8 +9,7 @@ from tara_chat.repository_audit import RepositoryAuditor
 
 class RepositoryAuditorTests(unittest.TestCase):
     def make_repo(self, root: Path) -> None:
-        required = RepositoryAuditor.REQUIRED_FILES
-        for relative in required:
+        for relative in RepositoryAuditor.REQUIRED_FILES:
             path = root / relative
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("# fixture\n", encoding="utf-8")
@@ -32,7 +31,7 @@ class RepositoryAuditorTests(unittest.TestCase):
             missing = [issue.path for issue in report.issues if issue.code == "MISSING_REQUIRED_FILE"]
             self.assertEqual(missing, ["src/tara_chat/brain.py"])
 
-    def test_auditor_ignores_build_and_virtual_environment_trees(self):
+    def test_generated_and_dependency_directories_are_excluded(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.make_repo(root)
@@ -41,13 +40,14 @@ class RepositoryAuditorTests(unittest.TestCase):
                 root / "venv/lib/hidden.py",
                 root / "__pycache__/hidden.py",
                 root / "build/generated.py",
+                root / "node_modules/package/index.py",
+                root / "dist/generated.py",
             ]
             for path in ignored:
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text("def ok(): return True\n", encoding="utf-8")
             report = RepositoryAuditor(root).audit()
-            scanned_paths = report.python_files
-            self.assertEqual(scanned_paths, 0)
+            self.assertEqual(report.python_files, 0)
 
     def test_auditor_reports_python_syntax_errors(self):
         with tempfile.TemporaryDirectory() as directory:
