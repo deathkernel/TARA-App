@@ -6,10 +6,12 @@ import os
 import re
 import shutil
 import subprocess
+from threading import RLock
 from pathlib import Path
 from typing import Mapping, Sequence
 
 from tara_app.contracts import AdapterHealth, Capability, ModuleRequest, ModuleResult
+from tara_app.module_client import _terminate_process_tree
 
 _ENV_NAME = re.compile(r"^[A-Z][A-Z0-9_]{0,127}$")
 
@@ -47,6 +49,9 @@ class HandlerProcessAdapter:
         self.timeout_seconds = timeout_seconds
         self.max_response_bytes = max_response_bytes
         self.environment = dict(environment or {})
+        self._process_lock = RLock()
+        self._active_processes: dict[str, subprocess.Popen[str]] = {}
+        self._cancelled_requests: set[str] = set()
         for name, value in self.environment.items():
             if not _ENV_NAME.fullmatch(name) or not isinstance(value, str) or "\x00" in value or len(value) > 4096:
                 raise ValueError("Handler environment contains an invalid value")
@@ -66,30 +71,59 @@ class HandlerProcessAdapter:
     def execute(self, request: ModuleRequest) -> ModuleResult:
         if request.module != self.module_id or request.action != "diagnose":
             return ModuleResult("permission_denied", error="Handler adapter only permits read-only diagnostics")
+        process: subprocess.Popen[str] | None = None
         try:
-            completed = subprocess.run(
+            process = subprocess.Popen(
                 self.command,
                 stdin=subprocess.DEVNULL,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
                 encoding="utf-8",
                 errors="replace",
                 cwd=self.working_directory,
                 env=self._safe_environment(),
-                timeout=min(self.timeout_seconds, request.timeout_seconds),
                 shell=False,
-                check=False,
+                **({"creationflags": getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)} if os.name == "nt" else {"start_new_session": True}),
             )
+            with self._process_lock:
+                self._active_processes[request.request_id] = process
+            stdout, stderr = process.communicate(timeout=min(self.timeout_seconds, request.timeout_seconds))
         except subprocess.TimeoutExpired:
+            if process is not None and process.poll() is None:
+                _terminate_process_tree(process)
+                process.communicate()
             return ModuleResult("timeout", error="TARA-Handler diagnostic timed out")
         except OSError:
             return ModuleResult("unavailable", error="configured TARA-Handler command could not start")
-        output = (completed.stdout + completed.stderr).strip()
+        finally:
+            with self._process_lock:
+                self._active_processes.pop(request.request_id, None)
+                cancelled = request.request_id in self._cancelled_requests
+                self._cancelled_requests.discard(request.request_id)
+        if cancelled:
+            return ModuleResult("cancelled", error="Request was cancelled by the user")
+        output = (stdout + stderr).strip()
         if len(output.encode("utf-8")) > self.max_response_bytes:
             return ModuleResult("failed", error="TARA-Handler output exceeds the configured size limit")
-        if completed.returncode != 0:
-            return ModuleResult("failed", {"text": output[:20_000], "exit_code": completed.returncode}, "TARA-Handler diagnostic returned a failure status")
+        if process is None or process.returncode != 0:
+            return ModuleResult("failed", {"text": output[:20_000], "exit_code": process.returncode if process is not None else -1}, "TARA-Handler diagnostic returned a failure status")
         return ModuleResult("success", {"text": output[:20_000], "exit_code": 0})
+
+    def cancel_request(self, request_id: str) -> bool:
+        """Terminate the active Handler process tree for one request."""
+        if not isinstance(request_id, str) or not request_id or len(request_id) > 128:
+            return False
+        with self._process_lock:
+            process = self._active_processes.get(request_id)
+            if process is None or process.poll() is not None:
+                return False
+            self._cancelled_requests.add(request_id)
+        try:
+            _terminate_process_tree(process)
+        except OSError:
+            return False
+        return True
 
     def _safe_environment(self) -> dict[str, str]:
         environment = {"PATH": os.environ.get("PATH", ""), "PYTHONIOENCODING": "utf-8"}

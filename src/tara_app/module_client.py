@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import signal
 import subprocess
 from threading import RLock
 from pathlib import Path
@@ -15,6 +16,40 @@ from tara_app.contracts import AdapterHealth, Capability, MAX_PAYLOAD_BYTES, Mod
 _ENV_NAME = re.compile(r"^[A-Z][A-Z0-9_]{0,127}$")
 _RESULT_FIELDS = {"schema_version", "request_id", "status", "data", "error", "duration_ms"}
 
+
+
+def _terminate_process_tree(process: subprocess.Popen[Any], *, graceful_timeout: float = 2.0) -> None:
+    """Terminate a dedicated process group, including specialist-launched children."""
+    if os.name == "nt":
+        try:
+            subprocess.run(
+                ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=5,
+                shell=False,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            if process.poll() is None:
+                process.terminate()
+    else:
+        try:
+            os.killpg(process.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            return
+        except OSError:
+            if process.poll() is None:
+                process.terminate()
+        try:
+            process.wait(timeout=graceful_timeout)
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            process.wait(timeout=graceful_timeout)
 
 class ModuleProcessError(RuntimeError):
     """Raised when a trusted module process violates the adapter protocol."""
@@ -107,12 +142,7 @@ class StdioModuleAdapter:
                 return False
             self._cancelled_requests.add(request_id)
         try:
-            process.terminate()
-            try:
-                process.wait(timeout=2)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait(timeout=2)
+            _terminate_process_tree(process)
         except OSError:
             return False
         return True
@@ -137,6 +167,7 @@ class StdioModuleAdapter:
                 cwd=self.working_directory,
                 env=self._safe_environment(),
                 shell=False,
+                **({"creationflags": getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)} if os.name == "nt" else {"start_new_session": True}),
             )
             if request_id is not None:
                 with self._process_lock:
