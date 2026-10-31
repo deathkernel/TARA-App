@@ -110,6 +110,25 @@ This layout is a target, not a claim that those modules are already implemented.
 
 See [runtime and development option notes](docs/runtime-evaluation.md) for the current scope of Amp, GitHub Copilot sandboxing, GitHub Package Firewall, and AWS TorchNeuron. These are optional references, not built-in TARA runtimes. The [native Handler integration notes](docs/native-handler.md) describe its explicit build step and read-only app boundary.
 
+
+## Optional BharatCode hosted model (integration planned)
+
+**Recommended hosted model for TARA: BharatCode Qwen 3.8 27B** (`qwen-3.8-27b`). This is a hosted model accessed through BharatCode; BharatCode is the API platform, not the model itself. This provider is a documented integration target, not a claim that the current TARA build already has a BharatCode adapter.
+
+- **Student access:** verified eligible Indian students receive up to 10,000,000 total Qwen tokens per IST day. Input, cached input, output, and reasoning tokens count; the allowance resets at midnight IST.
+- **Other access:** Qwen API access is included in BharatCode Lite and Pro paid plans. DeepSeek V4.1 Flash (`deepseek-v4.1-flash`) is Pro-only; it is not part of the free student Qwen allowance.
+- **Endpoint:** `https://bharatcode.ai/api/model/v1` (OpenAI-compatible). Use `qwen-3.8-27b` as the model ID.
+- **Supported API routes:** `POST /responses` and `POST /chat/completions`. The Responses API supports text/image input, streaming, structured output, and caller-defined function tools.
+- **Important API limits:** requests are stateless; send the required conversation history and function-call outputs with each request. `store:true`, `previous_response_id`, hosted tools, background jobs, and audio/video/file input are unsupported. Output limits include reasoning; incomplete/length responses must not be treated as complete tool calls.
+- **Capacity:** student requests use shared capacity and may queue, time out, or be delayed during busy periods. The 10M/day allowance is not unlimited throughput or a service-level guarantee.
+- **Security:** keep `BHARATCODE_API_KEY` on the server side, never in browser bundles, desktop frontend code, source control, or logs. Remote inference sends the submitted prompt/context (and any supported image input) to BharatCode; do not send secrets or sensitive workspace contents without explicit user consent.
+- **TARA integration design:** make hosted inference an explicit opt-in provider profile. Keep local Ollama available as the local/offline option and fallback. Do not silently upload repository files, memory, desktop data, or tool output. Route tool calls back to TARA's local capability registry; validate arguments with TARA-Security and require the existing approval flow for mutations. The model must never execute host commands directly.
+- **Cost classification:** free only for verified student Qwen access within its daily allowance. Lite/Pro are paid subscriptions. Do not describe all BharatCode models or all API calls as free.
+
+Official references: [BharatCode model/API guide](https://auth.bharatcode.ai/build), [BharatCode pricing and student terms](https://www.bharatcode.ai/), and [BharatCode Terms of Service](https://auth.bharatcode.ai/terms).
+
+The existing local Ollama profiles below remain local fallbacks and are not removed by this hosted-provider option. Model availability, IDs, student eligibility, pricing, and API capabilities can change; check BharatCode's live `GET /models` before relying on a model ID.
+
 ## Local Ollama model profiles
 
 TARA-App is the only user-facing process. It starts or reuses local Ollama, prepares the Chat model before the interface becomes ready, and routes each request to the matching specialist and its configured model. Other specialist models download on first use.
