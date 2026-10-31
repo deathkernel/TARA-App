@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ast
+import os
 from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
@@ -55,10 +56,7 @@ class RepositoryAuditor:
 
     def audit(self) -> AuditReport:
         issues: list[AuditIssue] = []
-        python_files = sorted(
-            path for path in self.root.rglob("*.py")
-            if not self._ignored(path)
-        )
+        python_files = sorted(self._python_files())
         workflow_files = sorted(
             path for path in (self.root / ".github" / "workflows").glob("*")
             if path.is_file()
@@ -96,6 +94,17 @@ class RepositoryAuditor:
             issues=tuple(sorted(issues, key=lambda item: (item.code, item.path, item.detail))),
             fingerprint=fingerprint,
         )
+
+    def _python_files(self):
+        """Walk the repository while pruning generated trees before traversal."""
+        for current, directories, filenames in os.walk(self.root, topdown=True, followlinks=False):
+            directories[:] = sorted(
+                name for name in directories
+                if name not in self.IGNORED_DIRECTORIES
+            )
+            for filename in sorted(filenames):
+                if filename.endswith(".py"):
+                    yield Path(current) / filename
 
     def _audit_python(self, path: Path, issues: list[AuditIssue]) -> None:
         relative = str(path.relative_to(self.root))
