@@ -117,7 +117,7 @@ def handle_request(request:Any)->dict[str,Any]:
         if not isinstance(question,str) or not question.strip() or len(question)>20000: return result(rid,"invalid_request",error="question is invalid")
         model=inputs.get("model")
         if not isinstance(model,str) or not model:
-            selection=re.match(r"\s*(?:please\s+)?(?:use|switch to|try|ask|run with)\s+(?:(?:the|openai)\s+)?(gemini-[a-z0-9.-]+|gpt-oss(?::[a-z0-9.-]+)?|qwen-3\\.8-27b|gemini)\s*[:,-]?\s*",question,re.I)
+            selection=re.match(r"\s*(?:please\s+)?(?:use|switch to|try|ask|run with)\s+(?:(?:the|openai)\s+)?(gemini-[a-z0-9.-]+|gpt-oss(?::[a-z0-9.-]+)?|qwen-3\.8-27b|gemini)\s*[:,-]?\s*",question,re.I)
             model=selection.group(1).lower() if selection else "gemini-3.5-flash-lite"
             if selection: question=question[selection.end():].strip() or question
             if model=="gemini": model="gemini-3.5-flash-lite"
