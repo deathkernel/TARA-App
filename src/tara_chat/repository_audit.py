@@ -122,15 +122,6 @@ class RepositoryAuditor:
                     severity="warning",
                 ))
 
-    def _ignored(self, path: Path) -> bool:
-        """Return whether a candidate path is inside a known generated tree."""
-        try:
-            relative = path.relative_to(self.root)
-        except ValueError:
-            return True
-        return any(part in self.IGNORED_DIRECTORIES for part in relative.parts)
-
-
 def main() -> int:
     import argparse
 
