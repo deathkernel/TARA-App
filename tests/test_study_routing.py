@@ -30,6 +30,9 @@ class StudyRoutingTests(unittest.TestCase):
     def test_bharatcode_qwen_selection_routes_to_model_hub(self):
         result=self.route("Use qwen-3.8-27b: explain this topic",["chat.respond","models.generate"])
         self.assertEqual((result.module,result.action),("models","generate"))
+    def test_bharatcode_qwen_shorthand_routes_to_model_hub(self):
+        result=self.route("Use BharatCode Qwen: explain this topic",["chat.respond","models.generate"])
+        self.assertEqual((result.module,result.action),("models","generate"))
     def test_openai_gpt_oss_selection_routes_to_model_hub(self):
         result=self.route("Use OpenAI gpt-oss:20b: explain this topic",["chat.respond","models.generate"])
         self.assertEqual((result.module,result.action),("models","generate"))
