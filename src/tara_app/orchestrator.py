@@ -83,6 +83,8 @@ class PendingApproval:
 class Orchestrator:
     """Uses Router proposals and registered module adapters; it never auto-approves."""
 
+    _MAX_HISTORY_CHARS = 120_000
+
     def __init__(
         self,
         registry: CapabilityRegistry,
