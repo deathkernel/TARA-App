@@ -68,7 +68,7 @@ def handle_request(request: Any) -> dict[str, Any]:
         return _result(
             request_id, "success",
             {
-                "text": "\\n".join(lines),
+                "text": "\n".join(lines),
                 "healthy": report.healthy,
                 "files_scanned": report.files_scanned,
                 "python_files": report.python_files,
