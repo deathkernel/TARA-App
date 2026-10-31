@@ -40,7 +40,7 @@ class BharatCodeSpecialistRoutingTests(unittest.TestCase):
     def test_vision_specialist_uses_bharatcode_only_when_selected(self, chat) -> None:
         from tara_vision.__main__ import handle_request
 
-        png = base64.b64encode(b"\\x89PNG\\r\\n\\x1a\\nimage-data").decode("ascii")
+        png = base64.b64encode(b"\x89PNG\r\n\x1a\nimage-data").decode("ascii")
         result = handle_request({
             "schema_version": "1.0",
             "request_id": "vision-1",
