@@ -2,7 +2,7 @@
 
 > **Purpose:** This is the handover document and working source of truth for anyone joining TARA-App—including a new developer, a reviewer, or the daily scheduled development task.
 >
-> **Last reviewed:** 2026-10-27  
+> **Last reviewed:** 2026-10-31  
 > **Repository:** [deathkernel/TARA-App](https://github.com/deathkernel/TARA-App)  
 > **Default branch:** `main`  
 > **Status rule:** “Implemented in code/docs” is not the same as “verified on a real machine.” Do not claim tests, runtime checks, UI QA, or integrations passed unless there is current evidence for the exact commit.
@@ -127,13 +127,13 @@ This roadmap is dependency-ordered. The daily development task should deliver a 
 ### P1 — Finish the application integration path
 
 - [ ] Connect the headless application service to a stable local UI/API entry point.
-- [ ] Bind the actual TARA-Chat engine through the versioned Chat adapter and verify a real end-to-end chat request.
-- [ ] Bind TARA-Code planning/review through its adapter; keep proposed changes as data until a secure patch-review workflow exists.
-- [ ] Specify and implement the narrow TARA-Handler subprocess protocol with fixed arguments, `shell=False`, timeouts, bounded output and an explicit command allowlist.
-- [ ] Add request cancellation, timeouts, bounded execution and graceful shutdown for injected engines and provider calls.
+- [x] Bind the actual TARA-Chat engine through the versioned JSON-over-stdio Chat adapter; add mocked provider/session-history contract tests. A real local Ollama end-to-end smoke request remains a target-machine check.
+- [x] Bind TARA-Code planning/review through its versioned JSON-over-stdio adapter; keep proposed changes as data until a secure patch-review workflow exists. A real local Ollama review remains a target-machine check.
+- [x] Specify and implement the narrow TARA-Handler subprocess protocol with fixed arguments, `shell=False`, timeouts, bounded output and an explicit command allowlist.
+- [x] Add duplicate-request protection, process-tree cancellation for Stdio/Handler specialists, bounded timeouts and graceful shutdown. Routing/model preparation before specialist execution is not cancellable yet.
 - [ ] Verify runtime lifecycle behavior: health checks, load/unload, missing model/provider, download failure, resource limits, concurrent requests and recovery.
 - [ ] Finish session persistence policy: define retention/deletion defaults, migration strategy, and app-level configuration wiring. Opt-in SQLite persistence and restart/close regression tests are implemented; persistence is not enabled by default.
-- [ ] Ensure approvals are visible, scoped to one operation, expire/reject reuse, and cannot be bypassed by unknown capability names or audit failures.
+- [x] Expose one-time approvals in the React UI; keep approvals session-bound, operation-scoped, expiring and non-reusable, with explicit Approve once / Cancel controls.
 
 ### P1 — Coding safety (blocking before execution is enabled)
 
@@ -221,3 +221,13 @@ Append a dated entry after each meaningful, evidence-backed change. Keep entries
 - [AI/tool ecosystem inventory](TARA_AI_TOOL_ECOSYSTEM.md)
 - [Native Handler integration](native-handler.md)
 - [Runtime and development option notes](runtime-evaluation.md)
+
+
+### 2026-10-31 — bulk core integration continuation
+
+- Added duplicate in-flight request protection and user cancellation through the chat UI; Stdio and Handler adapters now terminate dedicated process trees, including descendants. Added graceful shutdown that rejects new work and cancels active specialist processes.
+- Completed the in-repository Chat and Code process-adapter path, added mocked local-provider contract tests, and aligned Code's source suffix and 512 KB combined attachment limits with its specialist contract.
+- Added browser file attachments (20 files / 10 MB combined HTTP payload bound), specialist-specific limits for Code, Vision, Voice and Data, and the Study source bound. Increased the loopback API request cap to 15 MB to support bounded Study files.
+- Added explicit one-time approval controls in the React chat UI. Approval tokens are intentionally excluded from browser persistence. Added model-pull progress polling and local browser read-aloud controls.
+- CI evidence: [commit 6704ac5](https://github.com/deathkernel/TARA-App/commit/6704ac5b26303c9612fcbfde5243af187f74baad) passed Python tests, frontend build, and native Handler builds on Windows and Linux. Later upload/approval changes are on `feat/bulk-core-feature-batch`; at `2bef868`, Python tests passed while frontend and native CI jobs were still running. No real target-machine Ollama/browser smoke test has been claimed.
+- Still pending: app-level SQLite session persistence configuration/retention policy, real Windows machine smoke testing, browser QA, remaining runtime recovery/resource checks, and release packaging.
