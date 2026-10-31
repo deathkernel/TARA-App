@@ -284,6 +284,7 @@ class AppCoreTests(unittest.TestCase):
         attachments = [
             {"name": "health.py", "media_type": "text/x-python", "content_base64": code_content},
             {"name": "screen.png", "media_type": "image/png", "content_base64": image_content},
+            {"name": "settings.json", "media_type": "application/json", "content_base64": self.encoded(b'{"safe": true}')},
         ]
 
         result = Orchestrator(registry, router).handle_question(
@@ -291,9 +292,26 @@ class AppCoreTests(unittest.TestCase):
         )
 
         self.assertEqual(result.status, "success")
-        self.assertEqual(code.calls[0].inputs["attachments"], [attachments[0]])
+        self.assertEqual([item["name"] for item in code.calls[0].inputs["attachments"]], ["health.py", "settings.json"])
         self.assertNotIn("images", code.calls[0].inputs)
         self.assertTrue(all("content_base64" not in item for item in router.payloads[0]["attachments"]))
+
+
+    def test_code_rejects_source_attachments_over_specialist_limit(self) -> None:
+        code = FakeAdapter("code", (Capability("code", "plan", "Coding plan", True),))
+        registry = CapabilityRegistry()
+        registry.register(code)
+        router = FakeRouter(RouteDecision("req-code-size", "routed", "code", "plan", "coding", "Code request"))
+        attachments = [
+            {"name": "first.py", "media_type": "text/x-python", "content_base64": self.encoded(b"a" * 300_000)},
+            {"name": "second.py", "media_type": "text/x-python", "content_base64": self.encoded(b"b" * 250_000)},
+        ]
+        result = Orchestrator(registry, router).handle_question(
+            "Review these files", attachments=attachments, request_id="req-code-size"
+        )
+        self.assertEqual(result.status, "invalid_request")
+        self.assertEqual(result.result.data["reason_code"], "invalid_attachment_content")
+        self.assertEqual(code.calls, [])
 
     def test_code_attachments_respect_adapter_file_limit(self) -> None:
         code = FakeAdapter("code", (Capability("code", "plan", "Code planning", True),))

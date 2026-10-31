@@ -286,9 +286,12 @@ class Orchestrator:
         if not isinstance(health, AdapterHealth) or health.status != "healthy":
             return self._outcome(operation_id, "unavailable", decision, "adapter_unavailable", "Selected specialist is unavailable")
 
-        module_attachments = self._specialist_attachments(
-            decision.module, decision.action, safe_attachments
-        )
+        try:
+            module_attachments = self._specialist_attachments(
+                decision.module, decision.action, safe_attachments
+            )
+        except (ValueError, binascii.Error):
+            return self._outcome(operation_id, "invalid_request", decision, "invalid_attachment_content", "attachments exceed the selected specialist's supported limits")
         inputs: dict[str, Any] = {"question": question, "attachments": module_attachments}
         try:
             self._add_specialist_attachment_inputs(
@@ -751,9 +754,30 @@ class Orchestrator:
             ".scala",
             ".lua",
             ".pl",
-            ".r"
+            ".r",
+            ".json",
+            ".yaml",
+            ".yml",
+            ".toml",
+            ".md"
         ))
             ][:4]
+        total_source_bytes = sum(
+            len(base64.b64decode(item["content_base64"], validate=True))
+            for item in [
+                candidate for candidate in attachments
+                if candidate.get("content_base64")
+                and candidate.get("name", "").casefold().endswith((
+                    ".py", ".pyi", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx",
+                    ".java", ".go", ".rs", ".c", ".h", ".cc", ".hh", ".hpp",
+                    ".cpp", ".cxx", ".cs", ".rb", ".php", ".sh", ".bash", ".zsh",
+                    ".ps1", ".sql", ".swift", ".kt", ".kts", ".dart", ".scala",
+                    ".lua", ".pl", ".r", ".json", ".yaml", ".yml", ".toml", ".md"
+                ))
+            ][:4]
+        )
+        if total_source_bytes > 512_000:
+            raise ValueError("Code accepts at most 512 KB of combined source attachments")
         if module == "vision" and action == "analyze":
             images = [
                 item for item in attachments
