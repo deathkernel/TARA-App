@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import unittest
+from threading import Event, Thread
 from typing import Mapping, Sequence
 
 from tara_app.contracts import AdapterHealth, Capability, ModuleRequest, ModuleResult, RouteDecision
@@ -59,6 +60,58 @@ class AppCoreTests(unittest.TestCase):
         self.assertEqual(history_a[-2]["content"], "Question 12")
         self.assertEqual(history_a[-1]["content"], "TARA reply")
         self.assertEqual(history_b, [])
+
+    def test_duplicate_in_flight_question_is_rejected_per_session(self) -> None:
+        started = Event()
+        release = Event()
+
+        class BlockingAdapter(FakeAdapter):
+            def execute(self, request: ModuleRequest) -> ModuleResult:
+                self.calls.append(request)
+                started.set()
+                if not release.wait(timeout=5):
+                    return ModuleResult("timeout", error="test wait timed out")
+                return self.result
+
+        chat = BlockingAdapter(
+            "chat",
+            (Capability("chat", "respond", "Conversation response", True),),
+            ModuleResult("success", {"text": "TARA reply"}),
+        )
+        registry = CapabilityRegistry()
+        registry.register(chat)
+
+        class SessionRouter:
+            def route(self, payload):
+                return RouteDecision(payload["request_id"], "routed", "chat", "respond", "conversation", "Chat intent")
+
+        app = Orchestrator(registry, SessionRouter())
+        first_result = []
+        worker = Thread(
+            target=lambda: first_result.append(
+                app.handle_question("Explain this", session_id="session-a", request_id="req-first")
+            )
+        )
+        worker.start()
+        self.assertTrue(started.wait(timeout=2))
+
+        duplicate = app.handle_question(
+            "  EXPLAIN THIS  ",
+            session_id="session-a",
+            request_id="req-duplicate",
+        )
+        self.assertEqual(duplicate.status, "unavailable")
+        self.assertEqual(duplicate.result.data["reason_code"], "duplicate_request")
+        self.assertEqual(len(chat.calls), 1)
+
+        release.set()
+        worker.join(timeout=2)
+        self.assertFalse(worker.is_alive())
+        self.assertEqual(first_result[0].status, "success")
+
+        retry = app.handle_question("Explain this", session_id="session-a", request_id="req-retry")
+        self.assertEqual(retry.status, "success")
+        self.assertEqual(len(chat.calls), 2)
 
     def test_read_only_route_dispatches_to_its_own_adapter(self) -> None:
         chat = FakeAdapter("chat", (Capability("chat", "respond", "Conversation response", True),))

@@ -96,6 +96,8 @@ class Orchestrator:
         self._history_lock = RLock()
         self._pending_approvals: OrderedDict[str, PendingApproval] = OrderedDict()
         self._approval_lock = RLock()
+        self._active_question_lock = RLock()
+        self._active_questions: dict[tuple[str, str], str] = {}
 
     def replace_conversation_history(self, session_id: str, history: Sequence[Mapping[str, str]]) -> None:
         """Replace one session's bounded conversation context from the local UI."""
@@ -126,6 +128,55 @@ class Orchestrator:
                 self._conversation_history.popitem(last=False)
 
     def handle_question(
+        self,
+        question: str,
+        *,
+        session_id: str = "default",
+        attachments: Sequence[Mapping[str, str]] = (),
+        workspace_root: str | None = None,
+        request_id: str | None = None,
+    ) -> DispatchOutcome:
+        """Reject an identical in-flight question in the same session.
+
+        This protects against duplicate submissions from multiple tabs or
+        clients. It does not suppress a later retry after the first request
+        has completed.
+        """
+        operation_id = request_id or str(uuid4())
+        if isinstance(question, str) and isinstance(session_id, str):
+            fingerprint = hashlib.sha256(question.strip().casefold().encode("utf-8")).hexdigest()
+            key = (session_id, fingerprint)
+            with self._active_question_lock:
+                if key in self._active_questions:
+                    return self._outcome(
+                        operation_id,
+                        "unavailable",
+                        None,
+                        "duplicate_request",
+                        "An identical request is already running in this session.",
+                    )
+                self._active_questions[key] = operation_id
+            try:
+                return self._handle_question(
+                    question,
+                    session_id=session_id,
+                    attachments=attachments,
+                    workspace_root=workspace_root,
+                    request_id=operation_id,
+                )
+            finally:
+                with self._active_question_lock:
+                    if self._active_questions.get(key) == operation_id:
+                        self._active_questions.pop(key, None)
+        return self._handle_question(
+            question,
+            session_id=session_id,
+            attachments=attachments,
+            workspace_root=workspace_root,
+            request_id=operation_id,
+        )
+
+    def _handle_question(
         self,
         question: str,
         *,

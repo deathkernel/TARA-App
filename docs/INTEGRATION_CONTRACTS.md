@@ -62,3 +62,14 @@ The adapter must preserve the original request ID, bound returned data, redact s
 | handler | `handler.repair` | Disabled through app natural-language dispatch pending explicit approval design |
 
 Actual capabilities must be checked against each engine version before enabling. This draft is not a guarantee that each command exists in all versions.
+
+
+## Request concurrency and duplicate submissions
+
+The app orchestrator rejects an identical in-flight question when it is submitted
+again in the same session (case- and surrounding-whitespace-insensitive). The
+rejection uses status `unavailable` and reason code `duplicate_request`; it does
+not enqueue or silently discard the first request. Once the first request
+finishes, the same question can be submitted again as a normal retry. This is
+request de-duplication, not process cancellation or a guarantee that semantically
+similar prompts are identical.
