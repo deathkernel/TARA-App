@@ -22,7 +22,8 @@ _MAX_REQUEST_BYTES = 1_000_000
 
 
 class _Server(ThreadingHTTPServer):
-    daemon_threads = True
+    daemon_threads = False
+    block_on_close = True
     allow_reuse_address = True
 
     def __init__(self, address: tuple[str, int], app: Orchestrator) -> None:
@@ -233,5 +234,6 @@ def serve(app: Orchestrator, *, port: int = 8765) -> None:
     except KeyboardInterrupt:
         print("\nTARA-App stopped")
     finally:
+        app.shutdown()
         server.server_close()
 

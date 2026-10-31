@@ -153,6 +153,47 @@ class AppCoreTests(unittest.TestCase):
         worker.join(timeout=2)
         self.assertFalse(worker.is_alive())
 
+
+    def test_shutdown_rejects_new_requests_and_cancels_active_execution(self) -> None:
+        started = Event()
+        release = Event()
+
+        class CancellableAdapter(FakeAdapter):
+            def __init__(self):
+                super().__init__("chat", (Capability("chat", "respond", "Conversation response", True),))
+                self.cancelled = []
+
+            def execute(self, request):
+                self.calls.append(request)
+                started.set()
+                release.wait(timeout=3)
+                return ModuleResult("success", {"text": "done"})
+
+            def cancel_request(self, request_id):
+                self.cancelled.append(request_id)
+                return True
+
+        adapter = CancellableAdapter()
+        registry = CapabilityRegistry()
+        registry.register(adapter)
+
+        class SessionRouter:
+            def route(self, payload):
+                return RouteDecision(payload["request_id"], "routed", "chat", "respond", "conversation", "Chat intent")
+
+        app = Orchestrator(registry, SessionRouter())
+        worker = Thread(target=lambda: app.handle_question("Running", session_id="session-a", request_id="req-running"))
+        worker.start()
+        self.assertTrue(started.wait(timeout=2))
+        app.shutdown()
+        self.assertEqual(adapter.cancelled, ["req-running"])
+        rejected = app.handle_question("After shutdown", session_id="session-a", request_id="req-later")
+        self.assertEqual(rejected.status, "unavailable")
+        self.assertEqual(rejected.result.data["reason_code"], "app_shutting_down")
+        release.set()
+        worker.join(timeout=2)
+        self.assertFalse(worker.is_alive())
+
     def test_read_only_route_dispatches_to_its_own_adapter(self) -> None:
         chat = FakeAdapter("chat", (Capability("chat", "respond", "Conversation response", True),))
         registry = CapabilityRegistry()

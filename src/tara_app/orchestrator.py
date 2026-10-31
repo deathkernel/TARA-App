@@ -100,6 +100,7 @@ class Orchestrator:
         self._active_questions: dict[tuple[str, str], str] = {}
         self._active_execution_lock = RLock()
         self._active_executions: dict[str, tuple[str, Any]] = {}
+        self._shutting_down = False
 
     def replace_conversation_history(self, session_id: str, history: Sequence[Mapping[str, str]]) -> None:
         """Replace one session's bounded conversation context from the local UI."""
@@ -145,6 +146,9 @@ class Orchestrator:
         has completed.
         """
         operation_id = request_id or str(uuid4())
+        with self._active_execution_lock:
+            if self._shutting_down:
+                return self._outcome(operation_id, "unavailable", None, "app_shutting_down", "TARA-App is shutting down and cannot accept new requests")
         if isinstance(question, str) and isinstance(session_id, str):
             fingerprint = hashlib.sha256(question.strip().casefold().encode("utf-8", errors="replace")).hexdigest()
             key = (session_id, fingerprint)
@@ -321,6 +325,8 @@ class Orchestrator:
             workspace_root=workspace_root,
         )
         with self._active_execution_lock:
+            if self._shutting_down:
+                return self._outcome(operation_id, "unavailable", decision, "app_shutting_down", "TARA-App is shutting down and cannot start specialist execution")
             self._active_executions[operation_id] = (session_id, adapter)
         try:
             result = adapter.execute(module_request)
@@ -404,6 +410,20 @@ class Orchestrator:
             return DispatchOutcome("approval_required", decision, pending, operation_id)
 
         return DispatchOutcome(result.status, decision, result, operation_id)
+
+    def shutdown(self) -> None:
+        """Stop accepting work and request termination of active specialist processes."""
+        with self._active_execution_lock:
+            self._shutting_down = True
+            active = list(self._active_executions.items())
+        for request_id, (_session_id, adapter) in active:
+            cancel = getattr(adapter, "cancel_request", None)
+            if callable(cancel):
+                try:
+                    cancel(request_id)
+                except Exception:
+                    # Shutdown continues; non-cooperating adapters remain bounded by their own timeout.
+                    continue
 
     def cancel_request(self, request_id: str, *, session_id: str) -> str:
         """Cancel one active specialist process belonging to the given session."""
