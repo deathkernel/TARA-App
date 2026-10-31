@@ -8,7 +8,7 @@ import shutil
 import subprocess
 import time
 from collections.abc import Mapping
-from threading import Lock, Thread
+from threading import Lock, RLock, Thread
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
@@ -39,6 +39,7 @@ class OllamaModelCatalog:
         self.profiles = dict(profiles or {})
         self.base_url = base_url
         self._lifecycle_lock = Lock()
+        self._startup_lock = RLock()
         self._pull_lock = Lock()
         self._ensure_lock = Lock()
         self._pull_state: dict[str, Any] = {"status": "idle"}
@@ -77,6 +78,10 @@ class OllamaModelCatalog:
             raise ValueError("Ollama profile names are invalid")
 
     def ensure_service_started(self, *, timeout_seconds: float = 30.0) -> bool:
+        with self._startup_lock:
+            return self._ensure_service_started_locked(timeout_seconds=timeout_seconds)
+
+    def _ensure_service_started_locked(self, *, timeout_seconds: float = 30.0) -> bool:
         """Reuse local Ollama or start it for this TARA-App process.
 
         Returns True only when this instance launched the service. The app
@@ -119,18 +124,19 @@ class OllamaModelCatalog:
 
     def close(self) -> None:
         """Stop only an Ollama process that this TARA-App instance started."""
-        process = self._managed_server
-        self._managed_server = None
-        if process is None or process.poll() is not None:
-            return
-        try:
-            process.terminate()
-            process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait(timeout=5)
-        except OSError:
-            return
+        with self._startup_lock:
+            process = self._managed_server
+            self._managed_server = None
+            if process is None or process.poll() is not None:
+                return
+            try:
+                process.terminate()
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=5)
+            except OSError:
+                return
 
     def status(self) -> dict[str, Any]:
         if not self.profiles or self.base_url is None:
@@ -171,6 +177,7 @@ class OllamaModelCatalog:
         if self.base_url is None:
             raise RuntimeError("local Ollama is not configured")
 
+        self.ensure_service_started()
         with self._lifecycle_lock, self._pull_lock:
             if self._pull_state.get("status") in _ACTIVE_PULL_STATES:
                 raise RuntimeError("another local model download is already running")
@@ -204,6 +211,7 @@ class OllamaModelCatalog:
         model = self.profiles[specialist]
         deadline = time.monotonic() + timeout_seconds
         with self._ensure_lock:
+            self.ensure_service_started()
             while True:
                 installed = self._installed_models()
                 if installed is None:
@@ -245,6 +253,7 @@ class OllamaModelCatalog:
             return dict(self._pull_state)
 
     def unload_model(self, specialist: Any) -> dict[str, str]:
+        self.ensure_service_started()
         with self._lifecycle_lock:
             return self._unload_model_locked(specialist)
 
@@ -296,6 +305,7 @@ class OllamaModelCatalog:
             raise RuntimeError("local Ollama is not configured")
         if keep_alive not in {"5m", "10m", "15m", "30m"}:
             raise ValueError("keep_alive is outside the supported warm-up options")
+        self.ensure_service_started()
         model = self.profiles[specialist]
         installed = self._installed_models()
         if installed is None or model not in installed:
@@ -325,6 +335,7 @@ class OllamaModelCatalog:
         return {"status": "ready", "specialist": specialist, "model": model}
 
     def remove_model(self, specialist: Any) -> dict[str, str]:
+        self.ensure_service_started()
         with self._lifecycle_lock:
             return self._remove_model_locked(specialist)
 
