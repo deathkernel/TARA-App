@@ -38,7 +38,7 @@ Validation rules:
   "schema_version": "1.0",
   "request_id": "uuid",
   "ok": true,
-  "status": "success|unavailable|permission_denied|invalid_request|timeout|failed",
+  "status": "success|unavailable|permission_denied|invalid_request|timeout|cancelled|failed",
   "data": {},
   "error": null,
   "duration_ms": 0,
@@ -80,10 +80,28 @@ similar prompts are identical.
 The local UI assigns a unique request ID to each chat submission and can send
 `POST /api/cancel-request` with that ID and its session ID. The orchestrator
 checks the session binding and delegates cancellation only to the adapter
-currently executing that request. The stdio adapter terminates the associated
-child process (and force-kills it if it does not exit promptly), then returns
-the normalized `cancelled` status. This does not cancel routing or health
-checks before specialist execution begins, and adapters that do not expose
-process cancellation report the operation as unsupported/not running. The
+currently executing that request. The stdio and Handler adapters terminate the associated process tree (and
+force-kill it if it does not exit promptly), then return the normalized
+`cancelled` status. This does not cancel routing, model preparation, or health
+checks before specialist execution begins. Adapters that do not expose process
+cancellation report the operation as unsupported/not running. The
 existing `POST /api/cancel` endpoint remains dedicated to cancelling pending
 human approvals.
+
+
+## Specialist input limits
+
+TARA-Code accepts at most four explicitly attached source files and 512 KB of
+combined decoded source. TARA-App applies this limit before dispatch so a
+request that exceeds the specialist contract is rejected as `invalid_request`
+instead of being sent to the module and failing later. The app forwards the
+supported source suffixes from TARA-Code, including JSON, YAML, TOML, and
+Markdown files. Code execution remains disabled; the specialist returns
+review-first plans and proposals only.
+
+## Graceful shutdown
+
+When the local server stops, TARA-App stops accepting new orchestration and
+approval work, requests cancellation of active specialist process trees, and
+then waits for HTTP worker threads to close. The app does not claim that
+non-cancellable external operations (such as model preparation) are interrupted.
