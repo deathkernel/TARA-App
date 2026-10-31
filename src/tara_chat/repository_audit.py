@@ -29,13 +29,18 @@ class AuditReport:
 
 
 class RepositoryAuditor:
+    # These paths describe the current TARA-App monorepo layout, not the
+    # legacy standalone TARA-Chat package layout.
     REQUIRED_FILES = (
-        "requirements.txt",
-        "src/__main__.py",
-        "src/brain.py",
-        "src/ollama_provider.py",
-        "src/memory.py",
-        "tests/test_tara_cli.py",
+        "pyproject.toml",
+        "src/tara_app/__init__.py",
+        "src/tara_app/cli.py",
+        "src/tara_chat/__init__.py",
+        "src/tara_chat/brain.py",
+        "src/tara_chat/ollama_provider.py",
+        "src/tara_chat/memory.py",
+        "tests/test_app_core.py",
+        ".github/workflows/ci.yml",
     )
 
     def __init__(self, root: str | Path):
