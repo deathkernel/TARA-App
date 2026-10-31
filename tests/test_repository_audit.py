@@ -49,6 +49,22 @@ class RepositoryAuditorTests(unittest.TestCase):
             report = RepositoryAuditor(root).audit()
             self.assertEqual(report.python_files, 7)
 
+    def test_generated_directories_are_pruned_before_traversal(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            auditor = RepositoryAuditor(root)
+            root_directories = [".git", "node_modules", "src", "build"]
+
+            def walk(*args, **kwargs):
+                yield str(root), root_directories, ["root.py"]
+                yield str(root / "src"), [], ["app.py"]
+
+            with patch("tara_chat.repository_audit.os.walk", side_effect=walk):
+                paths = list(auditor._python_files())
+
+            self.assertEqual(root_directories, ["src"])
+            self.assertEqual([path.name for path in paths], ["root.py", "app.py"])
+
     def test_auditor_reports_python_syntax_errors(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
