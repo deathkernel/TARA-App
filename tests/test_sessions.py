@@ -8,6 +8,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from tara_app.sessions import SessionError, SessionStore  # noqa: E402
+from tara_app.orchestrator import Orchestrator  # noqa: E402
+from tara_app.registry import CapabilityRegistry  # noqa: E402
 
 
 class SessionStoreTests(unittest.TestCase):
@@ -76,6 +78,31 @@ class SessionStoreTests(unittest.TestCase):
                 {"role": "user", "content": "hello"},
                 {"role": "assistant", "content": "again"},
             ])
+
+
+    def test_orchestrator_restores_and_updates_persistent_chat_history(self):
+        with tempfile.TemporaryDirectory() as temp:
+            database = Path(temp) / "sessions.sqlite3"
+            store = SessionStore(database_path=database)
+            store.replace_history("session-persist", [{"role": "user", "content": "Before restart"}])
+            app = Orchestrator(CapabilityRegistry(), object(), session_store=store)
+            self.assertEqual(
+                app._conversation_history["session-persist"],
+                [{"role": "user", "content": "Before restart"}],
+            )
+            app.replace_conversation_history("session-persist", [
+                {"role": "user", "content": "After restart"},
+                {"role": "assistant", "content": "Restored context"},
+            ])
+            restarted = SessionStore(database_path=database)
+            app_after_restart = Orchestrator(CapabilityRegistry(), object(), session_store=restarted)
+            self.assertEqual(
+                app_after_restart._conversation_history["session-persist"],
+                [
+                    {"role": "user", "content": "After restart"},
+                    {"role": "assistant", "content": "Restored context"},
+                ],
+            )
 
     def test_persistence_is_disabled_by_default(self):
         store = SessionStore()
