@@ -256,3 +256,16 @@ tara-app
 ```
 
 When `src/tara_app/web/react-dist/` exists, the local server serves the compiled React UI at `/` and its hashed assets from `/assets/`. Without a build, it serves the existing static UI. The Vite development server uses `127.0.0.1:5173` and proxies API requests to the local TARA-App server on `127.0.0.1:8765`.
+
+
+## Local repository audit (TARA-Chat interactive CLI)
+
+The interactive TARA-Chat CLI includes a read-only repository audit command. Start the chat CLI from the repository folder, then enter:
+
+```text
+/audit
+/audit src
+/audit "sample project"
+```
+
+The optional folder must be a relative path inside the current working directory; absolute paths and paths that escape the working directory are rejected. The command does not call an LLM, execute shell commands, modify files, or upload repository content. It reports required monorepo files, Python syntax errors, duplicate full-pytest workflows, and warnings for process-randomized `hash()` usage. It is a quick static check, not a replacement for unit tests, linting, CodeQL, dependency scanning, or human security review.
