@@ -18,7 +18,7 @@ _ASSETS = {
     "/app.css": ("app.css", "text/css; charset=utf-8"),
     "/app.js": ("app.js", "text/javascript; charset=utf-8"),
 }
-_MAX_REQUEST_BYTES = 1_000_000
+_MAX_REQUEST_BYTES = 15_000_000
 
 
 class _Server(ThreadingHTTPServer):

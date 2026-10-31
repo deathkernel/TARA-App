@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 type Message = { role: "user" | "assistant"; text: string; status?: string; approval?: { approval_id: string; description: string } };
+type Attachment = { name: string; media_type: string; content_base64: string; size: number };
 type Conversation = { id: string; title: string; updatedAt: number; messages: Message[] };
 type LocalModel = {
   specialist: string;
@@ -41,6 +42,22 @@ function readConversations(): Conversation[] {
   } catch {
     return [];
   }
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== "string") {
+        reject(new Error(`Could not read ${file.name}.`));
+        return;
+      }
+      const separator = reader.result.indexOf(",");
+      resolve(separator >= 0 ? reader.result.slice(separator + 1) : reader.result);
+    };
+    reader.onerror = () => reject(new Error(`Could not read ${file.name}.`));
+    reader.readAsDataURL(file);
+  });
 }
 
 function errorText(payload: unknown, fallback: string): string {
@@ -90,6 +107,9 @@ export default function App() {
   });
   const [sessionId, setSessionId] = useState(() => localStorage.getItem(SESSION_KEY) ?? "");
   const [draft, setDraft] = useState("");
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [attachmentBusy, setAttachmentBusy] = useState(false);
+  const attachmentInput = useRef<HTMLInputElement | null>(null);
   const [sending, setSending] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [approvalBusy, setApprovalBusy] = useState("");
@@ -168,14 +188,45 @@ export default function App() {
     setConversations((items) => [item, ...items].slice(0, 12));
     setSessionId(item.id);
     setDraft("");
+    setAttachments([]);
     setNotice("");
+  }
+
+  async function addAttachments(files: FileList | null) {
+    if (!files?.length) return;
+    const incoming = Array.from(files);
+    if (attachments.length + incoming.length > 20) {
+      setNotice("You can attach up to 20 files to one message.");
+      return;
+    }
+    const totalBytes = attachments.reduce((sum, file) => sum + file.size, 0)
+      + incoming.reduce((sum, file) => sum + file.size, 0);
+    if (incoming.some((file) => file.size <= 0) || totalBytes > 10_000_000) {
+      setNotice("Attachments must be non-empty and total no more than 10 MB.");
+      return;
+    }
+    setAttachmentBusy(true);
+    try {
+      const prepared = await Promise.all(incoming.map(async (file) => ({
+        name: file.name,
+        media_type: file.type || "application/octet-stream",
+        content_base64: await fileToBase64(file),
+        size: file.size,
+      })));
+      setAttachments([...attachments, ...prepared]);
+      setNotice("");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Could not read the selected files.");
+    } finally {
+      setAttachmentBusy(false);
+    }
   }
 
   async function sendMessage(textOverride?: string) {
     const question = (textOverride ?? draft).trim();
     if (!question || sending || !active) return;
     const history = active.messages.slice(-20).map(({ role, text }) => ({ role, content: text }));
-    const userMessage: Message = { role: "user", text: question };
+    const userMessage: Message = { role: "user", text: attachments.length ? `${question}\\n\\nAttachments: ${attachments.map((file) => file.name).join(", ")}` : question };
     updateActive((item) => ({
       ...item,
       title: item.title === "New chat" ? question.replace(/\s+/g, " ").slice(0, 48) : item.title,
@@ -192,7 +243,7 @@ export default function App() {
     try {
       const payload = await api<any>("/api/chat", {
         method: "POST",
-        body: JSON.stringify({ question, session_id: active.id, request_id: requestId, attachments: [], history }),
+        body: JSON.stringify({ question, session_id: active.id, request_id: requestId, attachments: attachments.map(({ name, media_type, content_base64 }) => ({ name, media_type, content_base64 })), history }),
       });
       const text = answerText(payload);
       const resultData = payload?.result?.data;
@@ -203,6 +254,7 @@ export default function App() {
           : "TARA-Security requires your approval before this operation can run.",
       } : undefined;
       const assistantMessage: Message = { role: "assistant", text, status: payload?.status ?? "success", approval };
+      if (["success", "approval_required"].includes(payload?.status)) setAttachments([]);
       updateActive((item) => ({
         ...item, updatedAt: Date.now(),
         messages: [...item.messages, assistantMessage].slice(-24),
@@ -388,7 +440,23 @@ export default function App() {
         </section>
 
         <form className="composer" onSubmit={submit}>
+          <input
+            ref={attachmentInput}
+            className="file-input"
+            type="file"
+            multiple
+            accept=".py,.pyi,.js,.mjs,.cjs,.ts,.tsx,.jsx,.java,.go,.rs,.c,.h,.cc,.hh,.hpp,.cpp,.cxx,.cs,.rb,.php,.sh,.bash,.zsh,.ps1,.sql,.swift,.kt,.kts,.dart,.scala,.lua,.pl,.r,.json,.yaml,.yml,.toml,.md,.markdown,.rst,.txt,.csv,.pdf,image/*,audio/*"
+            onChange={(event) => { void addAttachments(event.currentTarget.files); event.currentTarget.value = ""; }}
+            aria-label="Choose files to attach"
+          />
+          {attachments.length > 0 && <div className="attachment-list">
+            {attachments.map((file, index) => <div className="attachment-chip" key={`${file.name}-${index}`}>
+              <span>{file.name} <small>{formatBytes(file.size)}</small></span>
+              <button type="button" onClick={() => setAttachments((items) => items.filter((_, itemIndex) => itemIndex !== index))} disabled={sending || attachmentBusy} aria-label={`Remove ${file.name}`}>×</button>
+            </div>)}
+          </div>}
           <textarea value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onComposerKeyDown} placeholder="Message TARA…" aria-label="Message TARA" rows={1} maxLength={20000} />
+          <button className="secondary attach-button" type="button" onClick={() => attachmentInput.current?.click()} disabled={sending || attachmentBusy}>{attachmentBusy ? "Reading…" : "Attach"}</button>
           {sending ? <button className="secondary" type="button" onClick={() => void stopMessage()} disabled={cancelling}>{cancelling ? "Stopping…" : "Stop"}</button> : <button className="send" type="submit" disabled={!draft.trim()} aria-label="Send message">↑</button>}
           <p>Local inference stays on your device. Cloud requests require explicit configuration.</p>
         </form>
