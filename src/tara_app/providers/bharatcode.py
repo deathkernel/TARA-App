@@ -148,7 +148,8 @@ class BharatCodeProvider:
         if isinstance(system, str) and system.strip():
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
-        return self.chat(messages, max_tokens=max_completion_tokens or self.default_max_tokens, temperature=temperature)
+        output_tokens = self.default_max_tokens if max_completion_tokens is None else max_completion_tokens
+        return self.chat(messages, max_tokens=output_tokens, temperature=temperature)
 
 
 __all__ = ["BharatCodeError", "BharatCodeProvider", "DEFAULT_MODEL"]
