@@ -124,7 +124,8 @@ Backend SQLite persistence is opt-in through the `[sessions]` table in
 `tara-app.toml`. Without `sessions.database_path`, the backend keeps session
 history in memory and the React UI keeps its existing local browser history.
 The configured store persists at most 100 sessions by default, with up to 24
-messages per session and 20,000 characters per message. When capacity is
+messages per session, 20,000 characters per message, and a 120,000-character
+aggregate orchestration-history budget. Older messages are trimmed first. When capacity is
 reached, the least-recently-updated session is evicted; there is no time-based
 expiry. Closing a session deletes its rows.
 
