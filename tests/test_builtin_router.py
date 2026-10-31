@@ -8,7 +8,7 @@ from tara_app.builtin_router import BuiltinRouter
 class BuiltinRouterTests(unittest.TestCase):
     def setUp(self) -> None:
         self.router = BuiltinRouter()
-        self.capabilities = ["chat.respond", "code.plan", "research.answer", "security.assess"]
+        self.capabilities = ["chat.respond", "chat.audit_repository", "code.plan", "research.answer", "security.assess"]
 
     def route(self, question: str, attachments=()):
         return self.router.route({
@@ -22,6 +22,18 @@ class BuiltinRouterTests(unittest.TestCase):
     def test_general_question_uses_chat(self):
         decision = self.route("Hello, explain this simply")
         self.assertEqual((decision.status, decision.module, decision.action), ("routed", "chat", "respond"))
+
+    def test_explicit_repository_audit_uses_local_chat_auditor(self):
+        decision = self.route("Audit this repository")
+        self.assertEqual((decision.status, decision.module, decision.action), ("routed", "chat", "audit_repository"))
+        self.assertEqual(decision.reason_code, "repository_audit")
+
+    def test_repository_audit_fails_closed_when_capability_is_disabled(self):
+        self.capabilities.remove("chat.audit_repository")
+        decision = self.route("Check this project")
+        self.assertEqual(decision.status, "unavailable")
+        self.assertEqual(decision.intended_module, "chat")
+        self.assertEqual(decision.intended_action, "audit_repository")
 
     def test_coding_question_uses_code_specialist(self):
         decision = self.route("Help me debug this Python function")
