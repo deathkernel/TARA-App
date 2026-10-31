@@ -34,6 +34,58 @@ def _run_handler_command(command_text: str) -> str | None:
         return f"Handler request not run: {_display_text(exc, limit=500)}"
 
 
+def _run_repository_audit_command(command_text: str) -> str | None:
+    """Run the read-only repository audit for an explicitly selected local folder."""
+    stripped = command_text.strip()
+    verb, _, argument = stripped.partition(" ")
+    if verb.lower() != "/audit":
+        return None
+    argument = argument.strip()
+    if argument.startswith('"') and argument.endswith('"') and len(argument) >= 2:
+        argument = argument[1:-1]
+    elif any(char.isspace() for char in argument):
+        return 'Usage: /audit [relative-folder] (quote folder names containing spaces)'
+    if len(argument) > 2048:
+        return "Audit path is too long."
+    from pathlib import Path, PureWindowsPath
+
+    workspace = Path.cwd().resolve()
+    requested = Path(argument).expanduser() if argument else Path(".")
+    if requested.is_absolute() or (argument and PureWindowsPath(argument).is_absolute()):
+        return "Audit accepts a relative folder inside the current working directory only."
+    try:
+        root = (workspace / requested).resolve(strict=True)
+        root.relative_to(workspace)
+    except (OSError, ValueError):
+        return "Audit folder must exist inside the current working directory."
+    if not root.is_dir():
+        return "Audit target must be a folder."
+
+    try:
+        from .repository_audit import RepositoryAuditor
+        report = RepositoryAuditor(root).audit()
+    except (OSError, ValueError, RuntimeError) as exc:
+        return f"Repository audit could not complete: {_display_text(exc, limit=300)}"
+
+    errors = [issue for issue in report.issues if issue.severity == "error"]
+    warnings = [issue for issue in report.issues if issue.severity == "warning"]
+    status = "HEALTHY" if report.healthy else "ISSUES FOUND"
+    lines = [
+        f"Repository audit: {status}",
+        f"Files scanned: {report.files_scanned} (Python: {report.python_files}, workflows: {report.workflow_files})",
+        f"Errors: {len(errors)} | Warnings: {len(warnings)}",
+        f"Fingerprint: {report.fingerprint}",
+    ]
+    for issue in report.issues[:20]:
+        lines.append(
+            f"- {issue.severity.upper()} {issue.code} {issue.path}: "
+            f"{_display_text(issue.detail, limit=240)}"
+        )
+    if len(report.issues) > 20:
+        lines.append(f"... {len(report.issues) - 20} additional findings omitted.")
+    return "\n".join(lines)
+
+
 def _run_memory_command(command_text: str, brain) -> str | None:
     """Handle explicit persistent-memory commands without involving the LLM."""
     parts = command_text.strip().split(maxsplit=1)
@@ -112,7 +164,11 @@ def chat_loop(brain, *, input_fn=input, output_fn=print) -> None:
             output_fn("TARA: Bye, bhai!")
             return
         if command == "/help":
-            output_fn("Commands: /help, /exit, /memory [query], /remember key=value, /forget key, /handler [action]")
+            output_fn("Commands: /help, /exit, /audit [folder], /memory [query], /remember key=value, /forget key, /handler [action]")
+            continue
+        if command == "/audit" or command.startswith("/audit "):
+            audit_result = _run_repository_audit_command(prompt)
+            output_fn(f"TARA: {audit_result or 'Repository audit command not recognized.'}")
             continue
         if command == "/handler" or command == "/diagnose" or command.startswith(("/handler ", "/diagnose ")):
             handler_result = _run_handler_command(prompt)

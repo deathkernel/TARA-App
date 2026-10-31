@@ -11,7 +11,7 @@ from .llm_provider_factory import provider_from_env
 from .memory import LongTermMemory
 
 MODULE_ID = "chat"
-CAPABILITIES = ("respond",)
+CAPABILITIES = ("respond", "audit_repository")
 MAX_REQUEST_BYTES = 1_000_000
 _ALLOWED_REQUEST_FIELDS = {"schema_version", "request_id", "session_id", "module", "action", "inputs", "workspace_root", "timeout_seconds", "approval_token"}
 
@@ -33,6 +33,57 @@ def handle_request(request: Any) -> dict[str, Any]:
         return _result(request_id, "invalid_request", error="action or inputs are invalid")
     if action == "health":
         return _result(request_id, "success", {"healthy": True})
+    if action == "audit_repository":
+        question = inputs.get("question")
+        attachments = inputs.get("attachments", [])
+        if not isinstance(question, str) or not question.strip() or len(question) > 20_000:
+            return _result(request_id, "invalid_request", error="audit request question is invalid")
+        if not isinstance(attachments, list) or attachments:
+            return _result(request_id, "invalid_request", error="repository audit does not accept attachments")
+        start = time.monotonic()
+        try:
+            from pathlib import Path
+            from .repository_audit import RepositoryAuditor
+
+            report = RepositoryAuditor(Path.cwd()).audit()
+        except (OSError, RuntimeError, ValueError):
+            return _result(
+                request_id, "unavailable",
+                error="repository audit could not inspect the configured local working directory",
+                duration_ms=max(0, int((time.monotonic() - start) * 1000)),
+            )
+        errors = [issue for issue in report.issues if issue.severity == "error"]
+        warnings = [issue for issue in report.issues if issue.severity == "warning"]
+        status = "HEALTHY" if report.healthy else "ISSUES FOUND"
+        lines = [
+            f"Repository audit: {status}",
+            f"Files scanned: {report.files_scanned} (Python: {report.python_files}, workflows: {report.workflow_files})",
+            f"Errors: {len(errors)} | Warnings: {len(warnings)}",
+            f"Fingerprint: {report.fingerprint}",
+        ]
+        for issue in report.issues[:20]:
+            lines.append(f"- {issue.severity.upper()} {issue.code} {issue.path}: {issue.detail[:240]}")
+        if len(report.issues) > 20:
+            lines.append(f"... {len(report.issues) - 20} additional findings omitted.")
+        return _result(
+            request_id, "success",
+            {
+                "text": "\n".join(lines),
+                "healthy": report.healthy,
+                "files_scanned": report.files_scanned,
+                "python_files": report.python_files,
+                "workflow_files": report.workflow_files,
+                "error_count": len(errors),
+                "warning_count": len(warnings),
+                "fingerprint": report.fingerprint,
+                "issues": [
+                    {"code": issue.code, "path": issue.path, "detail": issue.detail, "severity": issue.severity}
+                    for issue in report.issues[:100]
+                ],
+                "remote_data_transfer": False,
+            },
+            duration_ms=max(0, int((time.monotonic() - start) * 1000)),
+        )
     if action != "respond":
         return _result(request_id, "permission_denied", error="unsupported TARA-Chat capability")
     question = inputs.get("question")

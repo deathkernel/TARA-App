@@ -13,6 +13,8 @@ _SIDE_EFFECT = re.compile(
     r"\b(?:send|publish|delete|remove|install|commit|merge|execute|run)\b",
     re.IGNORECASE,
 )
+_REPOSITORY_AUDIT_ONLY = re.compile(r"^\s*(?:(?:please\s+)?(?:run|perform|do)\s+(?:a\s+)?(?:repository|repo|project)\s+audit|(?:please\s+)?(?:audit|inspect|check)\s+(?:(?:the|this|my|our)\s+)?(?:repository|repo|project))\s*[.!?]*$", re.I)
+_REPOSITORY_AUDIT = re.compile(r"\b(?:audit|inspect|check)\s+(?:(?:the|this|my|our)\s+)?(?:repository|repo|project)\b|\b(?:repository|repo|project)\s+(?:audit|health check)\b", re.I)
 _CODE = re.compile(r"\b(?:code|coding|debug|bug|compile|refactor|function|class|script|program|repository|repo|pull request|test failure)\b", re.I)
 _RESEARCH = re.compile(r"\b(?:research|sources?|citations?|latest|current|recent|today|news|paper|studies|evidence|look up|search the web)\b", re.I)
 _PLANNER = re.compile(r"\b(?:plan|break down|roadmap|steps|schedule|milestones|prioritize)\b", re.I)
@@ -122,7 +124,7 @@ class BuiltinRouter:
                 intended_module="action", intended_action="execute", requires_approval=True,
                 policy_tags=("desktop_automation", "human_approval"),
             )
-        if _SIDE_EFFECT.search(question):
+        if _SIDE_EFFECT.search(question) and not _REPOSITORY_AUDIT_ONLY.fullmatch(question.strip()):
             if "security.assess" in available:
                 return RouteDecision(
                     request_id, "routed", "security", "assess", "approval_gate",
@@ -135,6 +137,9 @@ class BuiltinRouter:
                 "TARA requires the Security and approval workflow before it can perform changes.",
                 intended_module="action", intended_action="execute", policy_tags=("side_effect",),
             )
+
+        if _REPOSITORY_AUDIT.search(normalized):
+            target = ("chat", "audit_repository", "repository_audit", "The user explicitly requested a read-only audit of the configured local repository.")
 
         media = [str(item.get("media_type", "")).casefold() for item in attachments]
         if any(kind.startswith("image/") for kind in media):

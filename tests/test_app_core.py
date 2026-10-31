@@ -70,6 +70,30 @@ class AppCoreTests(unittest.TestCase):
         self.assertEqual(len(chat.calls), 1)
         self.assertEqual(router.payloads[0]["available_capabilities"], ["chat.respond"])
 
+    def test_repository_audit_dispatches_to_read_only_chat_capability(self) -> None:
+        chat = FakeAdapter(
+            "chat",
+            (
+                Capability("chat", "respond", "Conversation response", True),
+                Capability("chat", "audit_repository", "Read-only repository audit", True),
+            ),
+            ModuleResult("success", {"text": "Repository audit: HEALTHY"}),
+        )
+        registry = CapabilityRegistry()
+        registry.register(chat)
+        decision = RouteDecision(
+            "req-audit", "routed", "chat", "audit_repository",
+            "repository_audit", "Explicit repository audit request",
+        )
+
+        result = Orchestrator(registry, FakeRouter(decision)).handle_question(
+            "Audit this repository", request_id="req-audit"
+        )
+
+        self.assertEqual(result.status, "success")
+        self.assertEqual(chat.calls[0].action, "audit_repository")
+        self.assertEqual(chat.calls[0].inputs["attachments"], [])
+
     def test_side_effect_is_security_assessed_but_never_auto_executed(self) -> None:
         action = FakeAdapter("action", (Capability("action", "execute", "External action", False, True),))
         security = FakeAdapter(
