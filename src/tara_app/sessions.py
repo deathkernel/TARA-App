@@ -5,6 +5,7 @@ Chat content stays in memory by default. Persistence is opt-in via database_path
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from contextlib import contextmanager
 from collections.abc import Iterator, Mapping, Sequence
@@ -84,6 +85,8 @@ class SessionStore:
                     """)
                     db.execute("PRAGMA foreign_keys = ON")
                     self._load_from_db(db)
+                if os.name != "nt":
+                    os.chmod(self.database_path, 0o600)
             except (OSError, sqlite3.Error, ValueError, TypeError):
                 raise SessionError("persistent session store could not be initialized") from None
 
