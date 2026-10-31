@@ -17,6 +17,7 @@ from tara_app.ollama_models import OllamaModelCatalog
 from tara_app.orchestrator import Orchestrator
 from tara_app.registry import CapabilityRegistry
 from tara_app.router_client import StdioRouterClient
+from tara_app.sessions import SessionStore
 
 _ENV_NAME = re.compile(r"^[A-Z][A-Z0-9_]{0,127}$")
 _POLICIES: dict[str, tuple[Capability, ...]] = {
@@ -79,11 +80,12 @@ def create_application(config_path: str | Path) -> Orchestrator:
             config = tomllib.load(stream)
     except (OSError, tomllib.TOMLDecodeError) as exc:
         raise RuntimeConfigurationError("configuration file could not be read") from exc
-    if set(config) - {"router", "modules", "ollama"}:
+    if set(config) - {"router", "modules", "ollama", "sessions"}:
         raise RuntimeConfigurationError("configuration contains unsupported top-level settings")
 
     root = config_file.parent
     ollama_settings = _ollama_settings(config.get("ollama"))
+    session_store = _session_store(config.get("sessions"), root)
     router_config = _table(config.get("router"), "router")
     if set(router_config) - {"command", "working_directory", "timeout_seconds", "max_response_bytes"}:
         raise RuntimeConfigurationError("router contains unsupported settings")
@@ -147,7 +149,36 @@ def create_application(config_path: str | Path) -> Orchestrator:
             profiles[module_id] = model
             base_url = module_url
     model_catalog = OllamaModelCatalog(profiles, base_url) if profiles else OllamaModelCatalog()
-    return Orchestrator(registry, router, model_catalog=model_catalog)
+    return Orchestrator(registry, router, model_catalog=model_catalog, session_store=session_store)
+
+
+def _session_store(value: Any, root: Path) -> SessionStore | None:
+    if value is None:
+        return None
+    config = _table(value, "sessions")
+    allowed = {"database_path", "max_sessions", "max_messages_per_session", "max_content_chars"}
+    if set(config) - allowed:
+        raise RuntimeConfigurationError("sessions contains unsupported settings")
+    database_path = config.get("database_path")
+    if database_path is None:
+        if config:
+            raise RuntimeConfigurationError("sessions.database_path is required when session limits are configured")
+        return None
+    if not isinstance(database_path, str) or not database_path.strip() or len(database_path) > 4096:
+        raise RuntimeConfigurationError("sessions.database_path must be a bounded file path")
+    path = Path(database_path).expanduser()
+    if not path.is_absolute():
+        path = root / path
+    try:
+        path = path.resolve()
+    except OSError as exc:
+        raise RuntimeConfigurationError("sessions.database_path could not be resolved") from exc
+    return SessionStore(
+        database_path=path,
+        max_sessions=_integer(config.get("max_sessions", 100), "sessions.max_sessions", 1, 512),
+        max_messages_per_session=_integer(config.get("max_messages_per_session", 24), "sessions.max_messages_per_session", 1, 24),
+        max_content_chars=_integer(config.get("max_content_chars", 20_000), "sessions.max_content_chars", 1, 20_000),
+    )
 
 
 def _ollama_settings(value: Any) -> dict[str, dict[str, str]]:

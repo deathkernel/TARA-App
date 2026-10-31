@@ -120,3 +120,12 @@ working_directory = "."
 timeout_seconds = 60
 allow_remote = true # Gemini sends the selected prompt to Google; local gpt-oss stays on Ollama.
 environment = ["GEMINI_API_KEY"]
+
+# Optional server-side session backup. Browser chat history remains local by
+# default; uncomment this section to persist bounded backend context in SQLite.
+# Oldest sessions are evicted when max_sessions is reached.
+# [sessions]
+# database_path = "data/sessions.sqlite3"
+# max_sessions = 100
+# max_messages_per_session = 24
+# max_content_chars = 20000
