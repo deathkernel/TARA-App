@@ -9,7 +9,7 @@ import signal
 import subprocess
 from threading import RLock
 from pathlib import Path
-from typing import Mapping, Sequence
+from typing import Any, Mapping, Sequence
 
 from tara_app.contracts import AdapterHealth, Capability, MAX_PAYLOAD_BYTES, ModuleRequest, ModuleResult, SCHEMA_VERSION
 
@@ -22,7 +22,7 @@ def _terminate_process_tree(process: subprocess.Popen[Any], *, graceful_timeout:
     """Terminate a dedicated process group, including specialist-launched children."""
     if os.name == "nt":
         try:
-            subprocess.run(
+            result = subprocess.run(
                 ["taskkill", "/PID", str(process.pid), "/T", "/F"],
                 stdin=subprocess.DEVNULL,
                 stdout=subprocess.DEVNULL,
@@ -31,6 +31,8 @@ def _terminate_process_tree(process: subprocess.Popen[Any], *, graceful_timeout:
                 shell=False,
                 check=False,
             )
+            if result.returncode != 0 and process.poll() is None:
+                process.terminate()
         except (OSError, subprocess.TimeoutExpired):
             if process.poll() is None:
                 process.terminate()
