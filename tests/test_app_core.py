@@ -65,6 +65,19 @@ class AppCoreTests(unittest.TestCase):
         self.assertEqual(history_b, [])
 
 
+
+    def test_history_trims_oldest_messages_to_total_character_budget(self) -> None:
+        app = Orchestrator(CapabilityRegistry(), FakeRouter(RouteDecision("unused", "unavailable", None, None, "conversation", "No route")))
+        history = [
+            {"role": "user" if index % 2 == 0 else "assistant", "content": str(index) * 20_000}
+            for index in range(8)
+        ]
+        app.replace_conversation_history("session-budget", history)
+        saved = app._conversation_history["session-budget"]
+        self.assertEqual(len(saved), 6)
+        self.assertEqual(saved[0]["content"], "2" * 20_000)
+        self.assertEqual(sum(len(turn["content"]) for turn in saved), 120_000)
+
     def test_successful_chat_turn_is_saved_to_configured_session_store(self) -> None:
         chat = FakeAdapter(
             "chat",
