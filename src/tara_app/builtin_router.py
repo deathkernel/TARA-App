@@ -103,9 +103,6 @@ class BuiltinRouter:
                 requires_approval=True,
                 policy_tags=("memory_write", "consent_required", "human_approval"),
             )
-        if _REPOSITORY_AUDIT.search(normalized):
-            target = ("chat", "audit_repository", "repository_audit", "The user explicitly requested a read-only audit of the configured local repository.")
-
         website_match = _WEBSITE_OPEN.fullmatch(question.strip())
         if website_match is not None and not _valid_website_open(question):
             return RouteDecision(
@@ -139,6 +136,9 @@ class BuiltinRouter:
                 "TARA requires the Security and approval workflow before it can perform changes.",
                 intended_module="action", intended_action="execute", policy_tags=("side_effect",),
             )
+
+        if _REPOSITORY_AUDIT.search(normalized):
+            target = ("chat", "audit_repository", "repository_audit", "The user explicitly requested a read-only audit of the configured local repository.")
 
         media = [str(item.get("media_type", "")).casefold() for item in attachments]
         if any(kind.startswith("image/") for kind in media):
