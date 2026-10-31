@@ -7,19 +7,22 @@ from .ollama_provider import OllamaProvider
 
 
 def provider_from_env():
-    """Return the configured provider, or None to keep TARA's built-in model.
+    """Construct the explicitly selected provider without starting background work.
 
-    Set TARA_LLM_BACKEND=ollama to enable local inference. Provider construction
-    is explicit and does not download models or start background services.
+    TARA_LLM_BACKEND accepts 'ollama' or 'bharatcode'. Remote inference is
+    opt-in and requires a server-side BHARATCODE_API_KEY environment variable.
     """
     backend = os.getenv("TARA_LLM_BACKEND", "").strip().lower()
     if backend in {"", "none", "local"}:
         return None
     if backend in {"ollama", "llama"}:
         return OllamaProvider.from_env()
+    if backend == "bharatcode":
+        from tara_app.providers.bharatcode import BharatCodeProvider
+        return BharatCodeProvider.from_env()
     raise ValueError(
         f"Unsupported TARA_LLM_BACKEND {backend!r}; supported values are "
-        "'ollama'/'llama' or 'none'"
+        "'ollama'/'llama', 'bharatcode', or 'none'"
     )
 
 
