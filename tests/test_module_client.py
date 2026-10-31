@@ -78,6 +78,23 @@ class StdioModuleAdapterTests(unittest.TestCase):
         self.assertEqual(result.status, "approval_required")
         popen.assert_not_called()
 
+
+    def test_execution_semaphore_is_released_after_process_start_failure(self) -> None:
+        semaphore = threading.BoundedSemaphore(1)
+        adapter = StdioModuleAdapter(
+            "research",
+            (Capability("research", "answer", "Answer with sourced research", True),),
+            ("python", "-m", "tara_research"),
+            working_directory=Path(__file__).resolve().parent,
+            execution_semaphore=semaphore,
+        )
+        request = ModuleRequest("req-start-failure", "session-1", "research", "answer", {})
+        with patch("tara_app.module_client.subprocess.Popen", side_effect=OSError("not available")):
+            with self.assertRaises(ModuleProcessError):
+                adapter.execute(request)
+        self.assertTrue(semaphore.acquire(blocking=False))
+        semaphore.release()
+
     def test_health_requires_matching_request_id_and_healthy_response(self) -> None:
         adapter = self.adapter()
         response = {
