@@ -17,7 +17,7 @@ type ModelStatus = {
   provider?: string;
   service_available?: boolean;
   models?: LocalModel[];
-  pull?: { status?: string; model?: string; message?: string };
+  pull?: { status?: string; model?: string; specialist?: string; message?: string; completed?: number; total?: number | null; percent?: number | null; error?: string | null };
 };
 
 const STORAGE_KEY = "tara-react-conversations";
@@ -127,6 +127,22 @@ export default function App() {
   useEffect(() => {
     if (modelsOpen && !modelStatus) void refreshModels();
   }, [modelsOpen]);
+
+  const pullActive = ["queued", "pulling"].includes(modelStatus?.pull?.status ?? "");
+
+  useEffect(() => {
+    if (!modelsOpen || !pullActive) return;
+    let active = true;
+    const timer = window.setInterval(() => {
+      void api<ModelStatus>("/api/models")
+        .then((status) => { if (active) setModelStatus(status); })
+        .catch(() => undefined);
+    }, 1200);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [modelsOpen, pullActive]);
 
   function updateActive(transform: (conversation: Conversation) => Conversation) {
     if (!active) return;
@@ -258,6 +274,13 @@ export default function App() {
         {modelsOpen && <section className="models-panel">
           <div className="panel-heading"><div><h2>Local models</h2><p>{modelStatus?.service_available ? "Ollama is available on this device." : "Model inventory and lifecycle controls"}</p></div><button className="secondary" onClick={() => void refreshModels()} disabled={modelBusy === "refresh"}>{modelBusy === "refresh" ? "Refreshing…" : "Refresh"}</button></div>
           {modelStatus?.status === "not_configured" && <p className="muted">No local Ollama profiles are configured.</p>}
+          {modelStatus?.pull && modelStatus.pull.status !== "idle" && <div className="pull-status" role="status">
+            <div className="pull-heading"><strong>{modelStatus.pull.model ?? "Model download"}</strong><span>{modelStatus.pull.status}</span></div>
+            <p>{modelStatus.pull.message ?? "Local model download status"}</p>
+            {typeof modelStatus.pull.percent === "number" && <progress max={100} value={modelStatus.pull.percent} />}
+            {typeof modelStatus.pull.completed === "number" && typeof modelStatus.pull.total === "number" && modelStatus.pull.total > 1 && <small>{formatBytes(modelStatus.pull.completed)} / {formatBytes(modelStatus.pull.total)}</small>}
+            {modelStatus.pull.error && <small className="pull-error">{modelStatus.pull.error}</small>}
+          </div>}
           {(modelStatus?.models ?? []).map((model) => <div className="model-card" key={model.specialist}>
             <div><strong>{model.specialist}</strong><p>{model.model}</p><small>{model.memory_bytes ? `RAM ${formatBytes(model.memory_bytes)} · ` : ""}{model.vram_bytes ? `VRAM ${formatBytes(model.vram_bytes)} · ` : ""}{model.running ? "Loaded" : model.installed ? "Installed" : "Not installed"}</small></div>
             <div className="model-actions">
