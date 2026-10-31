@@ -65,7 +65,7 @@ def _image_media_type(encoded: str) -> str:
     raw = base64.b64decode(encoded, validate=True)
     if raw.startswith(b"\x89PNG\r\n\x1a\n"):
         return "image/png"
-    if raw.startswith(b"\xff\\xd8\xff"):
+    if raw.startswith(b"\xff\xd8\xff"):
         return "image/jpeg"
     if raw.startswith((b"GIF87a", b"GIF89a")):
         return "image/gif"
