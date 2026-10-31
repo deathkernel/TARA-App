@@ -68,16 +68,32 @@ class BharatCodeSpecialistRoutingTests(unittest.TestCase):
     def test_model_hub_can_select_bharatcode_qwen(self, complete) -> None:
         from tara_models.__main__ import handle_request
 
-        result = handle_request({
-            "schema_version": "1.0",
-            "request_id": "models-1",
-            "module": "models",
-            "action": "generate",
-            "inputs": {"question": "Explain binary search", "model": "qwen-3.8-27b"},
-        })
+        with patch.object(BharatCodeProvider, "list_models", return_value=[{"id": "qwen-3.8-27b"}]):
+            result = handle_request({
+                "schema_version": "1.0",
+                "request_id": "models-1",
+                "module": "models",
+                "action": "generate",
+                "inputs": {"question": "Explain binary search", "model": "qwen-3.8-27b"},
+            })
         self.assertEqual(result["status"], "success")
         self.assertEqual(result["data"]["provider"], "BharatCode")
         complete.assert_called_once()
+
+    def test_model_hub_catalog_verifies_live_bharatcode_model_when_key_exists(self) -> None:
+        from tara_models.__main__ import handle_request
+
+        with patch.dict(os.environ, {"BHARATCODE_API_KEY": "test-key"}):
+            with patch.object(BharatCodeProvider, "list_models", return_value=[{"id": "qwen-3.8-27b"}]):
+                result = handle_request({
+                    "schema_version": "1.0",
+                    "request_id": "models-catalog",
+                    "module": "models",
+                    "action": "catalog",
+                    "inputs": {},
+                })
+        entry = next(item for item in result["data"]["models"] if item["provider"] == "bharatcode")
+        self.assertTrue(entry["live_verified"])
 
     def test_chat_factory_selects_bharatcode_provider(self) -> None:
         from tara_chat.llm_provider_factory import provider_from_env
