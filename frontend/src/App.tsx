@@ -203,6 +203,7 @@ export default function App() {
   }
 
   function startNewChat() {
+    stopSpeaking();
     const item = newConversation();
     setConversations((items) => [item, ...items].slice(0, 12));
     setSessionId(item.id);
@@ -401,7 +402,7 @@ export default function App() {
         <p className="section-label">RECENT CHATS</p>
         <nav className="conversation-list" aria-label="Recent chats">
           {conversations.slice().sort((a, b) => b.updatedAt - a.updatedAt).map((item) => (
-            <button key={item.id} className={item.id === active?.id ? "conversation active" : "conversation"} onClick={() => { setSessionId(item.id); setAttachments([]); }}>
+            <button key={item.id} className={item.id === active?.id ? "conversation active" : "conversation"} onClick={() => { stopSpeaking(); setSessionId(item.id); setAttachments([]); }}>
               {item.title}
             </button>
           ))}
