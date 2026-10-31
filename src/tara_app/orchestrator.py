@@ -114,6 +114,14 @@ class Orchestrator:
         self._active_executions: dict[str, tuple[str, Any]] = {}
         self._shutting_down = False
 
+    def _trim_history(self, history: list[dict[str, str]]) -> None:
+        if len(history) > self._history_limit:
+            del history[:-self._history_limit]
+        total_chars = sum(len(turn["content"]) for turn in history)
+        while history and total_chars > self._MAX_HISTORY_CHARS:
+            removed = history.pop(0)
+            total_chars -= len(removed["content"])
+
     def replace_conversation_history(self, session_id: str, history: Sequence[Mapping[str, str]]) -> None:
         """Replace one session's bounded conversation context from the local UI."""
         if not isinstance(session_id, str) or not session_id.strip() or len(session_id) > 128:
@@ -121,7 +129,6 @@ class Orchestrator:
         if not isinstance(history, Sequence) or isinstance(history, (str, bytes)) or len(history) > 24:
             raise ValueError("history is invalid")
         safe_history: list[dict[str, str]] = []
-        total_chars = 0
         for turn in history:
             if not isinstance(turn, Mapping) or set(turn) != {"role", "content"}:
                 raise ValueError("history turn is invalid")
@@ -129,11 +136,8 @@ class Orchestrator:
             content = turn.get("content")
             if role not in {"user", "assistant"} or not isinstance(content, str) or not content.strip() or len(content) > 20_000:
                 raise ValueError("history turn is invalid")
-            total_chars += len(content)
-            if total_chars > 120_000:
-                raise ValueError("history is too large")
             safe_history.append({"role": role, "content": content})
-        del safe_history[:-self._history_limit]
+        self._trim_history(safe_history)
         with self._history_lock:
             if self.session_store is not None:
                 try:
@@ -373,7 +377,7 @@ class Orchestrator:
                         {"role": "user", "content": question.strip()},
                         {"role": "assistant", "content": response_text.strip()},
                     ))
-                    del history[:-self._history_limit]
+                    self._trim_history(history)
                     if self.session_store is not None:
                         try:
                             self.session_store.replace_history(session_id, history)
