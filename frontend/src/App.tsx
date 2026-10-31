@@ -284,9 +284,9 @@ export default function App() {
           {(modelStatus?.models ?? []).map((model) => <div className="model-card" key={model.specialist}>
             <div><strong>{model.specialist}</strong><p>{model.model}</p><small>{model.memory_bytes ? `RAM ${formatBytes(model.memory_bytes)} · ` : ""}{model.vram_bytes ? `VRAM ${formatBytes(model.vram_bytes)} · ` : ""}{model.running ? "Loaded" : model.installed ? "Installed" : "Not installed"}</small></div>
             <div className="model-actions">
-              {!model.installed && <button onClick={() => void modelAction("pull", model.specialist)} disabled={!!modelBusy}>Install</button>}
-              {model.installed && model.running && <button className="secondary" onClick={() => void modelAction("unload", model.specialist)} disabled={!!modelBusy}>Unload</button>}
-              {model.installed && <button className="danger" onClick={() => void modelAction("remove", model.specialist)} disabled={!!modelBusy}>Remove</button>}
+              {!model.installed && <button onClick={() => void modelAction("pull", model.specialist)} disabled={!!modelBusy || pullActive}>Install</button>}
+              {model.installed && model.running && <button className="secondary" onClick={() => void modelAction("unload", model.specialist)} disabled={!!modelBusy || pullActive}>Unload</button>}
+              {model.installed && <button className="danger" onClick={() => void modelAction("remove", model.specialist)} disabled={!!modelBusy || pullActive}>Remove</button>}
             </div>
           </div>)}
           <div className="free-hub"><div><strong>Free Model Hub</strong><p>Browse free model options without sending a prompt to a cloud provider.</p></div><button onClick={() => void sendMessage(FREE_MODELS_PROMPT)} disabled={sending}>List free models</button></div>
