@@ -13,6 +13,7 @@ _SIDE_EFFECT = re.compile(
     r"\b(?:send|publish|delete|remove|install|commit|merge|execute|run)\b",
     re.IGNORECASE,
 )
+_REPOSITORY_AUDIT = re.compile(r"\\b(?:audit|inspect|check)\\s+(?:(?:the|this|my|our)\\s+)?(?:repository|repo|project)\\b|\\b(?:repository|repo|project)\\s+(?:audit|health check)\\b", re.I)
 _CODE = re.compile(r"\b(?:code|coding|debug|bug|compile|refactor|function|class|script|program|repository|repo|pull request|test failure)\b", re.I)
 _RESEARCH = re.compile(r"\b(?:research|sources?|citations?|latest|current|recent|today|news|paper|studies|evidence|look up|search the web)\b", re.I)
 _PLANNER = re.compile(r"\b(?:plan|break down|roadmap|steps|schedule|milestones|prioritize)\b", re.I)
@@ -102,6 +103,9 @@ class BuiltinRouter:
                 requires_approval=True,
                 policy_tags=("memory_write", "consent_required", "human_approval"),
             )
+        if _REPOSITORY_AUDIT.search(normalized):
+            target = ("chat", "audit_repository", "repository_audit", "The user explicitly requested a read-only audit of the configured local repository.")
+
         website_match = _WEBSITE_OPEN.fullmatch(question.strip())
         if website_match is not None and not _valid_website_open(question):
             return RouteDecision(
