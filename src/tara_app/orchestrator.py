@@ -133,6 +133,7 @@ class Orchestrator:
             if total_chars > 120_000:
                 raise ValueError("history is too large")
             safe_history.append({"role": role, "content": content})
+        del safe_history[:-self._history_limit]
         with self._history_lock:
             if self.session_store is not None:
                 try:
