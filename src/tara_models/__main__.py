@@ -103,24 +103,31 @@ def handle_request(request:Any)->dict[str,Any]:
                 "- gpt-oss:120b — Apache 2.0 weights; approx. 80 GB memory recommended",
                 "## Gemini API free-tier text models",
                 gemini_lines,
+                "## BharatCode hosted model (explicit opt-in)",
+                "- qwen-3.8-27b — BharatCode Qwen 3.8 27B; requires BHARATCODE_API_KEY and verified account access",
                 "## Existing OpenAI-origin local capability",
                 "- Whisper transcription is available through TARA-Voice's optional faster-whisper backend; it runs locally after model setup.",
                 "## Installed local Ollama models",
                 "\\n".join("- "+item["id"] for item in local) if local else "- Ollama is not running or no local models are installed.",
                 "Free limits change; Gemini quotas and availability depend on your project. No paid OpenAI API is called."
             ]
-            return result(rid,"success",{"text":"\\n\\n".join(sections),"models":catalog_models+list(OPENAI_OPEN_WEIGHT_MODELS)+local,"provider":"TARA Model Hub"})
+            return result(rid,"success",{"text":"\\n\\n".join(sections),"models":catalog_models+[{"id":"qwen-3.8-27b","provider":"bharatcode","label":"BharatCode Qwen 3.8 27B","free":"Student access requires verified eligibility; paid plans also available"}]+list(OPENAI_OPEN_WEIGHT_MODELS)+local,"provider":"TARA Model Hub"})
         if action!="generate": return result(rid,"permission_denied",error="unsupported model capability")
         question=inputs.get("question")
         if not isinstance(question,str) or not question.strip() or len(question)>20000: return result(rid,"invalid_request",error="question is invalid")
         model=inputs.get("model")
         if not isinstance(model,str) or not model:
-            selection=re.match(r"\s*(?:please\s+)?(?:use|switch to|try|ask|run with)\s+(?:(?:the|openai)\s+)?(gemini-[a-z0-9.-]+|gpt-oss(?::[a-z0-9.-]+)?|gemini)\s*[:,-]?\s*",question,re.I)
+            selection=re.match(r"\s*(?:please\s+)?(?:use|switch to|try|ask|run with)\s+(?:(?:the|openai)\s+)?(gemini-[a-z0-9.-]+|gpt-oss(?::[a-z0-9.-]+)?|qwen-3\\.8-27b|gemini)\s*[:,-]?\s*",question,re.I)
             model=selection.group(1).lower() if selection else "gemini-3.5-flash-lite"
             if selection: question=question[selection.end():].strip() or question
             if model=="gemini": model="gemini-3.5-flash-lite"
             if model=="gpt-oss": model="gpt-oss:20b"
         if not isinstance(model,str) or len(model)>100: return result(rid,"invalid_request",error="model name is invalid")
+        if model == "qwen-3.8-27b":
+            from tara_app.providers.bharatcode import BharatCodeProvider
+            provider = BharatCodeProvider.from_env()
+            text = provider.complete(question, system="You are TARA, a helpful assistant. Answer clearly and directly.", max_completion_tokens=4096, temperature=0.4)
+            return result(rid,"success",{"text":text,"provider":"BharatCode","model":provider.model,"remote_data_transfer":True})
         if model.startswith("gemini-"):
             text=_generate_gemini(question,model)
             return result(rid,"success",{"text":text,"provider":"Gemini API","model":model,"free_tier_only":True,"remote_data_transfer":True})
