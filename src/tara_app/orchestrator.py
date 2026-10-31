@@ -737,18 +737,22 @@ class Orchestrator:
             return code_attachments
         if module == "vision" and action == "analyze":
             images = [
-                item for item in attachments
+                dict(item) for item in attachments
                 if item.get("media_type", "").casefold().startswith("image/")
                 and item.get("content_base64")
             ][:4]
-            return [dict(item) for item in images]
+            if sum(len(base64.b64decode(item["content_base64"], validate=True)) for item in images) > 512_000:
+                raise ValueError("Vision accepts at most 512 KB of combined image data")
+            return images
         if module == "voice" and action == "transcribe":
             audio = [
-                item for item in attachments
+                dict(item) for item in attachments
                 if item.get("media_type", "").casefold().startswith("audio/")
                 and item.get("content_base64")
             ][:1]
-            return [dict(item) for item in audio]
+            if sum(len(base64.b64decode(item["content_base64"], validate=True)) for item in audio) > 512_000:
+                raise ValueError("Voice accepts at most 512 KB of audio data")
+            return audio
         if module == "study" and action == "create":
             study_files = [
                 item for item in attachments
@@ -761,14 +765,16 @@ class Orchestrator:
             return [dict(item) for item in study_files]
         if module == "data" and action == "analyze":
             csv_files = [
-                item for item in attachments
+                dict(item) for item in attachments
                 if (
                     item.get("media_type", "").casefold() == "text/csv"
                     or item.get("name", "").casefold().endswith(".csv")
                 )
                 and item.get("content_base64")
             ][:1]
-            return [dict(item) for item in csv_files]
+            if sum(len(base64.b64decode(item["content_base64"], validate=True)) for item in csv_files) > 512_000:
+                raise ValueError("Data analysis accepts at most 512 KB of CSV data")
+            return csv_files
         return []
 
     @staticmethod

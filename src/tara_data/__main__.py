@@ -10,7 +10,7 @@ import sys
 from collections.abc import Mapping
 from typing import Any
 
-MAX_REQUEST_BYTES = 1_000_000
+MAX_REQUEST_BYTES = 4_000_000
 MAX_CSV_CHARS = 512_000
 MAX_ROWS = 20_000
 MAX_COLUMNS = 64

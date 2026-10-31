@@ -12,7 +12,7 @@ from .memory import LongTermMemory
 
 MODULE_ID = "chat"
 CAPABILITIES = ("respond",)
-MAX_REQUEST_BYTES = 1_000_000
+MAX_REQUEST_BYTES = 4_000_000
 _ALLOWED_REQUEST_FIELDS = {"schema_version", "request_id", "session_id", "module", "action", "inputs", "workspace_root", "timeout_seconds", "approval_token"}
 
 
