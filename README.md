@@ -136,12 +136,14 @@ $env:TARA_LLM_BACKEND = "bharatcode"       # Chat: bharatcode or ollama
 $env:TARA_CODE_PROVIDER = "bharatcode"     # Code: bharatcode or ollama
 $env:TARA_CREATIVE_PROVIDER = "bharatcode" # Creative: bharatcode or ollama
 $env:TARA_VISION_PROVIDER = "bharatcode"   # Vision: bharatcode or ollama
+# Optional: explicitly allow relevant saved memories in remote Chat prompts
+# $env:TARA_CHAT_REMOTE_MEMORY = "true"
 .\run-tara.bat
 ```
 
 Each specialist is independently selectable; omit a provider variable or set it to `ollama` to keep local inference. Chat uses `BHARATCODE_MODEL`; Code, Creative, and Vision can override it with `BHARATCODE_CODE_MODEL`, `BHARATCODE_CREATIVE_MODEL`, and `BHARATCODE_VISION_MODEL`. All default to `qwen-3.8-27b`. The example TOML forwards the secret only to the selected module processes; it never contains the secret value.
 
-- **Chat:** uses the existing bounded conversation history assembled by TARA and sends it as a stateless request.
+- **Chat:** uses the existing bounded conversation history assembled by TARA and sends it as a stateless request. Saved local memories are excluded from remote prompts by default; set `TARA_CHAT_REMOTE_MEMORY=true` only if you explicitly want relevant saved memories sent to BharatCode.
 - **Code:** sends the user's prompt and any attached source text to BharatCode only when `TARA_CODE_PROVIDER=bharatcode`. Code remains review-first; it cannot execute commands or modify files.
 - **Creative:** sends the writing brief to BharatCode only when `TARA_CREATIVE_PROVIDER=bharatcode`.
 - **Vision:** sends supported image data and the question to BharatCode only when `TARA_VISION_PROVIDER=bharatcode`. This transfers the images off-device; keep Ollama selected for local-only image analysis.
