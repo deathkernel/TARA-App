@@ -399,11 +399,11 @@ export default function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand"><span className="brand-mark">T</span><span>TARA</span></div>
-        <button className="new-chat" onClick={startNewChat}>＋ New chat</button>
+        <button className="new-chat" onClick={startNewChat} disabled={attachmentBusy}>＋ New chat</button>
         <p className="section-label">RECENT CHATS</p>
         <nav className="conversation-list" aria-label="Recent chats">
           {conversations.slice().sort((a, b) => b.updatedAt - a.updatedAt).map((item) => (
-            <button key={item.id} className={item.id === active?.id ? "conversation active" : "conversation"} onClick={() => { stopSpeaking(); setSessionId(item.id); setAttachments([]); }}>
+            <button key={item.id} className={item.id === active?.id ? "conversation active" : "conversation"} onClick={() => { stopSpeaking(); setSessionId(item.id); setAttachments([]); }} disabled={attachmentBusy}>
               {item.title}
             </button>
           ))}
