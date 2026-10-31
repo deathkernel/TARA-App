@@ -28,6 +28,11 @@ class BuiltinRouterTests(unittest.TestCase):
         self.assertEqual((decision.status, decision.module, decision.action), ("routed", "chat", "audit_repository"))
         self.assertEqual(decision.reason_code, "repository_audit")
 
+    def test_standalone_run_repository_audit_is_read_only(self):
+        decision = self.route("Run a repository audit")
+        self.assertEqual((decision.module, decision.action), ("chat", "audit_repository"))
+        self.assertFalse(decision.requires_approval)
+
     def test_repository_audit_does_not_override_side_effect_gate(self):
         decision = self.route("Audit this repository and run all tests")
         self.assertEqual((decision.module, decision.action), ("security", "assess"))
