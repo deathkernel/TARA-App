@@ -5,15 +5,15 @@ import os
 import unittest
 from unittest.mock import patch
 
-from tara_code.__main__ import _ollama_origin, _read_attachments, handle_request as handle_code
+from tara_code.__main__ import _omniroute_base_url, _read_attachments, handle_request as handle_code
 from tara_research.__main__ import _crossref, _wikipedia, handle_request as handle_research
 
 
 class CodeSpecialistTests(unittest.TestCase):
     def test_code_rejects_non_loopback_model_endpoint(self):
-        with patch.dict(os.environ, {"TARA_CODE_OLLAMA_URL": "https://example.com"}):
+        with patch.dict(os.environ, {"TARA_CODE_API_BASE_URL": "https://example.com/v1"}):
             with self.assertRaises(ValueError):
-                _ollama_origin()
+                _omniroute_base_url()
 
     def test_code_accepts_only_bounded_utf8_source_attachments(self):
         encoded = base64.b64encode(b"print('safe')").decode("ascii")
@@ -23,12 +23,15 @@ class CodeSpecialistTests(unittest.TestCase):
             _read_attachments([{"name": "passwords.txt", "content_base64": encoded}])
 
     def test_code_health_does_not_call_a_model(self):
-        result = handle_code({
-            "schema_version": "1.0", "request_id": "code-health", "module": "code",
-            "action": "health", "inputs": {},
-        })
+        with patch.dict(os.environ, {"TARA_CODE_API_KEY": "local-test-key"}), patch(
+            "tara_code.__main__._check_gateway", return_value=True
+        ):
+            result = handle_code({
+                "schema_version": "1.0", "request_id": "code-health", "module": "code",
+                "action": "health", "inputs": {},
+            })
         self.assertEqual(result["status"], "success")
-        self.assertEqual(result["data"]["provider"], "ollama")
+        self.assertEqual(result["data"]["provider"], "omniroute")
 
 
 class FreeResearchTests(unittest.TestCase):
