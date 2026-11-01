@@ -21,10 +21,16 @@ Session content remains in process memory by default. `SessionStore(database_pat
 1. Bind the actual TARA-CHAT engine behind the injected chat callable.
 2. Bind TARA-Code planning/review behind the injected code callable, preserving workspace constraints and diff review.
 3. Implement a separate, constrained TARA-Handler subprocess adapter after documenting its CLI protocol.
-4. Add cancellation, request timeouts, and bounded execution for injected callables before running untrusted/long-running engines.
+4. Provider calls now have a bounded concurrency gate, wall-clock HTTP deadline, response-size cap, and cooperative cancellation for the Ollama adapter. Injected specialist callables still need a separately enforced process boundary; do not treat a Python thread timeout as cancellation.
 5. Connect these services to a UI/API entry point and then run the expanded test suite.
 
 No shell execution, patch application, model download, provider launch, auto-merge, or third-party installation is added by these adapters.
+
+## Provider request lifecycle
+
+The runtime manager limits simultaneous provider operations and rejects excess work rather than accumulating an unbounded queue. The Ollama HTTP adapter enforces a wall-clock request deadline, keeps the existing 2 MiB response bound, and supports cooperative cancellation by closing the in-flight loopback connection. Cancellation is exposed through the application chat service; providers that do not implement the cancellation contract fail closed when cancellation is requested.
+
+This does not forcibly terminate arbitrary injected Python callables. Such engines require a separately supervised subprocess boundary with fixed protocol, bounded input/output, timeout, cancellation/termination, and cleanup before they are eligible for untrusted or long-running execution.
 
 
 ## Local health endpoint
