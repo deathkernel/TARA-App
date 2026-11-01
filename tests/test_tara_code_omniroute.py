@@ -8,7 +8,7 @@ from unittest.mock import patch
 from urllib.error import HTTPError
 
 from tara_code import __main__ as code_module
-from tara_app.runtime import RuntimeConfigurationError, _omniroute_settings
+from tara_app.runtime import RuntimeConfigurationError, _ollama_settings, _omniroute_settings
 
 
 class FakeResponse:
@@ -132,6 +132,13 @@ class TaraCodeOmniRouteTests(unittest.TestCase):
         })
         with self.assertRaises(RuntimeConfigurationError):
             _omniroute_settings({"base_url": "https://api.example.com/v1"})
+
+    def test_old_ollama_code_setting_is_ignored_and_new_defaults_apply(self) -> None:
+        legacy = _ollama_settings({"models": {"code": "legacy-coder-model"}})
+        self.assertNotIn("code", legacy)
+        defaults = _omniroute_settings(None)
+        self.assertEqual(defaults["TARA_CODE_API_BASE_URL"], "http://127.0.0.1:20128/v1")
+        self.assertEqual(defaults["TARA_CODE_MODEL"], "auto/coding")
 
 
 if __name__ == "__main__":

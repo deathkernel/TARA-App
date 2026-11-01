@@ -117,6 +117,9 @@ def create_application(config_path: str | Path) -> Orchestrator:
         module_environment.update(ollama_settings.get(module_id, {}))
         if module_id == "code":
             module_environment.update(omniroute_settings)
+            module_environment.pop("TARA_CODE_OLLAMA_URL", None)
+            if "TARA_CODE_API_KEY" in os.environ:
+                module_environment["TARA_CODE_API_KEY"] = os.environ["TARA_CODE_API_KEY"]
         adapter_args = {
             "working_directory": _directory(root, item.get("working_directory")),
             "timeout_seconds": _integer(item.get("timeout_seconds", 30), f"modules[{index}].timeout_seconds", 1, 600),
@@ -179,7 +182,9 @@ def _ollama_settings(value: Any) -> dict[str, dict[str, str]]:
         raise RuntimeConfigurationError("ollama.base_url must target a local Ollama origin")
 
     models = _table(config.get("models", {}), "ollama.models")
-    if set(models) - set(_OLLAMA_DEFAULT_MODELS):
+    # Accept the old local config's code entry for migration compatibility,
+    # but never pass it to the Code specialist or use it as an Ollama profile.
+    if set(models) - (set(_OLLAMA_DEFAULT_MODELS) | {"code"}):
         raise RuntimeConfigurationError("ollama.models contains an unsupported specialist")
     settings: dict[str, dict[str, str]] = {}
     for module_id, default_model in _OLLAMA_DEFAULT_MODELS.items():
@@ -203,9 +208,7 @@ def _ollama_settings(value: Any) -> dict[str, dict[str, str]]:
 
 def _omniroute_settings(value: Any) -> dict[str, str]:
     """Validate the loopback OmniRoute gateway and expose non-secret settings."""
-    if value is None:
-        return {}
-    config = _table(value, "omniroute")
+    config = {} if value is None else _table(value, "omniroute")
     if set(config) - {"base_url", "model"}:
         raise RuntimeConfigurationError("omniroute contains unsupported settings")
     base_url = config.get("base_url", "http://127.0.0.1:20128/v1")
