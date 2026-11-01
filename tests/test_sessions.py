@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -152,10 +153,10 @@ class SessionStoreTests(unittest.TestCase):
 
     def test_manual_retention_prune_uses_updated_at_and_keeps_recent_sessions(self):
         store = SessionStore(retention_seconds=60)
-        expired = store.create()
-        active = store.create()
         old = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
-        store._sessions[expired.session_id].updated_at = old
+        with patch.object(SessionStore, "_now", return_value=old):
+            expired = store.create()
+        active = store.create()
 
         removed = store.prune_expired_sessions()
 
