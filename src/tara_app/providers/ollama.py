@@ -105,6 +105,10 @@ class OllamaProvider:
         except (OSError, TimeoutError, http.client.HTTPException, json.JSONDecodeError, UnicodeDecodeError):
             if interruption:
                 raise ProviderError(f"Ollama request {interruption[0]}") from None
+            if cancel_event is not None and cancel_event.is_set():
+                raise ProviderError("Ollama request was cancelled") from None
+            if monotonic() >= deadline:
+                raise ProviderError("Ollama request timed out") from None
             raise ProviderError("Ollama is unavailable or returned invalid JSON") from None
         finally:
             stop_monitor.set()
