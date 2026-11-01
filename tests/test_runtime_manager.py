@@ -91,6 +91,47 @@ class RuntimeManagerTests(unittest.TestCase):
         self.assertEqual(result, "local response")
         self.provider.chat.assert_called_once()
 
+    def test_provider_request_capacity_is_bounded(self) -> None:
+        """Reject concurrent provider work once the configured slot limit is reached."""
+        import threading
+
+        self.write_settings({"schema_version": 1, "providers": {"ollama": {"enabled": True}}})
+        entered = threading.Event()
+        release = threading.Event()
+
+        def blocked_chat(model, messages):
+            entered.set()
+            release.wait(2)
+            return "done"
+
+        self.provider.chat.side_effect = blocked_chat
+        manager = RuntimeManager(
+            self.registry, self.settings, provider_factory=self.factory,
+            max_concurrent_requests=1,
+        )
+        worker = threading.Thread(
+            target=lambda: manager.chat("tinyllama", [{"role": "user", "content": "hi"}])
+        )
+        worker.start()
+        self.assertTrue(entered.wait(1))
+        with self.assertRaisesRegex(RuntimeConfigurationError, "capacity is full"):
+            manager.chat("tinyllama", [{"role": "user", "content": "second"}])
+        release.set()
+        worker.join(2)
+        self.assertFalse(worker.is_alive())
+
+    def test_cancellation_requires_provider_support_and_checks_pre_cancelled_event(self) -> None:
+        """Fail closed if cancellation is requested but the provider lacks the contract."""
+        from threading import Event
+
+        self.write_settings({"schema_version": 1, "providers": {"ollama": {"enabled": True}}})
+        manager = self.manager()
+        with self.assertRaisesRegex(RuntimeConfigurationError, "does not support request cancellation"):
+            manager.chat(
+                "tinyllama", [{"role": "user", "content": "hi"}],
+                cancel_event=Event(),
+            )
+
     def test_unknown_or_unimplemented_provider_fails_closed(self) -> None:
         self.write_settings({"schema_version": 1, "providers": {"unknown": {"enabled": True}}})
         with self.assertRaisesRegex(RuntimeConfigurationError, "not present"):
