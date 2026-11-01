@@ -59,6 +59,7 @@ class ApplicationServiceTests(unittest.TestCase):
 
 
     def test_chat_rejects_when_only_one_message_slot_remains(self):
+        """Verify capacity is checked before invoking the provider."""
         runtime = FakeRuntime()
         sessions = SessionStore(max_messages_per_session=2)
         service = TARAApplicationService(
@@ -81,6 +82,7 @@ class ApplicationServiceTests(unittest.TestCase):
         )
 
     def test_chat_does_not_partially_commit_if_capacity_changes_during_inference(self):
+        """Verify a capacity race cannot append only half a chat turn."""
         sessions = SessionStore(max_messages_per_session=3)
 
         class CapacityChangingRuntime(FakeRuntime):
