@@ -2,7 +2,7 @@
 
 > **Purpose:** This is the handover document and working source of truth for anyone joining TARA-App—including a new developer, a reviewer, or the daily scheduled development task.
 >
-> **Last reviewed:** 2026-10-27  
+> **Last reviewed:** 2026-11-01  
 > **Repository:** [deathkernel/TARA-App](https://github.com/deathkernel/TARA-App)  
 > **Default branch:** `main`  
 > **Status rule:** “Implemented in code/docs” is not the same as “verified on a real machine.” Do not claim tests, runtime checks, UI QA, or integrations passed unless there is current evidence for the exact commit.
@@ -91,6 +91,7 @@ This is a concise history of significant milestones visible in the repository's 
 | [PR #26 — living project roadmap](https://github.com/deathkernel/TARA-App/pull/26) | Added newcomer-friendly history, dependency-ordered roadmap, and scheduled-task evidence rules | Merged as `4d4c225aeba422cd30dfc272ca67d32bba942129` |
 | [PR #27 — structured TARA answers](https://github.com/deathkernel/TARA-App/pull/27) | Added task-adaptive response guidance and focused answer-style tests; fixed a syntax error found by CI before merge | PR CI passed on head `dd2f87295c6be934f867e96b4976dc592c575447`; merged as `c8b484c977ca31ac4f8396bd20c090fe580299ea` |
 | [PR #34 — drop floating pet](https://github.com/deathkernel/TARA-App/pull/34) | Restored the normal browser UI as the default Windows launcher and documented that the floating pet is no longer a product goal | Merged as `1bf4fdff00d748acecbba4e50cda7483f82b9f4f`; all 5 GitHub Actions jobs passed on PR head `0eff1fa8b0e1d4c99f964ccdc08ad600eb153c82` |
+| [PR #41 — atomic chat-turn persistence](https://github.com/deathkernel/TARA-App/pull/41) | Ports atomic user/assistant turn storage onto current `main`, checks two-message capacity before inference, and writes both SQLite rows plus the session timestamp in one transaction. | PR CI passed for implementation head `6c0097b0b56f759f9771f52bed2deefd6a57605e` (Python tests, frontend build, Windows Handler and Ubuntu Handler); later documentation-only follow-up is subject to its own checks. PR remains open pending human review; no target-machine smoke test is claimed. |
 
 Useful history links:
 
@@ -116,9 +117,9 @@ This roadmap is dependency-ordered. The daily development task should deliver a 
 
 ### P0 — Establish a trustworthy baseline
 
-- [ ] Run the current Python test suite on the current commit; record the exact command, environment, pass/fail counts and failures.
+- [ ] Run the current Python test suite on the current commit; record the exact command, environment, pass/fail counts and failures. (PR #41 CI Python test job passed on implementation head; current main is not yet updated.)
 - [ ] Run frontend install/typecheck/build where lockfile and package scripts support it; record exact results.
-- [ ] Inspect current GitHub Actions/CI status for the exact commit. Do not infer CI success from historical commits.
+- [ ] Inspect current GitHub Actions/CI status for the exact commit. Do not infer CI success from historical commits. (PR #41 Core CI passed all four jobs on head 6c0097b0; its subsequent docstring follow-up is pending CI.)
 - [ ] Do a local launch smoke test: app starts, health/status is truthful, a chat request completes, and failures are surfaced accurately.
 - [ ] Perform browser QA on the actual UI at desktop and narrow/mobile widths; compare the ChatGPT-inspired layout without claiming pixel parity in advance.
 - [ ] Reconcile README claims with architecture/adapter docs so “implemented,” “partial,” and “pending verification” are consistent.
