@@ -13,7 +13,7 @@ creative = "llama3.2:3b"
 
 [omniroute]
 base_url = "http://127.0.0.1:20128/v1"
-model = "auto/coding"
+model = "auto/coding:cheap"
 
 [router]
 command = ["{python}", "-m", "tara_router"]

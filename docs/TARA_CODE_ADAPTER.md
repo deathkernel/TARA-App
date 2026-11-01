@@ -82,7 +82,7 @@ Return `unavailable` for missing engine/dependency or unsupported engine version
 The current review-first `src/tara_code` stdio specialist uses **OmniRoute** as its inference gateway. This transport is separate from the future standalone `tara-code` engine integration described above.
 
 - OpenAI-compatible endpoint: `http://127.0.0.1:20128/v1/chat/completions`.
-- Default routing model: `auto/coding` (OmniRoute quality-first coding route).
+- Default routing model: `auto/coding:cheap` (cost-optimized coding route that prioritizes the cheapest eligible coding providers). This is not a free-only guarantee: if paid providers are configured and eligible, the route may use them. Set a spend limit on the TARA API key in OmniRoute to bound metered usage.
 - Authentication: `TARA_CODE_API_KEY` is read from the parent process environment and passed only to the Code specialist. Do not put the key in TOML, source control, prompts, or logs.
 - The gateway URL is restricted to loopback HTTP and the `/v1` path. Redirects and environment-configured HTTP proxies are disabled for the Code request.
 - The Code specialist remains review-first: it returns a proposed plan/review only and never writes files, executes commands, or performs Git operations.

@@ -231,7 +231,7 @@ def _omniroute_settings(value: Any) -> dict[str, str]:
         or (port is not None and not 1 <= port <= 65535)
     ):
         raise RuntimeConfigurationError("omniroute.base_url must target the local OmniRoute /v1 endpoint")
-    model = config.get("model", "auto/coding")
+    model = config.get("model", "auto/coding:cheap")
     if (
         not isinstance(model, str)
         or not model.strip()

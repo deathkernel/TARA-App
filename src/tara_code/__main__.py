@@ -146,7 +146,7 @@ def handle_request(request: Any) -> dict[str, Any]:
         api_key = _omniroute_api_key()
     except ValueError:
         return _result(request_id, "unavailable", error="OmniRoute API key is not configured")
-    model = os.environ.get("TARA_CODE_MODEL", "auto/coding").strip()
+    model = os.environ.get("TARA_CODE_MODEL", "auto/coding:cheap").strip()
     if not _MODEL_RE.fullmatch(model):
         return _result(request_id, "invalid_request", error="configured local model name is invalid")
     prompt = (

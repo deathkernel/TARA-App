@@ -138,7 +138,7 @@ class TaraCodeOmniRouteTests(unittest.TestCase):
         self.assertNotIn("code", legacy)
         defaults = _omniroute_settings(None)
         self.assertEqual(defaults["TARA_CODE_API_BASE_URL"], "http://127.0.0.1:20128/v1")
-        self.assertEqual(defaults["TARA_CODE_MODEL"], "auto/coding")
+        self.assertEqual(defaults["TARA_CODE_MODEL"], "auto/coding:cheap")
 
 
 if __name__ == "__main__":
