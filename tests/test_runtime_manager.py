@@ -125,6 +125,7 @@ class RuntimeManagerTests(unittest.TestCase):
         from threading import Event
 
         self.write_settings({"schema_version": 1, "providers": {"ollama": {"enabled": True}}})
+        self.provider.chat_cancellable = None
         manager = self.manager()
         with self.assertRaisesRegex(RuntimeConfigurationError, "does not support request cancellation"):
             manager.chat(
