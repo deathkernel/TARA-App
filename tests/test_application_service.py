@@ -111,6 +111,30 @@ class ApplicationServiceTests(unittest.TestCase):
             [("user", "previous"), ("tool", "concurrent update")],
         )
 
+    def test_chat_forwards_cancellation_event_to_runtime(self):
+        """Forward a caller cancellation event without changing normal chat calls."""
+        from threading import Event
+
+        class CancellableRuntime(FakeRuntime):
+            def chat(self, model, messages, provider_id="ollama", *, cancel_event=None):
+                self.received_cancel_event = cancel_event
+                return "reply:" + messages[-1]["content"]
+
+        runtime = CancellableRuntime()
+        service = TARAApplicationService(
+            runtime=runtime, audit=self.audit, sessions=SessionStore(), catalogue=self.catalogue,
+        )
+        service.refresh_model_catalogue()
+        session = service.create_session()
+        cancellation = Event()
+
+        service.chat(
+            session_id=session.session_id, provider_id="ollama", model="test-model",
+            message="hello", cancel_event=cancellation,
+        )
+
+        self.assertIs(runtime.received_cancel_event, cancellation)
+
     def test_provider_failure_does_not_commit_partial_user_turn(self):
         class FailingRuntime(FakeRuntime):
             def chat(self, model, messages, provider_id="ollama"):
