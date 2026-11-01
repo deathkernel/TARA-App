@@ -75,3 +75,17 @@ Return `unavailable` for missing engine/dependency or unsupported engine version
 4. Add a read-only app orchestration vertical slice and audit coverage.
 5. Keep patch writes behind exact-operation approval; keep execution disabled pending a sandbox security review.
 6. Update the checklist only when each item is demonstrated by tests.
+
+
+## TARA-Code inference provider — OmniRoute
+
+The current review-first `src/tara_code` stdio specialist uses **OmniRoute** as its inference gateway. This transport is separate from the future standalone `tara-code` engine integration described above.
+
+- OpenAI-compatible endpoint: `http://127.0.0.1:20128/v1/chat/completions`.
+- Default routing model: `auto/coding` (OmniRoute quality-first coding route).
+- Authentication: `TARA_CODE_API_KEY` is read from the parent process environment and passed only to the Code specialist. Do not put the key in TOML, source control, prompts, or logs.
+- The gateway URL is restricted to loopback HTTP and the `/v1` path. Redirects and environment-configured HTTP proxies are disabled for the Code request.
+- The Code specialist remains review-first: it returns a proposed plan/review only and never writes files, executes commands, or performs Git operations.
+- Ollama remains configured for Chat, Vision, and Creative specialists; only the Code specialist is moved off the Qwen/Ollama path.
+
+Copy the example configuration's `[omniroute]` block into `tara-app.toml`. Set `TARA_CODE_API_KEY` in the Windows user environment after creating an API key in OmniRoute's Dashboard → Endpoints. Restart the terminal before launching TARA so the new environment variable is inherited.

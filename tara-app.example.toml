@@ -1,16 +1,19 @@
 # Copy to tara-app.toml and adjust only the local settings you need.
 # TARA-App contains its Router and specialist packages in this repository.
-# Ollama runs local open-weight models; TARA-App starts the service, prepares
-# Chat before opening the interface, and downloads other specialists on first use.
+# Ollama remains available for local Chat, Vision, and Creative specialists.
+# TARA-Code uses the local OmniRoute OpenAI-compatible gateway instead.
 
 [ollama]
 base_url = "http://127.0.0.1:11434"
 
 [ollama.models]
 chat = "llama3.2:3b"
-code = "qwen2.5-coder:3b"
 vision = "gemma3:4b"
 creative = "llama3.2:3b"
+
+[omniroute]
+base_url = "http://127.0.0.1:20128/v1"
+model = "auto/coding"
 
 [router]
 command = ["{python}", "-m", "tara_router"]
@@ -29,7 +32,7 @@ id = "code"
 command = ["{python}", "-m", "tara_code"]
 working_directory = "."
 timeout_seconds = 180
-environment = ["TARA_CODE_MODEL", "TARA_CODE_OLLAMA_URL"]
+environment = ["TARA_CODE_API_KEY"]
 
 [[modules]]
 id = "research"
