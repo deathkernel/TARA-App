@@ -163,6 +163,7 @@ class SessionStore:
             return self._snapshot(session)
 
     def _validate_message(self, role: str, content: str) -> None:
+        """Validate a message role and content against the session store limits."""
         if not isinstance(role, str) or role not in {"system", "user", "assistant", "tool"}:
             raise SessionError("role is not supported")
         if not isinstance(content, str) or not content.strip():
@@ -224,6 +225,7 @@ class SessionStore:
             return user_message, assistant_message
 
     def append_message(self, session_id: str, role: str, content: str) -> SessionMessage:
+        """Append one validated message when the session has remaining capacity."""
         self._validate_message(role, content)
         with self._lock:
             session = self._sessions.get(session_id)
