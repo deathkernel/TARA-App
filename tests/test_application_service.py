@@ -15,10 +15,14 @@ from tara_app.sessions import SessionStore
 
 
 class FakeRuntime:
+    def __init__(self):
+        self.chat_calls = 0
+
     def list_models(self, provider_id="ollama"):
         return [ModelInfo(provider_id, "test-model", family="test")]
 
     def chat(self, model, messages, provider_id="ollama"):
+        self.chat_calls += 1
         return "reply:" + messages[-1]["content"]
 
 
@@ -53,6 +57,57 @@ class ApplicationServiceTests(unittest.TestCase):
             self.service.chat(session_id=session.session_id, provider_id="ollama",
                               model="missing", message=" ")
 
+
+    def test_chat_rejects_when_only_one_message_slot_remains(self):
+        runtime = FakeRuntime()
+        sessions = SessionStore(max_messages_per_session=2)
+        service = TARAApplicationService(
+            runtime=runtime, audit=self.audit, sessions=sessions, catalogue=self.catalogue,
+        )
+        self.assertEqual(service.refresh_model_catalogue(), 1)
+        session = service.create_session()
+        sessions.append_message(session.session_id, "user", "previous")
+
+        with self.assertRaisesRegex(ApplicationServiceError, "two message slots"):
+            service.chat(
+                session_id=session.session_id, provider_id="ollama",
+                model="test-model", message="hello",
+            )
+
+        self.assertEqual(runtime.chat_calls, 0)
+        self.assertEqual(
+            [(message.role, message.content) for message in sessions.history(session.session_id)],
+            [("user", "previous")],
+        )
+
+    def test_chat_does_not_partially_commit_if_capacity_changes_during_inference(self):
+        sessions = SessionStore(max_messages_per_session=3)
+
+        class CapacityChangingRuntime(FakeRuntime):
+            def chat(self, model, messages, provider_id="ollama"):
+                self.chat_calls += 1
+                sessions.append_message(session.session_id, "tool", "concurrent update")
+                return "reply:" + messages[-1]["content"]
+
+        runtime = CapacityChangingRuntime()
+        service = TARAApplicationService(
+            runtime=runtime, audit=self.audit, sessions=sessions, catalogue=self.catalogue,
+        )
+        self.assertEqual(service.refresh_model_catalogue(), 1)
+        session = service.create_session()
+        sessions.append_message(session.session_id, "user", "previous")
+
+        with self.assertRaisesRegex(ApplicationServiceError, "two message slots"):
+            service.chat(
+                session_id=session.session_id, provider_id="ollama",
+                model="test-model", message="hello",
+            )
+
+        self.assertEqual(runtime.chat_calls, 1)
+        self.assertEqual(
+            [(message.role, message.content) for message in sessions.history(session.session_id)],
+            [("user", "previous"), ("tool", "concurrent update")],
+        )
 
     def test_provider_failure_does_not_commit_partial_user_turn(self):
         class FailingRuntime(FakeRuntime):
