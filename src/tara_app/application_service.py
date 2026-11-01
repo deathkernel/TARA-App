@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from threading import Event
 from typing import Any
 
 from tara_app.audit import AuditLogError, JsonlAuditLog
@@ -80,8 +81,11 @@ class TARAApplicationService:
             for model in models
         ]
 
-    def chat(self, *, session_id: str, provider_id: str, model: str, message: str) -> ChatTurn:
-        """Generate a reply and persist its user/assistant messages as one turn."""
+    def chat(
+        self, *, session_id: str, provider_id: str, model: str, message: str,
+        cancel_event: Event | None = None,
+    ) -> ChatTurn:
+        """Generate a reply, optionally cancel it, and persist one complete chat turn."""
         if not isinstance(message, str) or not message.strip():
             raise ApplicationServiceError("message must be non-empty")
         try:
@@ -97,11 +101,15 @@ class TARAApplicationService:
                 for item in history if item.role in {"system", "user", "assistant"}
             ]
             request_history.append({"role": "user", "content": message})
-            response = self.runtime.chat(
-                model=model,
-                provider_id=provider_id,
-                messages=request_history,
-            )
+            if cancel_event is not None:
+                response = self.runtime.chat(
+                    model=model, provider_id=provider_id, messages=request_history,
+                    cancel_event=cancel_event,
+                )
+            else:
+                response = self.runtime.chat(
+                    model=model, provider_id=provider_id, messages=request_history,
+                )
             if not isinstance(response, str) or not response.strip():
                 raise ApplicationServiceError("chat provider returned an empty or invalid response")
             answer = response.strip()
