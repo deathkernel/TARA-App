@@ -81,6 +81,7 @@ class TARAApplicationService:
         ]
 
     def chat(self, *, session_id: str, provider_id: str, model: str, message: str) -> ChatTurn:
+        """Generate a reply and persist its user/assistant messages as one turn."""
         if not isinstance(message, str) or not message.strip():
             raise ApplicationServiceError("message must be non-empty")
         try:
