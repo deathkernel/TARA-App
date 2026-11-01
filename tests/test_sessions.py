@@ -32,6 +32,7 @@ class SessionStoreTests(unittest.TestCase):
 
 
     def test_append_turn_commits_user_and_assistant_as_a_pair(self):
+        """Verify an in-memory turn is stored in user-then-assistant order."""
         store = SessionStore(max_messages_per_session=2)
         session = store.create()
 
@@ -46,6 +47,7 @@ class SessionStoreTests(unittest.TestCase):
         )
 
     def test_append_turn_persists_both_messages_together(self):
+        """Verify a complete turn survives a SQLite-backed store restart."""
         with tempfile.TemporaryDirectory() as temp:
             database = Path(temp) / "sessions.sqlite3"
             store = SessionStore(database_path=database)
@@ -59,6 +61,7 @@ class SessionStoreTests(unittest.TestCase):
             )
 
     def test_append_turn_rejects_insufficient_capacity_without_partial_write(self):
+        """Verify insufficient capacity rejects the pair without writing either message."""
         store = SessionStore(max_messages_per_session=1)
         session = store.create()
 
