@@ -13,7 +13,7 @@ from tara_app.application_service import ApplicationServiceError, TARAApplicatio
 from tara_app.audit import JsonlAuditLog
 from tara_app.contracts import ModelInfo
 from tara_app.model_catalogue import ModelCatalogue
-from tara_app.sessions import SessionStore
+from tara_app.sessions import SessionError, SessionStore
 
 
 class FakeRuntime:
@@ -214,7 +214,7 @@ class ApplicationServiceTests(unittest.TestCase):
             runtime=FakeRuntime(), audit=self.audit, session_database_path=database,
             session_retention_seconds=7 * 24 * 60 * 60,
         )
-        with self.assertRaisesRegex(Exception, "session not found"):
+        with self.assertRaisesRegex(SessionError, "session not found"):
             restarted.sessions.get(session.session_id)
 
     def test_service_rejects_retention_options_with_an_injected_session_store(self):
