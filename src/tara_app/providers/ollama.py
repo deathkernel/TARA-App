@@ -53,6 +53,8 @@ class OllamaProvider:
     ) -> dict[str, Any]:
         """Make one bounded loopback request with a wall-clock deadline and cancellation."""
         timeout = self._timeout if timeout_seconds is None else timeout_seconds
+        if cancel_event is not None and cancel_event.is_set():
+            raise ProviderError("Ollama request was cancelled")
         deadline = monotonic() + timeout
         connection = http.client.HTTPConnection("127.0.0.1", self._port, timeout=timeout)
         body = None if payload is None else json.dumps(payload)
