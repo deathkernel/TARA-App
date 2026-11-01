@@ -184,5 +184,43 @@ class SessionStoreTests(unittest.TestCase):
                 SessionStore(database_path=database)
 
 
+    def test_manual_persistent_prune_removes_expired_session_and_messages(self):
+        with tempfile.TemporaryDirectory() as temp:
+            database = Path(temp) / "sessions.sqlite3"
+            store = SessionStore(database_path=database, retention_seconds=3600)
+            expired = store.create()
+            store.append_message(expired.session_id, "user", "expired content")
+            old = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()
+            with sqlite3.connect(database) as db:
+                db.execute("UPDATE sessions SET updated_at = ? WHERE session_id = ?", (old, expired.session_id))
+
+            removed = store.prune_expired_sessions()
+
+            self.assertEqual(removed, 1)
+            with self.assertRaises(SessionError):
+                store.get(expired.session_id)
+            with sqlite3.connect(database) as db:
+                self.assertEqual(
+                    db.execute("SELECT COUNT(*) FROM session_messages WHERE session_id = ?", (expired.session_id,)).fetchone()[0],
+                    0,
+                )
+
+    def test_malformed_persistent_timestamp_fails_closed_without_deletion(self):
+        with tempfile.TemporaryDirectory() as temp:
+            database = Path(temp) / "sessions.sqlite3"
+            store = SessionStore(database_path=database)
+            session = store.create()
+            with sqlite3.connect(database) as db:
+                db.execute("UPDATE sessions SET updated_at = ? WHERE session_id = ?", ("not-a-timestamp", session.session_id))
+
+            with self.assertRaisesRegex(SessionError, "timestamp is invalid"):
+                SessionStore(database_path=database, retention_seconds=3600)
+            with sqlite3.connect(database) as db:
+                self.assertEqual(
+                    db.execute("SELECT COUNT(*) FROM sessions WHERE session_id = ?", (session.session_id,)).fetchone()[0],
+                    1,
+                )
+
+
 if __name__ == "__main__":
     unittest.main()
