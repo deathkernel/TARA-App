@@ -1,6 +1,8 @@
 """Tests for the headless application service facade."""
+import sqlite3
 import sys
 import tempfile
+from datetime import datetime, timedelta, timezone
 import unittest
 from pathlib import Path
 
@@ -195,6 +197,32 @@ class ApplicationServiceTests(unittest.TestCase):
         session = self.service.create_session()
         self.assertTrue(self.service.close_session(session.session_id))
         self.assertFalse(self.service.close_session(session.session_id))
+
+
+    def test_service_wires_explicit_session_retention_to_persistent_store(self):
+        database = Path(self.temp.name) / "retained-sessions.sqlite3"
+        first = TARAApplicationService(
+            runtime=FakeRuntime(), audit=self.audit, session_database_path=database,
+        )
+        session = first.create_session()
+        first.sessions.append_message(session.session_id, "user", "old conversation")
+        with sqlite3.connect(database) as db:
+            old = (datetime.now(timezone.utc) - timedelta(days=14)).isoformat()
+            db.execute("UPDATE sessions SET updated_at = ? WHERE session_id = ?", (old, session.session_id))
+
+        restarted = TARAApplicationService(
+            runtime=FakeRuntime(), audit=self.audit, session_database_path=database,
+            session_retention_seconds=7 * 24 * 60 * 60,
+        )
+        with self.assertRaisesRegex(Exception, "session not found"):
+            restarted.sessions.get(session.session_id)
+
+    def test_service_rejects_retention_options_with_an_injected_session_store(self):
+        with self.assertRaisesRegex(ValueError, "configured sessions store"):
+            TARAApplicationService(
+                runtime=FakeRuntime(), audit=self.audit, sessions=SessionStore(),
+                session_retention_seconds=3600,
+            )
 
 
 if __name__ == "__main__":
