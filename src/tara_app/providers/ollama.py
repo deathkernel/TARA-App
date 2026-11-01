@@ -4,6 +4,8 @@ from __future__ import annotations
 import http.client
 import json
 from dataclasses import dataclass
+from threading import Event, Thread
+from time import monotonic
 from typing import Any
 
 
@@ -41,17 +43,55 @@ class OllamaProvider:
         self._timeout = float(timeout_seconds)
         self._chat_timeout = float(chat_timeout_seconds)
 
-    def _request(self, path: str, payload: dict[str, Any] | None = None, *, timeout_seconds: float | None = None) -> dict[str, Any]:
+    def _request(
+        self,
+        path: str,
+        payload: dict[str, Any] | None = None,
+        *,
+        timeout_seconds: float | None = None,
+        cancel_event: Event | None = None,
+    ) -> dict[str, Any]:
+        """Make one bounded loopback request with a wall-clock deadline and cancellation."""
         timeout = self._timeout if timeout_seconds is None else timeout_seconds
+        deadline = monotonic() + timeout
         connection = http.client.HTTPConnection("127.0.0.1", self._port, timeout=timeout)
         body = None if payload is None else json.dumps(payload)
         headers = {"Accept": "application/json"}
         if body is not None:
             headers["Content-Type"] = "application/json"
+        stop_monitor = Event()
+        interruption: list[str] = []
+
+        def interrupt_blocked_request() -> None:
+            while not stop_monitor.wait(0.05):
+                if cancel_event is not None and cancel_event.is_set():
+                    interruption.append("cancelled")
+                elif monotonic() >= deadline:
+                    interruption.append("timed out")
+                if interruption:
+                    sock = getattr(connection, "sock", None)
+                    if sock is not None:
+                        try:
+                            sock.shutdown(2)
+                        except OSError:
+                            pass
+                    connection.close()
+                    return
+
+        monitor = Thread(target=interrupt_blocked_request, name="tara-provider-watchdog", daemon=True)
+        monitor.start()
         try:
+            if cancel_event is not None and cancel_event.is_set():
+                raise ProviderError("Ollama request was cancelled")
             connection.request("GET" if body is None else "POST", path, body=body, headers=headers)
             response = connection.getresponse()
             raw = response.read(2 * 1024 * 1024 + 1)
+            if interruption:
+                raise ProviderError(f"Ollama request {interruption[0]}")
+            if cancel_event is not None and cancel_event.is_set():
+                raise ProviderError("Ollama request was cancelled")
+            if monotonic() >= deadline:
+                raise ProviderError("Ollama request timed out")
             if response.status < 200 or response.status >= 300:
                 raise ProviderError(f"Ollama returned HTTP {response.status}")
             if len(raw) > 2 * 1024 * 1024:
@@ -63,9 +103,13 @@ class OllamaProvider:
         except ProviderError:
             raise
         except (OSError, TimeoutError, http.client.HTTPException, json.JSONDecodeError, UnicodeDecodeError):
+            if interruption:
+                raise ProviderError(f"Ollama request {interruption[0]}") from None
             raise ProviderError("Ollama is unavailable or returned invalid JSON") from None
         finally:
+            stop_monitor.set()
             connection.close()
+            monitor.join(timeout=0.2)
 
     def health(self) -> bool:
         try:
@@ -99,6 +143,18 @@ class OllamaProvider:
         return models
 
     def chat(self, model: str, messages: list[dict[str, str]]) -> str:
+        """Send a non-streaming chat request with the configured wall-clock timeout."""
+        return self._chat(model, messages)
+
+    def chat_cancellable(
+        self, model: str, messages: list[dict[str, str]], *, cancel_event: Event
+    ) -> str:
+        """Send a chat request that can be interrupted through the supplied event."""
+        return self._chat(model, messages, cancel_event=cancel_event)
+
+    def _chat(
+        self, model: str, messages: list[dict[str, str]], *, cancel_event: Event | None = None
+    ) -> str:
         if not isinstance(model, str) or not model.strip():
             raise ValueError("model must be a non-empty string")
         if not isinstance(messages, list) or not messages:
@@ -110,7 +166,10 @@ class OllamaProvider:
             for message in messages
         ):
             raise ValueError("messages must contain role/content string pairs")
-        response = self._request("/api/chat", {"model": model, "messages": messages, "stream": False}, timeout_seconds=self._chat_timeout)
+        response = self._request(
+            "/api/chat", {"model": model, "messages": messages, "stream": False},
+            timeout_seconds=self._chat_timeout, cancel_event=cancel_event,
+        )
         message = response.get("message")
         if not isinstance(message, dict) or not isinstance(message.get("content"), str):
             raise ProviderError("Ollama chat response has an unexpected shape")
