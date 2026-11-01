@@ -31,6 +31,42 @@ class SessionStoreTests(unittest.TestCase):
             store.append_message(session.session_id, "assistant", "again")
 
 
+    def test_append_turn_commits_user_and_assistant_as_a_pair(self):
+        store = SessionStore(max_messages_per_session=2)
+        session = store.create()
+
+        user_message, assistant_message = store.append_turn(
+            session.session_id, "hello", "hello back"
+        )
+
+        self.assertEqual((user_message.role, assistant_message.role), ("user", "assistant"))
+        self.assertEqual(
+            [(message.role, message.content) for message in store.history(session.session_id)],
+            [("user", "hello"), ("assistant", "hello back")],
+        )
+
+    def test_append_turn_persists_both_messages_together(self):
+        with tempfile.TemporaryDirectory() as temp:
+            database = Path(temp) / "sessions.sqlite3"
+            store = SessionStore(database_path=database)
+            session = store.create()
+            store.append_turn(session.session_id, "hello", "hello back")
+
+            restarted = SessionStore(database_path=database)
+            self.assertEqual(
+                [(message.role, message.content) for message in restarted.history(session.session_id)],
+                [("user", "hello"), ("assistant", "hello back")],
+            )
+
+    def test_append_turn_rejects_insufficient_capacity_without_partial_write(self):
+        store = SessionStore(max_messages_per_session=1)
+        session = store.create()
+
+        with self.assertRaisesRegex(SessionError, "two message slots"):
+            store.append_turn(session.session_id, "hello", "hello back")
+
+        self.assertEqual(store.history(session.session_id), [])
+
     def test_opt_in_persistence_restores_sessions_and_messages(self):
         with tempfile.TemporaryDirectory() as temp:
             database = Path(temp) / "sessions.sqlite3"
