@@ -134,6 +134,28 @@ class OllamaProviderTests(unittest.TestCase):
             canceller.join(1)
         self.assertTrue(closed.is_set())
 
+    def test_wall_clock_timeout_closes_a_blocked_provider_request(self):
+        """Close a blocked request when its total wall-clock deadline expires."""
+        import threading
+
+        closed = threading.Event()
+        connection = Mock()
+        connection.sock = None
+
+        def blocked_request(*args, **kwargs):
+            closed.wait(2)
+            raise OSError("connection closed")
+
+        connection.request.side_effect = blocked_request
+        connection.close.side_effect = lambda: closed.set()
+        provider = OllamaProvider(chat_timeout_seconds=1)
+
+        with patch("tara_app.providers.ollama.http.client.HTTPConnection", return_value=connection):
+            with self.assertRaisesRegex(ProviderError, "timed out"):
+                provider.chat("tinyllama", [{"role": "user", "content": "hi"}])
+
+        self.assertTrue(closed.is_set())
+
     def test_http_errors_are_normalized(self):
         connection = fake_connection({"error": "not found"}, status=500)
         with patch("tara_app.providers.ollama.http.client.HTTPConnection", return_value=connection):
