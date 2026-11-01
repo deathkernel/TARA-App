@@ -1,7 +1,9 @@
 """Tests for bounded, isolated in-memory sessions."""
 import sys
+import sqlite3
 import tempfile
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -112,6 +114,73 @@ class SessionStoreTests(unittest.TestCase):
         self.assertFalse(store.close(session.session_id))
         with self.assertRaises(SessionError):
             store.get(session.session_id)
+
+
+    def test_retention_is_disabled_by_default_and_preserves_old_sessions(self):
+        with tempfile.TemporaryDirectory() as temp:
+            database = Path(temp) / "sessions.sqlite3"
+            store = SessionStore(database_path=database)
+            session = store.create()
+            with sqlite3.connect(database) as db:
+                old = (datetime.now(timezone.utc) - timedelta(days=365)).isoformat()
+                db.execute("UPDATE sessions SET updated_at = ? WHERE session_id = ?", (old, session.session_id))
+
+            restarted = SessionStore(database_path=database)
+            self.assertEqual(restarted.get(session.session_id).session_id, session.session_id)
+
+    def test_explicit_retention_prunes_expired_sessions_and_cascades_messages(self):
+        with tempfile.TemporaryDirectory() as temp:
+            database = Path(temp) / "sessions.sqlite3"
+            store = SessionStore(database_path=database)
+            expired = store.create()
+            active = store.create()
+            store.append_message(expired.session_id, "user", "expired content")
+            with sqlite3.connect(database) as db:
+                old = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+                db.execute("UPDATE sessions SET updated_at = ? WHERE session_id = ?", (old, expired.session_id))
+
+            restarted = SessionStore(database_path=database, retention_seconds=7 * 24 * 60 * 60)
+            with self.assertRaises(SessionError):
+                restarted.get(expired.session_id)
+            self.assertEqual(restarted.get(active.session_id).session_id, active.session_id)
+            with sqlite3.connect(database) as db:
+                self.assertEqual(
+                    db.execute("SELECT COUNT(*) FROM session_messages WHERE session_id = ?", (expired.session_id,)).fetchone()[0],
+                    0,
+                )
+                self.assertEqual(db.execute("PRAGMA user_version").fetchone()[0], 1)
+
+    def test_manual_retention_prune_uses_updated_at_and_keeps_recent_sessions(self):
+        store = SessionStore(retention_seconds=60)
+        expired = store.create()
+        active = store.create()
+        old = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
+        store._sessions[expired.session_id].updated_at = old
+
+        removed = store.prune_expired_sessions()
+
+        self.assertEqual(removed, 1)
+        with self.assertRaises(SessionError):
+            store.get(expired.session_id)
+        self.assertEqual(store.get(active.session_id).session_id, active.session_id)
+
+    def test_retention_configuration_must_be_a_positive_integer(self):
+        for value in (0, -1, True, 1.5, "3600"):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                SessionStore(retention_seconds=value)
+
+    def test_retention_rejects_naive_reference_time(self):
+        store = SessionStore(retention_seconds=60)
+        with self.assertRaisesRegex(ValueError, "timezone-aware"):
+            store.prune_expired_sessions(now=datetime(2026, 1, 1))
+
+    def test_future_database_schema_fails_closed(self):
+        with tempfile.TemporaryDirectory() as temp:
+            database = Path(temp) / "sessions.sqlite3"
+            with sqlite3.connect(database) as db:
+                db.execute("PRAGMA user_version = 99")
+            with self.assertRaisesRegex(SessionError, "schema is newer"):
+                SessionStore(database_path=database)
 
 
 if __name__ == "__main__":
