@@ -6,7 +6,10 @@ explicitly enabled in a local JSON config before it can be queried.
 from __future__ import annotations
 
 import json
+from contextlib import contextmanager
 from pathlib import Path
+from threading import BoundedSemaphore, Event
+from collections.abc import Iterator
 from typing import Callable, Any
 
 from tara_app.config import SettingsError, load_runtime_settings
@@ -25,7 +28,11 @@ class RuntimeManager:
         settings_path: Path,
         *,
         provider_factory: Callable[..., ModelProvider] = OllamaProvider,
+        max_concurrent_requests: int = 2,
     ) -> None:
+        if isinstance(max_concurrent_requests, bool) or not isinstance(max_concurrent_requests, int) or max_concurrent_requests < 1:
+            raise ValueError("max_concurrent_requests must be a positive integer")
+        self._request_slots = BoundedSemaphore(max_concurrent_requests)
         self._registry_path = Path(registry_path)
         self._settings_path = Path(settings_path)
         self._provider_factory = provider_factory
@@ -87,6 +94,16 @@ class RuntimeManager:
             except (TypeError, ValueError) as exc:
                 raise RuntimeConfigurationError(f"invalid settings for provider {provider_id!r}: {exc}") from None
 
+    @contextmanager
+    def _provider_slot(self) -> Iterator[None]:
+        """Limit simultaneous provider operations and reject excess work immediately."""
+        if not self._request_slots.acquire(blocking=False):
+            raise RuntimeConfigurationError("provider is busy; request capacity is full")
+        try:
+            yield
+        finally:
+            self._request_slots.release()
+
     @property
     def configured_provider_ids(self) -> tuple[str, ...]:
         return tuple(sorted(self._providers))
@@ -97,7 +114,10 @@ class RuntimeManager:
         if provider is None:
             return ProviderStatus(provider_id, False, False, "Provider is not explicitly enabled")
         try:
-            healthy = provider.health()
+            with self._provider_slot():
+                healthy = provider.health()
+        except RuntimeConfigurationError:
+            return ProviderStatus(provider_id, True, False, "Local provider is busy")
         except Exception:
             # Adapters are a trust boundary; do not leak implementation exceptions.
             healthy = False
@@ -115,7 +135,8 @@ class RuntimeManager:
         if provider is None:
             raise RuntimeConfigurationError(f"provider {provider_id!r} is not enabled in local settings")
         try:
-            models = provider.list_models()
+            with self._provider_slot():
+                models = provider.list_models()
         except ProviderError:
             raise RuntimeConfigurationError(f"provider {provider_id!r} failed to list models") from None
         normalized = []
@@ -134,11 +155,33 @@ class RuntimeManager:
             ))
         return normalized
 
-    def chat(self, model: str, messages: list[dict[str, str]], provider_id: str = "ollama") -> str:
+    def chat(
+        self,
+        model: str,
+        messages: list[dict[str, str]],
+        provider_id: str = "ollama",
+        *,
+        cancel_event: Event | None = None,
+    ) -> str:
+        """Run a bounded provider chat, optionally using its cooperative cancellation API."""
         provider = self._providers.get(provider_id)
         if provider is None:
             raise RuntimeConfigurationError(f"provider {provider_id!r} is not enabled in local settings")
         try:
-            return provider.chat(model, messages)
-        except ProviderError:
+            with self._provider_slot():
+                if cancel_event is not None:
+                    if cancel_event.is_set():
+                        raise RuntimeConfigurationError("provider request was cancelled")
+                    cancellable_chat = getattr(provider, "chat_cancellable", None)
+                    if not callable(cancellable_chat):
+                        raise RuntimeConfigurationError(
+                            "configured provider does not support request cancellation"
+                        )
+                    return cancellable_chat(model, messages, cancel_event=cancel_event)
+                return provider.chat(model, messages)
+        except ProviderError as exc:
+            if "cancelled" in str(exc).lower():
+                raise RuntimeConfigurationError("provider request was cancelled") from None
+            if "timed out" in str(exc).lower():
+                raise RuntimeConfigurationError("provider request timed out") from None
             raise RuntimeConfigurationError(f"provider {provider_id!r} request failed") from None
