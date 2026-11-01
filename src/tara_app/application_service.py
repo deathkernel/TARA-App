@@ -38,12 +38,16 @@ class TARAApplicationService:
         catalogue: ModelCatalogue | None = None,
         orchestrator: CapabilityOrchestrator | None = None,
         session_database_path: str | Path | None = None,
+        session_retention_seconds: int | None = None,
     ) -> None:
         self.runtime = runtime
         self.audit = audit
-        if sessions is not None and session_database_path is not None:
-            raise ValueError("pass either sessions or session_database_path, not both")
-        self.sessions = sessions or SessionStore(database_path=session_database_path)
+        if sessions is not None and (session_database_path is not None or session_retention_seconds is not None):
+            raise ValueError("pass either a configured sessions store or session storage options, not both")
+        self.sessions = sessions or SessionStore(
+            database_path=session_database_path,
+            retention_seconds=session_retention_seconds,
+        )
         self.catalogue = catalogue or ModelCatalogue()
         self.orchestrator = orchestrator
 
