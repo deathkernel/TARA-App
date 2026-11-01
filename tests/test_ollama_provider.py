@@ -87,6 +87,53 @@ class OllamaProviderTests(unittest.TestCase):
             with self.subTest(model=model, messages=messages), self.assertRaises(ValueError):
                 provider.chat(model, messages)
 
+    def test_pre_cancelled_chat_is_rejected_before_network_call(self):
+        """Reject an already-cancelled request without opening a connection."""
+        from threading import Event
+
+        cancelled = Event()
+        cancelled.set()
+        with patch("tara_app.providers.ollama.http.client.HTTPConnection") as factory:
+            with self.assertRaisesRegex(ProviderError, "cancelled"):
+                OllamaProvider().chat_cancellable(
+                    "tinyllama", [{"role": "user", "content": "hi"}],
+                    cancel_event=cancelled,
+                )
+            factory.assert_not_called()
+
+    def test_cancellation_closes_a_blocked_provider_request(self):
+        """Close the active HTTP connection when its cancellation event is set."""
+        import threading
+        import time
+
+        closed = threading.Event()
+        connection = Mock()
+        connection.sock = None
+
+        def blocked_request(*args, **kwargs):
+            closed.wait(2)
+            raise OSError("connection closed")
+
+        connection.request.side_effect = blocked_request
+        connection.close.side_effect = lambda: closed.set()
+        cancelled = threading.Event()
+        provider = OllamaProvider(chat_timeout_seconds=5)
+
+        def cancel_soon():
+            time.sleep(0.1)
+            cancelled.set()
+
+        with patch("tara_app.providers.ollama.http.client.HTTPConnection", return_value=connection):
+            canceller = threading.Thread(target=cancel_soon)
+            canceller.start()
+            with self.assertRaisesRegex(ProviderError, "cancelled"):
+                provider.chat_cancellable(
+                    "tinyllama", [{"role": "user", "content": "hi"}],
+                    cancel_event=cancelled,
+                )
+            canceller.join(1)
+        self.assertTrue(closed.is_set())
+
     def test_http_errors_are_normalized(self):
         connection = fake_connection({"error": "not found"}, status=500)
         with patch("tara_app.providers.ollama.http.client.HTTPConnection", return_value=connection):
