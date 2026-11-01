@@ -120,8 +120,8 @@ class RuntimeManagerTests(unittest.TestCase):
         worker.join(2)
         self.assertFalse(worker.is_alive())
 
-    def test_cancellation_requires_provider_support_and_checks_pre_cancelled_event(self) -> None:
-        """Fail closed if cancellation is requested but the provider lacks the contract."""
+    def test_cancellation_fails_closed_for_provider_without_cancellation_support(self) -> None:
+        """Reject cancellation requests when an injected provider lacks the contract."""
         from threading import Event
 
         self.write_settings({"schema_version": 1, "providers": {"ollama": {"enabled": True}}})
@@ -131,6 +131,21 @@ class RuntimeManagerTests(unittest.TestCase):
                 "tinyllama", [{"role": "user", "content": "hi"}],
                 cancel_event=Event(),
             )
+
+    def test_pre_cancelled_request_never_invokes_provider(self) -> None:
+        """Reject an already-cancelled request before invoking the provider."""
+        from threading import Event
+
+        self.write_settings({"schema_version": 1, "providers": {"ollama": {"enabled": True}}})
+        manager = self.manager()
+        cancelled = Event()
+        cancelled.set()
+        with self.assertRaisesRegex(RuntimeConfigurationError, "was cancelled"):
+            manager.chat(
+                "tinyllama", [{"role": "user", "content": "hi"}],
+                cancel_event=cancelled,
+            )
+        self.provider.chat.assert_not_called()
 
     def test_unknown_or_unimplemented_provider_fails_closed(self) -> None:
         self.write_settings({"schema_version": 1, "providers": {"unknown": {"enabled": True}}})
