@@ -144,11 +144,11 @@ def chat_loop(brain, *, input_fn=input, output_fn=print) -> None:
 
 
 def main() -> int:
-    os.environ.setdefault("TARA_LLM_BACKEND", "ollama")
+    os.environ.setdefault("TARA_LLM_BACKEND", "omniroute")
     try:
         provider = provider_from_env()
         if provider is None:
-            print("TARA chat needs a language provider. Set TARA_LLM_BACKEND=ollama.")
+            print("TARA chat needs OmniRoute. Set TARA_OMNIROUTE_API_KEY and TARA_LLM_BACKEND=omniroute.")
             return 2
         memory_path = os.getenv("TARA_MEMORY_PATH", "data/tara_memory.json").strip()
         if not memory_path:
