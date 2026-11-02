@@ -13,7 +13,6 @@ from urllib.parse import urlsplit
 from tara_app.contracts import Capability
 from tara_app.handler_adapter import HandlerProcessAdapter
 from tara_app.module_client import StdioModuleAdapter
-from tara_app.ollama_models import OllamaModelCatalog
 from tara_app.orchestrator import Orchestrator
 from tara_app.registry import CapabilityRegistry
 from tara_app.router_client import StdioRouterClient
@@ -155,8 +154,7 @@ def create_application(config_path: str | Path) -> Orchestrator:
         registry.register(adapter)
     # TARA no longer starts or calls Ollama for language-model inference.
     # Model selection and lifecycle belong to OmniRoute.
-    model_catalog = OllamaModelCatalog()
-    return Orchestrator(registry, router, model_catalog=model_catalog)
+    return Orchestrator(registry, router, model_catalog=None)
 
 
 def _ollama_settings(value: Any) -> dict[str, dict[str, str]]:
