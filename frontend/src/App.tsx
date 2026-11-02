@@ -4,19 +4,15 @@ import remarkGfm from "remark-gfm";
 
 type Message = { role: "user" | "assistant"; text: string; status?: string };
 type Conversation = { id: string; title: string; updatedAt: number; messages: Message[] };
-type LocalModel = {
+type ModelRoute = {
   specialist: string;
   model: string;
-  installed?: boolean | null;
-  running?: boolean | null;
-  memory_bytes?: number | null;
-  vram_bytes?: number | null;
 };
 type ModelStatus = {
   status: string;
   provider?: string;
   service_available?: boolean;
-  models?: LocalModel[];
+  models?: ModelRoute[];
   pull?: { status?: string; model?: string; message?: string };
 };
 
@@ -185,19 +181,6 @@ export default function App() {
     }
   }
 
-  async function modelAction(action: "pull" | "unload" | "remove", specialist: string) {
-    if (action === "remove" && !window.confirm(`Remove the installed model for ${specialist}? This deletes local model files.`)) return;
-    setModelBusy(specialist);
-    try {
-      await api(`/api/models/${action}`, { method: "POST", body: JSON.stringify({ specialist }) });
-      await refreshModels();
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Model action failed.");
-    } finally {
-      setModelBusy("");
-    }
-  }
-
   function submit(event: FormEvent) {
     event.preventDefault();
     void sendMessage();
@@ -258,7 +241,7 @@ export default function App() {
         <form className="composer" onSubmit={submit}>
           <textarea value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onComposerKeyDown} placeholder="Message TARA…" aria-label="Message TARA" rows={1} maxLength={20000} />
           <button className="send" type="submit" disabled={sending || !draft.trim()} aria-label="Send message">{sending ? "…" : "↑"}</button>
-          <p>Local inference stays on your device. Cloud requests require explicit configuration.</p>
+          <p>Chat and specialist language-model requests are sent through OmniRoute and may reach a cloud provider selected by its routing policy. Review the provider and route before sending sensitive information. TARA keeps app data, memory, permissions, and desktop actions local.</p>
         </form>
         <footer>Chat and Code are separate specialists · TARA-App</footer>
       </main>
