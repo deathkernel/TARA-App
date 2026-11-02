@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.20)
 project(TARAHandler VERSION 0.9.0 LANGUAGES CXX)
 
+include(CTest)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -65,3 +67,17 @@ set_target_properties(tara-handler PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_BINARY_DIR}/bin"
     RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_BINARY_DIR}/bin"
 )
+
+if(BUILD_TESTING)
+    add_executable(tara-handler-risk-tests
+        tests/risky_command_tests.cpp
+        src/risky_command.cpp
+    )
+    target_include_directories(tara-handler-risk-tests PRIVATE include)
+    if(MSVC)
+        target_compile_options(tara-handler-risk-tests PRIVATE /W4 /permissive-)
+    else()
+        target_compile_options(tara-handler-risk-tests PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+    add_test(NAME native-handler-risk COMMAND tara-handler-risk-tests)
+endif()
