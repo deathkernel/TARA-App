@@ -12,7 +12,8 @@ from unittest.mock import Mock
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from tara_app.runtime_manager import RuntimeConfigurationError, RuntimeManager  # noqa: E402
+from tara_app.contracts import ModelProvider  # noqa: E402
+from tara_app.runtime_manager import RuntimeConfigurationError, RuntimeManager
 
 
 class RuntimeManagerTests(unittest.TestCase):
@@ -25,7 +26,7 @@ class RuntimeManagerTests(unittest.TestCase):
         source_registry = json.loads((ROOT / "config" / "ai_tool_registry.json").read_text(encoding="utf-8"))
         self.registry.write_text(json.dumps(source_registry), encoding="utf-8")
         self.settings.write_text(json.dumps({"schema_version": 1, "providers": {"ollama": {"enabled": False}}}), encoding="utf-8")
-        self.provider = Mock()
+        self.provider = Mock(spec=ModelProvider)
         self.provider.health.return_value = True
         self.provider.list_models.return_value = [SimpleNamespace(
             name="tinyllama:latest",
@@ -125,7 +126,6 @@ class RuntimeManagerTests(unittest.TestCase):
         from threading import Event
 
         self.write_settings({"schema_version": 1, "providers": {"ollama": {"enabled": True}}})
-        self.provider.chat_cancellable = None
         manager = self.manager()
         with self.assertRaisesRegex(RuntimeConfigurationError, "does not support request cancellation"):
             manager.chat(
