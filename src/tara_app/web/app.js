@@ -793,7 +793,7 @@
       const response = await fetch("/api/models", { headers: { Accept: "application/json" }, cache: "no-store" });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Could not read model status");
-      if (payload.status === "not_configured") {
+      if (payload.status === "managed_externally" || payload.status === "not_configured") {
         modelServiceStatus.textContent = "Model inventory and lifecycle are managed by OmniRoute. Use the Model Hub to list available models.";
         return;
       }
