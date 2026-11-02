@@ -9,7 +9,7 @@ import sqlite3
 from contextlib import contextmanager
 from collections.abc import Iterator
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from threading import RLock
 from uuid import uuid4
@@ -46,6 +46,7 @@ class SessionStore:
         max_messages_per_session: int = 40,
         max_content_chars: int = 16_000,
         database_path: str | Path | None = None,
+        retention_seconds: int | None = None,
     ) -> None:
         for name, value in (
             ("max_sessions", max_sessions),
@@ -56,7 +57,14 @@ class SessionStore:
                 raise ValueError(f"{name} must be a positive integer")
         self.max_sessions = max_sessions
         self.max_messages_per_session = max_messages_per_session
+        if retention_seconds is not None and (
+            isinstance(retention_seconds, bool)
+            or not isinstance(retention_seconds, int)
+            or retention_seconds < 1
+        ):
+            raise ValueError("retention_seconds must be a positive integer or None")
         self.max_content_chars = max_content_chars
+        self.retention_seconds = retention_seconds
         self.database_path = Path(database_path).expanduser().resolve() if database_path is not None else None
         self._sessions: dict[str, Session] = {}
         self._lock = RLock()
@@ -64,6 +72,9 @@ class SessionStore:
             try:
                 self.database_path.parent.mkdir(parents=True, exist_ok=True)
                 with self._connect() as db:
+                    schema_version = db.execute("PRAGMA user_version").fetchone()[0]
+                    if schema_version not in {0, 1}:
+                        raise SessionError("persistent session database schema is newer than this app")
                     db.execute("""
                         CREATE TABLE IF NOT EXISTS sessions (
                             session_id TEXT PRIMARY KEY,
@@ -82,10 +93,32 @@ class SessionStore:
                             PRIMARY KEY (session_id, position)
                         )
                     """)
-                    db.execute("PRAGMA foreign_keys = ON")
+                    if schema_version == 0:
+                        db.execute("PRAGMA user_version = 1")
+                    if self.retention_seconds is not None:
+                        for session_id in self._expired_session_ids(db, datetime.now(timezone.utc)):
+                            db.execute("DELETE FROM sessions WHERE session_id = ?", (session_id,))
                     self._load_from_db(db)
             except (OSError, sqlite3.Error, ValueError, TypeError):
                 raise SessionError("persistent session store could not be initialized") from None
+
+    def _expired_session_ids(self, db: sqlite3.Connection, now: datetime) -> list[str]:
+        """Return expired session IDs without deleting anything on malformed timestamps."""
+        if self.retention_seconds is None:
+            return []
+        cutoff = now.astimezone(timezone.utc) - timedelta(seconds=self.retention_seconds)
+        rows = db.execute("SELECT session_id, updated_at FROM sessions").fetchall()
+        expired: list[str] = []
+        for session_id, updated_at in rows:
+            try:
+                timestamp = datetime.fromisoformat(updated_at)
+            except (TypeError, ValueError):
+                raise SessionError("persistent session timestamp is invalid") from None
+            if timestamp.tzinfo is None:
+                raise SessionError("persistent session timestamp must include a timezone")
+            if timestamp.astimezone(timezone.utc) < cutoff:
+                expired.append(session_id)
+        return expired
 
     @contextmanager
     def _connect(self) -> Iterator[sqlite3.Connection]:
@@ -131,6 +164,42 @@ class SessionStore:
     def _now() -> str:
         return datetime.now(timezone.utc).isoformat()
 
+    def prune_expired_sessions(self, *, now: datetime | None = None) -> int:
+        """Delete expired sessions only when an explicit retention policy is configured."""
+        if self.retention_seconds is None:
+            return 0
+        reference = now or datetime.now(timezone.utc)
+        if not isinstance(reference, datetime) or reference.tzinfo is None:
+            raise ValueError("now must be a timezone-aware datetime")
+
+        with self._lock:
+            try:
+                if self.database_path is not None:
+                    with self._connect() as db:
+                        expired = self._expired_session_ids(db, reference)
+                        for session_id in expired:
+                            db.execute("DELETE FROM sessions WHERE session_id = ?", (session_id,))
+                else:
+                    cutoff = reference.astimezone(timezone.utc) - timedelta(seconds=self.retention_seconds)
+                    expired = []
+                    for session_id, session in self._sessions.items():
+                        try:
+                            updated = datetime.fromisoformat(session.updated_at)
+                        except (TypeError, ValueError):
+                            raise SessionError("session timestamp is invalid") from None
+                        if updated.tzinfo is None:
+                            raise SessionError("session timestamp must include a timezone")
+                        if updated.astimezone(timezone.utc) < cutoff:
+                            expired.append(session_id)
+            except SessionError:
+                raise
+            except (sqlite3.Error, OSError):
+                raise SessionError("expired sessions could not be removed from persistent storage") from None
+
+            for session_id in expired:
+                self._sessions.pop(session_id, None)
+            return len(expired)
+
     def create(self, metadata: dict[str, str] | None = None) -> Session:
         if metadata is not None and (
             not isinstance(metadata, dict)
@@ -162,13 +231,71 @@ class SessionStore:
                 raise SessionError("session not found")
             return self._snapshot(session)
 
-    def append_message(self, session_id: str, role: str, content: str) -> SessionMessage:
-        if role not in {"system", "user", "assistant", "tool"}:
+    def _validate_message(self, role: str, content: str) -> None:
+        """Validate a message role and content against the session store limits."""
+        if not isinstance(role, str) or role not in {"system", "user", "assistant", "tool"}:
             raise SessionError("role is not supported")
         if not isinstance(content, str) or not content.strip():
             raise SessionError("message content must be a non-empty string")
         if len(content) > self.max_content_chars:
             raise SessionError("message exceeds configured character limit")
+
+    def ensure_turn_capacity(self, session_id: str) -> None:
+        """Fail before inference if the session cannot store both sides of a chat turn."""
+        with self._lock:
+            session = self._sessions.get(session_id)
+            if session is None:
+                raise SessionError("session not found")
+            if len(session.messages) + 2 > self.max_messages_per_session:
+                raise SessionError(
+                    "session message capacity reached; a chat turn requires two message slots"
+                )
+
+    def append_turn(
+        self, session_id: str, user_content: str, assistant_content: str
+    ) -> tuple[SessionMessage, SessionMessage]:
+        """Persist and append a complete user/assistant pair atomically."""
+        self._validate_message("user", user_content)
+        self._validate_message("assistant", assistant_content)
+        with self._lock:
+            session = self._sessions.get(session_id)
+            if session is None:
+                raise SessionError("session not found")
+            if len(session.messages) + 2 > self.max_messages_per_session:
+                raise SessionError(
+                    "session message capacity reached; a chat turn requires two message slots"
+                )
+
+            user_message = SessionMessage("user", user_content, self._now())
+            assistant_message = SessionMessage("assistant", assistant_content, self._now())
+            if self.database_path is not None:
+                try:
+                    with self._connect() as db:
+                        position = len(session.messages)
+                        db.execute(
+                            "INSERT INTO session_messages(session_id, position, role, content, created_at) VALUES (?, ?, ?, ?, ?)",
+                            (session_id, position, user_message.role, user_message.content,
+                             user_message.created_at),
+                        )
+                        db.execute(
+                            "INSERT INTO session_messages(session_id, position, role, content, created_at) VALUES (?, ?, ?, ?, ?)",
+                            (session_id, position + 1, assistant_message.role,
+                             assistant_message.content, assistant_message.created_at),
+                        )
+                        db.execute(
+                            "UPDATE sessions SET updated_at = ? WHERE session_id = ?",
+                            (assistant_message.created_at, session_id),
+                        )
+                except (sqlite3.Error, OSError):
+                    raise SessionError("chat turn could not be persisted") from None
+
+            session.messages.extend((user_message, assistant_message))
+            session.updated_at = assistant_message.created_at
+            return user_message, assistant_message
+
+    def append_message(self, session_id: str, role: str, content: str) -> SessionMessage:
+        """Append one validated message when the session has remaining capacity."""
+        self._validate_message(role, content)
         with self._lock:
             session = self._sessions.get(session_id)
             if session is None:
