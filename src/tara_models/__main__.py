@@ -173,7 +173,19 @@ def handle_request(request: Any) -> dict[str, Any]:
         question = inputs.get("question")
         if not isinstance(question, str) or not question.strip() or len(question) > 20_000:
             return result(request_id, "invalid_request", error="question is invalid")
-        model = inputs.get("model", default_model)
+        model = inputs.get("model")
+        if model is None:
+            selection = re.match(
+                r"^\\s*(?:please\\s+)?(?:use|switch to|try|ask|run with)\\s+(?:model\\s+)?"
+                r"(?P<model>[A-Za-z0-9][A-Za-z0-9._:/-]{0,199})\\s*[:,-]?\\s*",
+                question,
+                re.I,
+            )
+            if selection and _MODEL_RE.fullmatch(selection.group("model")):
+                model = selection.group("model")
+                question = question[selection.end():].strip() or question
+            else:
+                model = default_model
         if not isinstance(model, str) or not _MODEL_RE.fullmatch(model):
             return result(request_id, "invalid_request", error="model route is invalid")
         answer, response_model = _generate(base, key, model, question.strip())
