@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import sys
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from tara_action import service
@@ -44,6 +46,69 @@ class DesktopActionServiceTests(unittest.TestCase):
             approval_token="one-time-approval",
         )
         self.assertEqual(status, "invalid_request")
+
+    def test_system_status_returns_metrics(self):
+        status, data, err = service.execute(
+            "execute",
+            {"operation": "desktop.system.status"},
+            approval_token="one-time-approval",
+        )
+        self.assertEqual(status, "success")
+        self.assertIsNone(err)
+        self.assertIn("memory", data)
+        self.assertIn("cpu", data)
+        self.assertIn("disk", data)
+
+    def test_process_list_returns_processes(self):
+        if not sys.platform.startswith("win"):
+            self.skipTest("Windows-only process listing test")
+        status, data, err = service.execute(
+            "execute",
+            {"operation": "desktop.process.list", "limit": 10},
+            approval_token="one-time-approval",
+        )
+        self.assertEqual(status, "success")
+        self.assertIsNone(err)
+        self.assertIn("processes", data)
+        self.assertLessEqual(len(data["processes"]), 10)
+
+    def test_process_terminate_rejects_invalid_pid(self):
+        status, _, err = service.execute(
+            "execute",
+            {"operation": "desktop.process.terminate", "pid": 0},
+            approval_token="one-time-approval",
+        )
+        self.assertEqual(status, "invalid_request")
+
+        status, _, err = service.execute(
+            "execute",
+            {"operation": "desktop.process.terminate", "pid": 4},
+            approval_token="one-time-approval",
+        )
+        self.assertEqual(status, "invalid_request")
+
+    def test_file_inspect_validates_and_blocks_system_dirs(self):
+        status, data, err = service.execute(
+            "execute",
+            {"operation": "desktop.file.inspect", "path": "README.md"},
+            approval_token="one-time-approval",
+        )
+        self.assertEqual(status, "success")
+        self.assertIsNone(err)
+        self.assertFalse(data["is_dir"])
+        self.assertGreater(data["size_bytes"], 0)
+
+        # Block C:\Windows\System32
+        status, _, err = service.execute(
+            "execute",
+            {"operation": "desktop.file.inspect", "path": "C:\\Windows\\System32\\drivers"},
+            approval_token="one-time-approval",
+        )
+        self.assertEqual(status, "permission_denied")
+
+    def test_expanded_app_allowlist(self):
+        for app in ["calculator", "notepad", "paint", "explorer", "taskmgr", "terminal"]:
+            self.assertIn(app, service._APP_COMMANDS)
 
 
 if __name__ == "__main__":

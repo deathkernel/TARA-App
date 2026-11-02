@@ -22,7 +22,138 @@ _APP_COMMANDS: dict[str, dict[str, tuple[str, ...] | None]] = {
     "calculator": {"windows": ("calc.exe",), "darwin": ("open", "-a", "Calculator"), "linux": ("gnome-calculator",)},
     "notepad": {"windows": ("notepad.exe",), "darwin": ("open", "-a", "TextEdit"), "linux": ("gedit",)},
     "paint": {"windows": ("mspaint.exe",), "darwin": None, "linux": ("pinta",)},
+    "explorer": {"windows": ("explorer.exe",), "darwin": ("open", "."), "linux": ("xdg-open", ".")},
+    "taskmgr": {"windows": ("taskmgr.exe",), "darwin": None, "linux": None},
+    "terminal": {"windows": ("wt.exe",), "darwin": ("open", "-a", "Terminal"), "linux": ("x-terminal-emulator",)},
 }
+
+_CRITICAL_PROCESSES = frozenset({
+    "system idle process",
+    "system",
+    "secure system",
+    "registry",
+    "smss.exe",
+    "csrss.exe",
+    "wininit.exe",
+    "services.exe",
+    "lsass.exe",
+    "svchost.exe",
+    "fontdrvhost.exe",
+    "winlogon.exe",
+    "dwminit.exe",
+    "dwm.exe",
+    "explorer.exe",
+    "spoolsv.exe",
+})
+
+
+def _system_status() -> tuple[str, dict[str, Any], str | None]:
+    try:
+        from tara_app.diagnostics import get_windows_memory, get_windows_cpu_load, get_disk_metrics
+        mem = get_windows_memory()
+        cpu = get_windows_cpu_load()
+        disk = get_disk_metrics()
+        return "success", {
+            "operation": "desktop.system.status",
+            "memory": mem,
+            "cpu": cpu,
+            "disk": disk,
+            "platform": sys.platform,
+        }, None
+    except Exception as exc:
+        return "failed", {}, f"could not retrieve system metrics: {exc}"
+
+
+def _list_processes(limit: Any = 50) -> tuple[str, dict[str, Any], str | None]:
+    if not isinstance(limit, int) or not 1 <= limit <= 100:
+        limit = 50
+    if not sys.platform.startswith("win"):
+        return "unavailable", {}, "process listing is currently supported on Windows"
+    try:
+        import csv
+        import io
+        out = subprocess.check_output(["tasklist", "/FO", "CSV", "/NH"], timeout=5).decode("cp1252", errors="replace")
+        reader = csv.reader(io.StringIO(out))
+        procs = []
+        for row in reader:
+            if len(row) >= 5:
+                try:
+                    pid = int(row[1])
+                except ValueError:
+                    continue
+                procs.append({"name": row[0], "pid": pid, "session": row[2], "memory": row[4]})
+                if len(procs) >= limit:
+                    break
+        return "success", {"operation": "desktop.process.list", "processes": procs, "count": len(procs)}, None
+    except Exception as exc:
+        return "failed", {}, f"could not list processes: {exc}"
+
+
+def _terminate_process(pid: Any) -> tuple[str, dict[str, Any], str | None]:
+    if not isinstance(pid, int) or pid <= 4:
+        return "invalid_request", {}, "process PID must be an integer greater than 4"
+    if sys.platform.startswith("win"):
+        try:
+            import csv
+            import io
+            out = subprocess.check_output(["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"], timeout=5).decode("cp1252", errors="replace")
+            for row in csv.reader(io.StringIO(out)):
+                if row and row[0].strip().casefold() in _CRITICAL_PROCESSES:
+                    return "permission_denied", {}, f"cannot terminate critical Windows system process '{row[0].strip()}'"
+        except Exception:
+            pass
+        try:
+            res = subprocess.run(["taskkill.exe", "/PID", str(pid), "/F"], capture_output=True, timeout=5, check=False)
+            if res.returncode == 0:
+                return "success", {"operation": "desktop.process.terminate", "pid": pid}, None
+            err = res.stderr.decode("cp1252", errors="replace").strip()
+            return "failed", {}, f"taskkill failed: {err}"
+        except Exception as exc:
+            return "failed", {}, f"could not terminate process: {exc}"
+    else:
+        try:
+            os.kill(pid, 15)
+            return "success", {"operation": "desktop.process.terminate", "pid": pid}, None
+        except Exception as exc:
+            return "failed", {}, str(exc)
+
+
+def _inspect_file(path_val: Any) -> tuple[str, dict[str, Any], str | None]:
+    if not isinstance(path_val, str) or not path_val.strip() or len(path_val) > 1024:
+        return "invalid_request", {}, "path must be a string of 1 to 1024 characters"
+    if any(ord(c) < 32 for c in path_val):
+        return "invalid_request", {}, "path contains invalid control characters"
+    from pathlib import Path
+    try:
+        resolved = Path(path_val.strip()).resolve()
+    except Exception:
+        return "invalid_request", {}, "path could not be resolved"
+    forbidden_prefixes = ["C:\\Windows\\System32", "C:\\Windows\\SysWOW64"]
+    for pref in forbidden_prefixes:
+        if str(resolved).casefold().startswith(pref.casefold()):
+            return "permission_denied", {}, "cannot inspect Windows system directory"
+    if not resolved.exists():
+        return "unavailable", {}, f"path '{resolved}' does not exist"
+    try:
+        stat = resolved.stat()
+        is_dir = resolved.is_dir()
+        size_bytes = stat.st_size if not is_dir else 0
+        line_count = None
+        if not is_dir and size_bytes <= 1_000_000:
+            try:
+                line_count = len(resolved.read_text(encoding="utf-8", errors="replace").splitlines())
+            except Exception:
+                pass
+        return "success", {
+            "operation": "desktop.file.inspect",
+            "path": str(resolved),
+            "is_dir": is_dir,
+            "size_bytes": size_bytes,
+            "modified_time": stat.st_mtime,
+            "line_count": line_count,
+        }, None
+    except Exception as exc:
+        return "failed", {}, f"could not inspect path: {exc}"
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -140,6 +271,22 @@ def execute(action: str, inputs: dict[str, Any], *, approval_token: str | None =
         if set(inputs) - {"operation", "url"}:
             return "invalid_request", {}, "website request contains unsupported fields"
         return _open_website(inputs.get("url"))
+    if operation == "desktop.system.status":
+        if set(inputs) - {"operation"}:
+            return "invalid_request", {}, "system status request contains unsupported fields"
+        return _system_status()
+    if operation == "desktop.process.list":
+        if set(inputs) - {"operation", "limit"}:
+            return "invalid_request", {}, "process list request contains unsupported fields"
+        return _list_processes(inputs.get("limit", 50))
+    if operation == "desktop.process.terminate":
+        if set(inputs) - {"operation", "pid"}:
+            return "invalid_request", {}, "process terminate request contains unsupported fields"
+        return _terminate_process(inputs.get("pid"))
+    if operation == "desktop.file.inspect":
+        if set(inputs) - {"operation", "path"}:
+            return "invalid_request", {}, "file inspect request contains unsupported fields"
+        return _inspect_file(inputs.get("path"))
     if operation != "github.issue.create":
         return "permission_denied", {}, "only allowlisted local desktop, browser, and GitHub issue actions are supported"
     repository = inputs.get("repository")

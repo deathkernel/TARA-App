@@ -458,6 +458,24 @@ class Orchestrator:
             reason="The user approved this one operation after TARA-Security assessment.",
             policy_tags=pending.route.policy_tags,
         )
+        if self.sessions is not None:
+            answer = (
+                result.data.get("text")
+                or result.data.get("reply")
+                or result.data.get("output")
+                or result.error
+                or f"Approved action {pending.target_module}.{pending.target_action} finished with status {result.status}"
+            )
+            self.sessions.append_message(pending.session_id, "assistant", str(answer))
+        if self.audit is not None:
+            self.audit.record(
+                "approved_action_executed",
+                session_id=pending.session_id,
+                request_id=pending.request_id,
+                module=pending.target_module,
+                action=pending.target_action,
+                status=result.status,
+            )
         return DispatchOutcome(result.status, approved_route, result, pending.request_id)
 
     def cancel_approval(self, approval_id: str, *, session_id: str) -> DispatchOutcome:
@@ -473,6 +491,15 @@ class Orchestrator:
                 return self._outcome(pending.request_id, "permission_denied", pending.route, "approval_session_mismatch", "Approval belongs to another session")
             self._pending_approvals.pop(approval_id, None)
         result = ModuleResult("success", {"cancelled": True})
+        if self.sessions is not None:
+            self.sessions.append_message(pending.session_id, "assistant", "Action cancelled by user.")
+        if self.audit is not None:
+            self.audit.record(
+                "action_approval_cancelled",
+                session_id=pending.session_id,
+                request_id=pending.request_id,
+                approval_id=approval_id,
+            )
         return DispatchOutcome("cancelled", pending.route, result, pending.request_id)
 
     def _store_approval(

@@ -328,3 +328,233 @@ body{background:#08090d;color:#e6e8ef}
 .markdown-body hr{border-top-color:#294751}
 .mobile-scrim{background:#02090dbd}
 @media(prefers-reduced-motion:reduce){.welcome-orbit,.welcome-orbit:before,.welcome-orbit:after{animation:none}}
+
+/* Approval & Security Cards */
+.approval-card {
+  margin: 12px 0 6px 0;
+  padding: 14px 16px;
+  border: 1px solid #c9933b;
+  border-radius: 12px;
+  background: #1c170d;
+  color: #faebd7;
+}
+.approval-card h4 {
+  margin: 0 0 6px 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffcf70;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.approval-card p {
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  color: #f0dfc0;
+  line-height: 1.4;
+}
+.approval-card small {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 11px;
+  color: #baa47d;
+}
+.approval-actions {
+  display: flex;
+  gap: 10px;
+}
+.approve-button, .cancel-button {
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.approve-button {
+  background: #c9933b;
+  border: 1px solid #ffcf70;
+  color: #120e06;
+}
+.approve-button:hover:not(:disabled) {
+  background: #deb05b;
+}
+.cancel-button {
+  background: transparent;
+  border: 1px solid #6b5329;
+  color: #dfcfb2;
+}
+.cancel-button:hover:not(:disabled) {
+  background: #332712;
+}
+.approve-button:disabled, .cancel-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Diagnostics Panel */
+.diagnostics-panel {
+  flex: 0 0 auto;
+  max-height: 48vh;
+  overflow-y: auto;
+  margin: 15px 32px 0;
+  padding: 18px 20px;
+  background: #09171e;
+  border: 1px solid #1c3b45;
+  border-radius: 14px;
+  color: #d2e5e8;
+}
+.diag-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin: 14px 0;
+}
+.diag-card {
+  padding: 12px 14px;
+  background: #050d12;
+  border: 1px solid #162f38;
+  border-radius: 10px;
+}
+.diag-card-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6fbac4;
+  margin-bottom: 6px;
+}
+.diag-card-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #e5f4f5;
+}
+.diag-card-sub {
+  font-size: 11px;
+  color: #7d9ba2;
+  margin-top: 4px;
+}
+.status-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.badge-good {
+  background: #0f351f;
+  border: 1px solid #1e7040;
+  color: #55e68d;
+}
+.badge-normal {
+  background: #0d2836;
+  border: 1px solid #205c75;
+  color: #63d2f2;
+}
+.badge-warning {
+  background: #3b280c;
+  border: 1px solid #754e19;
+  color: #f7b443;
+}
+.badge-critical {
+  background: #3b0e12;
+  border: 1px solid #7a1d26;
+  color: #ff6b77;
+}
+
+/* Sidebar Conversation Delete Button */
+.conversation-row {
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 100%;
+}
+.conversation-row .conversation {
+  flex: 1;
+  text-align: left;
+  padding-right: 28px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.conversation-delete {
+  position: absolute;
+  right: 6px;
+  background: transparent;
+  border: none;
+  color: #627b82;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  font-size: 14px;
+  line-height: 1;
+  display: none;
+}
+.conversation-row:hover .conversation-delete,
+.conversation-row .active + .conversation-delete,
+.conversation-row:focus-within .conversation-delete {
+  display: block;
+}
+.conversation-delete:hover {
+  color: #ff7582;
+  background: #201114;
+}
+
+/* Attachment Preview Bar */
+.attachment-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #0a171d;
+  border: 1px solid #1a3842;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+.attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #112832;
+  border: 1px solid #244b56;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #a4cbd2;
+}
+.attachment-remove {
+  background: transparent;
+  border: none;
+  color: #6d8e96;
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 14px;
+}
+.attachment-remove:hover {
+  color: #ff7080;
+}
+.composer-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  width: 100%;
+}
+.attach-button {
+  background: #0c1b22;
+  border: 1px solid #244b56;
+  border-radius: 8px;
+  color: #82a8b0;
+  padding: 10px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+.attach-button:hover {
+  color: #79dce5;
+  border-color: #3b7b8a;
+  background: #112730;
+}

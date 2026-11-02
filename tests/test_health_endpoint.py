@@ -57,6 +57,14 @@ class HealthEndpointTests(unittest.TestCase):
             payload = json.loads(response.read().decode("utf-8"))
         self.assertEqual(payload["model_runtime"], "omniroute")
 
+    def test_system_diagnostics_endpoint(self):
+        with urlopen(self.base_url + "/api/system/diagnostics", timeout=2) as response:
+            self.assertEqual(response.status, 200)
+            payload = json.loads(response.read().decode("utf-8"))
+        self.assertEqual(payload["status"], "success")
+        self.assertIn("diagnostics", payload)
+        self.assertIn("hardware", payload["diagnostics"])
+
     def test_health_rejects_untrusted_origin(self):
         request = Request(
             self.base_url + "/api/health",

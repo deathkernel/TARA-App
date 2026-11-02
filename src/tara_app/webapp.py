@@ -71,6 +71,18 @@ class _Handler(BaseHTTPRequestHandler):
             }
             self._json(200, payload)
             return
+        if endpoint == "/api/system/diagnostics":
+            if not self._local_origin():
+                self._json(403, {"status": "permission_denied", "error": "request origin is not allowed"})
+                return
+            from tara_app.diagnostics import collect_system_diagnostics
+            report = collect_system_diagnostics(
+                registry=getattr(self.server.app, "registry", None),
+                sessions_store=getattr(self.server.app, "sessions", None),
+                audit_log=getattr(self.server.app, "audit", None),
+            )
+            self._json(200, {"status": "success", "diagnostics": report})
+            return
         if endpoint == "/api/sessions":
             if not self._local_origin():
                 self._json(403, {"status": "permission_denied", "error": "request origin is not allowed"})
@@ -231,9 +243,9 @@ class _Handler(BaseHTTPRequestHandler):
                 attachments=payload.get("attachments", []),
             )
         elif endpoint == "/api/approve":
-            outcome = self.server.app.approve(payload.get("approval_id"), session_id=payload.get("session_id"))
+            outcome = self.server.app.approve(payload.get("approval_id") or "", session_id=payload.get("session_id") or "default")
         else:
-            outcome = self.server.app.cancel_approval(payload.get("approval_id"), session_id=payload.get("session_id"))
+            outcome = self.server.app.cancel_approval(payload.get("approval_id") or "", session_id=payload.get("session_id") or "default")
         self._json(200, outcome.to_payload())
 
     def _local_origin(self) -> bool:
