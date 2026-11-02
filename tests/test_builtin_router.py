@@ -27,6 +27,15 @@ class BuiltinRouterTests(unittest.TestCase):
         decision = self.route("Help me debug this Python function")
         self.assertEqual((decision.module, decision.action), ("code", "plan"))
 
+    def test_write_advanced_python_code_uses_code_specialist(self):
+        decision = self.route("Can you write advanced Python code for me?")
+        self.assertEqual((decision.module, decision.action), ("code", "plan"))
+
+    def test_write_a_story_uses_creative_specialist(self):
+        self.capabilities.append("creative.write")
+        decision = self.route("Write a short story about a robot")
+        self.assertEqual((decision.module, decision.action), ("creative", "write"))
+
     def test_current_research_uses_public_research_specialist(self):
         decision = self.route("Find current sources about solar energy")
         self.assertEqual((decision.module, decision.action), ("research", "answer"))
