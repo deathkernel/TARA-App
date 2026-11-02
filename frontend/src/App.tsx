@@ -22,7 +22,7 @@ type ModelStatus = {
 
 const STORAGE_KEY = "tara-react-conversations";
 const SESSION_KEY = "tara-react-session";
-const FREE_MODELS_PROMPT = "List all available free models";
+const FREE_MODELS_PROMPT = "List all available models";
 
 function newConversation(): Conversation {
   return { id: crypto.randomUUID(), title: "New chat", updatedAt: Date.now(), messages: [] };
@@ -115,7 +115,7 @@ export default function App() {
       setModelStatus(await api<ModelStatus>("/api/models"));
       setNotice("");
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Could not read local model status.");
+      setNotice(error instanceof Error ? error.message : "Could not read OmniRoute model status.");
     } finally {
       setModelBusy("");
     }
@@ -226,8 +226,8 @@ export default function App() {
         </header>
 
         {modelsOpen && <section className="models-panel">
-          <div className="panel-heading"><div><h2>Local models</h2><p>{modelStatus?.service_available ? "Ollama is available on this device." : "Model inventory and lifecycle controls"}</p></div><button className="secondary" onClick={() => void refreshModels()} disabled={modelBusy === "refresh"}>{modelBusy === "refresh" ? "Refreshing…" : "Refresh"}</button></div>
-          {modelStatus?.status === "not_configured" && <p className="muted">No local Ollama profiles are configured.</p>}
+          <div className="panel-heading"><div><h2>OmniRoute models</h2><p>Model selection and lifecycle are managed by the OmniRoute gateway.</p></div><button className="secondary" onClick={() => void refreshModels()} disabled={modelBusy === "refresh"}>{modelBusy === "refresh" ? "Refreshing…" : "Refresh"}</button></div>
+          {modelStatus?.status === "managed_externally" && <p className="muted">TARA does not install or manage model weights locally. Use the Model Hub to browse models exposed by OmniRoute.</p>}
           {(modelStatus?.models ?? []).map((model) => <div className="model-card" key={model.specialist}>
             <div><strong>{model.specialist}</strong><p>{model.model}</p><small>{model.memory_bytes ? `RAM ${formatBytes(model.memory_bytes)} · ` : ""}{model.vram_bytes ? `VRAM ${formatBytes(model.vram_bytes)} · ` : ""}{model.running ? "Loaded" : model.installed ? "Installed" : "Not installed"}</small></div>
             <div className="model-actions">
@@ -236,13 +236,13 @@ export default function App() {
               {model.installed && <button className="danger" onClick={() => void modelAction("remove", model.specialist)} disabled={!!modelBusy}>Remove</button>}
             </div>
           </div>)}
-          <div className="free-hub"><div><strong>Free Model Hub</strong><p>Browse free model options without sending a prompt to a cloud provider.</p></div><button onClick={() => void sendMessage(FREE_MODELS_PROMPT)} disabled={sending}>List free models</button></div>
+          <div className="free-hub"><div><strong>OmniRoute Model Hub</strong><p>Browse model IDs exposed by OmniRoute. Availability, quotas, and billing depend on its connected providers.</p></div><button onClick={() => void sendMessage(FREE_MODELS_PROMPT)} disabled={sending}>List free models</button></div>
         </section>}
 
         {notice && <div className="notice" role="status">{notice}<button onClick={() => setNotice("")} aria-label="Dismiss notice">×</button></div>}
         <section className="chat-area" aria-label="Conversation">
           {!active?.messages.length && <div className="welcome"><div className="welcome-mark">✦</div><h2>What can I help with?</h2><p>Local-first AI, with each request routed to the right specialist.</p><div className="prompt-grid">
-            {["Explain a concept simply", "Make study notes from my file", "Help me debug this code", "List all available free models"].map((prompt) => <button key={prompt} onClick={() => void sendMessage(prompt)}>{prompt}<span>↗</span></button>)}
+            {["Explain a concept simply", "Make study notes from my file", "Help me debug this code", "List all available models"].map((prompt) => <button key={prompt} onClick={() => void sendMessage(prompt)}>{prompt}<span>↗</span></button>)}
           </div></div>}
           <div className="messages">
             {(active?.messages ?? []).map((message, index) => <article key={`${active?.id}-${index}`} className={`message ${message.role}`}>
