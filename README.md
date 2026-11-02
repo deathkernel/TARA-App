@@ -126,7 +126,7 @@ All TARA language-model requests use the local OmniRoute gateway. This includes 
 
 The route aliases are passed to OmniRoute; they are not concrete model IDs. Provider availability, model IDs, quotas, billing, and fallback behavior depend on the connected providers and routing policy configured inside OmniRoute.
 
-**Data handling:** prompts and any explicitly supplied code attachments or images are sent to OmniRoute and may be forwarded to a cloud provider configured there. Do not send secrets or confidential workspace data unless you have reviewed the selected provider and consent to that transfer. Vision reports `images_sent_to_remote=true`. TARA keeps memory, permissions, capability routing, and desktop tool execution on the local machine; model output is never executed as a host command.
+**Data handling:** Chat prompts, recent history and relevant saved-memory snippets, creative briefs, and any explicitly supplied code attachments or images are sent to OmniRoute and may be forwarded to a cloud provider configured there. Do not send secrets or confidential workspace data unless you have reviewed the selected provider and consent to that transfer. Vision reports `images_sent_to_remote=true`. TARA keeps memory, permissions, capability routing, and desktop tool execution on the local machine; model output is never executed as a host command.
 
 Local speech transcription via optional faster-whisper and browser read-aloud are separate speech features, not language-model fallback paths. They remain local when enabled.
 
@@ -165,7 +165,7 @@ TARA-App now includes the local Router, Chat, Code, Planner, Memory, Creative, S
 1. Install Python 3.11 or newer and configure a running OmniRoute gateway.
 2. Clone this repository.
 3. Set `$env:TARA_OMNIROUTE_API_KEY = Read-Host 'OmniRoute API key'` in PowerShell.
-4. Double-click `run-tara.bat` from that same environment.
+4. Run `.\run-tara.bat` in that same PowerShell window.
 
 The launcher creates a local virtual environment, installs this repository, creates `tara-app.toml` from the example when needed, prepares the optional native Handler diagnostic, and starts TARA-App. TARA does not install, start, or call Ollama for language-model inference; the configured OmniRoute gateway handles model routing.
 
