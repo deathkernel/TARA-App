@@ -98,7 +98,7 @@ class FreeResearchTests(unittest.TestCase):
     def test_wikipedia_search_snippet_is_plain_text(self):
         payload = {"query": {"search": [{
             "title": "Example topic",
-            "snippet": "A <span class=\\"searchmatch\\">plain</span> result",
+            'snippet': 'A <span class="searchmatch">plain</span> result',
         }]}}
         with patch("tara_research.__main__._get_json", return_value=payload):
             items = _wikipedia("example topic")
