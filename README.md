@@ -132,6 +132,10 @@ Local speech transcription via optional faster-whisper and browser read-aloud ar
 
 See [OmniRoute integration setup](docs/OMNIROUTE_INTEGRATION.md) for Windows configuration and troubleshooting.
 
+### Web UI selection
+
+The feature-complete static web UI remains the default. The React frontend is built into `src/tara_app/web/react-dist` for integration testing and can be enabled explicitly with `TARA_ENABLE_REACT_UI=1`; it must not become the default until attachment, approval, voice, and conversation-management feature parity has been verified. The React UI sends language-model prompts through OmniRoute and must describe remote data handling accurately.
+
 ### Chat experience
 
 Assistant replies render safe Markdown for headings, lists, quotes, links, inline formatting, and code blocks. HTML in model output is treated as text; links are limited to HTTP or HTTPS. Replies and code blocks can be copied. Users can edit and resend a text-only prompt or regenerate its latest answer. TARA synchronizes the edited conversation context with its local chat runtime, including after the app restarts. Prompts with file attachments cannot be edited or regenerated because attachment bytes are not stored in the local chat history. Uploads support files up to 10 MB each, with a 10 MB combined attachment limit per message.

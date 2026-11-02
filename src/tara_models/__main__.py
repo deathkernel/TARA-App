@@ -152,6 +152,10 @@ def handle_request(request: Any) -> dict[str, Any]:
     action = request.get("action")
     if action not in {"health", "catalog", "generate"}:
         return result(request_id, "permission_denied", error="unsupported model capability")
+    if action == "generate":
+        question = inputs.get("question")
+        if not isinstance(question, str) or not question.strip() or len(question) > 20_000:
+            return result(request_id, "invalid_request", error="question is invalid")
     try:
         base, key, default_model = _omniroute_config()
         if action == "health":

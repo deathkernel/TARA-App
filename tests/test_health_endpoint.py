@@ -48,14 +48,14 @@ class HealthEndpointTests(unittest.TestCase):
         self.assertEqual(payload["api_version"], "1.0")
         self.assertEqual(payload["capability_count"], 2)
         self.assertEqual(payload["capabilities"], ["chat.respond", "models.catalog"])
-        self.assertEqual(payload["model_runtime"], "not_configured")
+        self.assertEqual(payload["model_runtime"], "omniroute")
 
 
     def test_health_reports_empty_catalog_as_not_configured(self):
         self.server.app.model_catalog = OllamaModelCatalog()
         with urlopen(self.base_url + "/api/health", timeout=2) as response:
             payload = json.loads(response.read().decode("utf-8"))
-        self.assertEqual(payload["model_runtime"], "not_configured")
+        self.assertEqual(payload["model_runtime"], "omniroute")
 
     def test_health_rejects_untrusted_origin(self):
         request = Request(

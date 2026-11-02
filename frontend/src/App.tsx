@@ -4,19 +4,15 @@ import remarkGfm from "remark-gfm";
 
 type Message = { role: "user" | "assistant"; text: string; status?: string };
 type Conversation = { id: string; title: string; updatedAt: number; messages: Message[] };
-type LocalModel = {
+type ModelRoute = {
   specialist: string;
   model: string;
-  installed?: boolean | null;
-  running?: boolean | null;
-  memory_bytes?: number | null;
-  vram_bytes?: number | null;
 };
 type ModelStatus = {
   status: string;
   provider?: string;
   service_available?: boolean;
-  models?: LocalModel[];
+  models?: ModelRoute[];
   pull?: { status?: string; model?: string; message?: string };
 };
 
@@ -61,15 +57,6 @@ function answerText(payload: any): string {
   ];
   const found = candidates.find((value) => typeof value === "string" && value.trim());
   return found ?? JSON.stringify(payload, null, 2);
-}
-
-function formatBytes(value?: number | null): string {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return "";
-  const units = ["B", "KiB", "MiB", "GiB", "TiB"];
-  let size = value;
-  let index = 0;
-  while (size >= 1024 && index < units.length - 1) { size /= 1024; index += 1; }
-  return `${size.toFixed(index ? 1 : 0)} ${units[index]}`;
 }
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -185,19 +172,6 @@ export default function App() {
     }
   }
 
-  async function modelAction(action: "pull" | "unload" | "remove", specialist: string) {
-    if (action === "remove" && !window.confirm(`Remove the installed model for ${specialist}? This deletes local model files.`)) return;
-    setModelBusy(specialist);
-    try {
-      await api(`/api/models/${action}`, { method: "POST", body: JSON.stringify({ specialist }) });
-      await refreshModels();
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Model action failed.");
-    } finally {
-      setModelBusy("");
-    }
-  }
-
   function submit(event: FormEvent) {
     event.preventDefault();
     void sendMessage();
@@ -228,14 +202,6 @@ export default function App() {
         {modelsOpen && <section className="models-panel">
           <div className="panel-heading"><div><h2>OmniRoute models</h2><p>Model selection and lifecycle are managed by the OmniRoute gateway.</p></div><button className="secondary" onClick={() => void refreshModels()} disabled={modelBusy === "refresh"}>{modelBusy === "refresh" ? "Refreshing…" : "Refresh"}</button></div>
           {modelStatus?.status === "managed_externally" && <p className="muted">TARA does not install or manage model weights locally. Use the Model Hub to browse models exposed by OmniRoute.</p>}
-          {(modelStatus?.models ?? []).map((model) => <div className="model-card" key={model.specialist}>
-            <div><strong>{model.specialist}</strong><p>{model.model}</p><small>{model.memory_bytes ? `RAM ${formatBytes(model.memory_bytes)} · ` : ""}{model.vram_bytes ? `VRAM ${formatBytes(model.vram_bytes)} · ` : ""}{model.running ? "Loaded" : model.installed ? "Installed" : "Not installed"}</small></div>
-            <div className="model-actions">
-              {!model.installed && <button onClick={() => void modelAction("pull", model.specialist)} disabled={!!modelBusy}>Install</button>}
-              {model.installed && model.running && <button className="secondary" onClick={() => void modelAction("unload", model.specialist)} disabled={!!modelBusy}>Unload</button>}
-              {model.installed && <button className="danger" onClick={() => void modelAction("remove", model.specialist)} disabled={!!modelBusy}>Remove</button>}
-            </div>
-          </div>)}
           <div className="free-hub"><div><strong>OmniRoute Model Hub</strong><p>Browse model IDs exposed by OmniRoute. Availability, quotas, and billing depend on its connected providers.</p></div><button onClick={() => void sendMessage(FREE_MODELS_PROMPT)} disabled={sending}>List models</button></div>
         </section>}
 
@@ -258,7 +224,7 @@ export default function App() {
         <form className="composer" onSubmit={submit}>
           <textarea value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onComposerKeyDown} placeholder="Message TARA…" aria-label="Message TARA" rows={1} maxLength={20000} />
           <button className="send" type="submit" disabled={sending || !draft.trim()} aria-label="Send message">{sending ? "…" : "↑"}</button>
-          <p>Local inference stays on your device. Cloud requests require explicit configuration.</p>
+          <p>Chat and specialist language-model requests are sent through OmniRoute and may reach a cloud provider selected by its routing policy. Review the provider and route before sending sensitive information. TARA keeps app data, memory, permissions, and desktop actions local.</p>
         </form>
         <footer>Chat and Code are separate specialists · TARA-App</footer>
       </main>

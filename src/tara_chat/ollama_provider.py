@@ -1,8 +1,4 @@
-"""Legacy direct Ollama chat adapter retained for compatibility/tests; TARA Chat now uses OmniRoute only."""
-
-TARA keeps memory, planning, tools, and verification. Ollama serves a pretrained
-local language model; this adapter does not train or fine-tune it.
-"""
+"""Legacy direct Ollama adapter retained for compatibility/tests; runtime uses OmniRoute."""
 from __future__ import annotations
 
 import json

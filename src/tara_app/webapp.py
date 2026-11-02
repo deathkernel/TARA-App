@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import mimetypes
+import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,11 @@ _ASSETS = {
     "/app.js": ("app.js", "text/javascript; charset=utf-8"),
 }
 _MAX_REQUEST_BYTES = 1_000_000
+
+
+def _react_ui_enabled() -> bool:
+    """Keep the feature-complete static UI as default until React parity is verified."""
+    return os.environ.get("TARA_ENABLE_REACT_UI", "").strip() == "1"
 
 
 class _Server(ThreadingHTTPServer):
@@ -69,7 +75,7 @@ class _Handler(BaseHTTPRequestHandler):
         # original static UI remains a safe fallback for source-only installs.
         react_root = (_WEB_ROOT / "react-dist").resolve()
         react_file: Path | None = None
-        if react_root.is_dir():
+        if _react_ui_enabled() and react_root.is_dir():
             if endpoint == "/":
                 react_file = react_root / "index.html"
             elif endpoint.startswith("/assets/"):
