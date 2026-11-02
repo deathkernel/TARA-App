@@ -1,7 +1,7 @@
 """Regression tests for OmniRoute-backed Model Hub dispatch."""
 import unittest
 
-from tara_app.contracts import Capability, ModuleResult, RouteDecision
+from tara_app.contracts import AdapterHealth, Capability, ModuleResult, RouteDecision
 from tara_app.orchestrator import Orchestrator
 from tara_app.registry import CapabilityRegistry
 
@@ -12,6 +12,9 @@ class FakeAdapter:
 
     def __init__(self):
         self.calls = []
+
+    def health(self):
+        return AdapterHealth("healthy")
 
     def execute(self, request):
         self.calls.append(request)
