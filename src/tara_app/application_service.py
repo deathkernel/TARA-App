@@ -37,12 +37,16 @@ class TARAApplicationService:
         catalogue: ModelCatalogue | None = None,
         orchestrator: CapabilityOrchestrator | None = None,
         session_database_path: str | Path | None = None,
+        session_retention_seconds: int | None = None,
     ) -> None:
         self.runtime = runtime
         self.audit = audit
-        if sessions is not None and session_database_path is not None:
-            raise ValueError("pass either sessions or session_database_path, not both")
-        self.sessions = sessions or SessionStore(database_path=session_database_path)
+        if sessions is not None and (session_database_path is not None or session_retention_seconds is not None):
+            raise ValueError("pass either a configured sessions store or session storage options, not both")
+        self.sessions = sessions or SessionStore(
+            database_path=session_database_path,
+            retention_seconds=session_retention_seconds,
+        )
         self.catalogue = catalogue or ModelCatalogue()
         self.orchestrator = orchestrator
 
@@ -81,17 +85,17 @@ class TARAApplicationService:
         ]
 
     def chat(self, *, session_id: str, provider_id: str, model: str, message: str) -> ChatTurn:
+        """Generate a reply, optionally cancel it, and persist one complete chat turn."""
         if not isinstance(message, str) or not message.strip():
             raise ApplicationServiceError("message must be non-empty")
         try:
-            session = self.sessions.get(session_id)
+            self.sessions.get(session_id)
             selected = self.catalogue.get(provider_id, model)
             if selected.provider_id != provider_id:
                 raise ApplicationServiceError("selected model/provider mismatch")
+            # Check capacity before inference, then recheck atomically when committing.
+            self.sessions.ensure_turn_capacity(session_id)
             history = self.sessions.history(session_id)
-            # Build the request with a tentative user turn. Commit both messages only
-            # after the provider returns a usable response, so provider failures do not
-            # leave an orphaned user message in the next turn's conversation context.
             request_history = [
                 {"role": item.role, "content": item.content}
                 for item in history if item.role in {"system", "user", "assistant"}
@@ -104,15 +108,17 @@ class TARAApplicationService:
             )
             if not isinstance(response, str) or not response.strip():
                 raise ApplicationServiceError("chat provider returned an empty or invalid response")
-            self.sessions.append_message(session_id, "user", message)
-            self.sessions.append_message(session_id, "assistant", response.strip())
+            answer = response.strip()
+            self.sessions.append_turn(session_id, message, answer)
             self.audit.record("chat_turn_completed", {
                 "session_id": session_id, "provider_id": provider_id, "model": model,
             })
-            return ChatTurn(session_id, provider_id, model, message, response.strip())
+            return ChatTurn(session_id, provider_id, model, message, answer)
         except ApplicationServiceError:
             raise
-        except (SessionError, RuntimeConfigurationError, AuditLogError, ValueError, RuntimeError):
+        except SessionError as exc:
+            raise ApplicationServiceError(str(exc)) from None
+        except (RuntimeConfigurationError, AuditLogError, ValueError, RuntimeError):
             raise ApplicationServiceError("chat turn failed; inspect local provider status and session state") from None
 
     def dispatch_capability(self, request: CapabilityRequest) -> CapabilityResponse:
