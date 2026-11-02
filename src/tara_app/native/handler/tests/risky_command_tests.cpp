@@ -44,6 +44,12 @@ int main() {
     expectRisk("git fetch remains high risk",
                "git", {"fetch", "origin"},
                RiskLevel::High);
+    expectRisk("pip uninstall remains high risk",
+               "python", {"-m", "pip", "uninstall", "sample", "-y"},
+               RiskLevel::High);
+    expectRisk("winget uninstall remains high risk",
+               "winget", {"uninstall", "sample"},
+               RiskLevel::High);
 
     expectRisk("python version query is low risk",
                "python", {"--version"}, RiskLevel::Low);
