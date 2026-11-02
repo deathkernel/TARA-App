@@ -68,8 +68,10 @@ RiskLevel classifyCommandRisk(const std::string& executable,
         lower.find("winget upgrade") != std::string::npos ||
         lower.find("winget install") != std::string::npos;
 
-    if (versionQuery) return RiskLevel::Low;
+    // Mutating operations must take precedence over version/verbosity flags.
+    // For example, "pip install package -v" is verbose mode, not a safe query.
     if (installOrUpdate) return RiskLevel::High;
+    if (versionQuery) return RiskLevel::Low;
 
     return RiskLevel::Medium;
 }
