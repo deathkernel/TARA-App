@@ -11,7 +11,7 @@ import os
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
-from typing import Any
+from typing import Any, Iterator
 
 MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 MAX_COMPLETION_TOKENS = 4096
@@ -49,6 +49,46 @@ def _request_json(url: str, payload: dict[str, Any], api_key: str, timeout: floa
     if not isinstance(result, dict):
         raise RuntimeError("OmniRoute returned an invalid response")
     return result
+
+
+def _stream_request_json(url: str, payload: dict[str, Any], api_key: str, timeout: float) -> Iterator[str]:
+    request = Request(
+        url,
+        data=json.dumps(payload, separators=(",", ":"), allow_nan=False).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream",
+        },
+        method="POST",
+    )
+    try:
+        with build_opener(ProxyHandler({}), _NoRedirectHandler()).open(request, timeout=timeout) as response:
+            total_bytes = 0
+            for raw_line in response:
+                total_bytes += len(raw_line)
+                if total_bytes > MAX_RESPONSE_BYTES:
+                    raise RuntimeError("OmniRoute streaming response exceeded the 8 MiB safety limit")
+                line = raw_line.decode("utf-8").strip()
+                if not line or not line.startswith("data:"):
+                    continue
+                data_str = line[len("data:"):].strip()
+                if data_str == "[DONE]":
+                    break
+                try:
+                    chunk = json.loads(data_str)
+                except json.JSONDecodeError:
+                    continue
+                choices = chunk.get("choices")
+                if isinstance(choices, list) and choices and isinstance(choices[0], dict):
+                    delta = choices[0].get("delta", {})
+                    content = delta.get("content")
+                    if content:
+                        yield content
+    except HTTPError as exc:
+        raise RuntimeError(f"OmniRoute returned HTTP {exc.code}") from None
+    except (URLError, TimeoutError, OSError):
+        raise RuntimeError("Could not reach the configured OmniRoute endpoint") from None
 
 
 class OmniRouteProvider:
@@ -92,6 +132,7 @@ class OmniRouteProvider:
         self.model = model.strip()
         self.timeout = float(timeout)
         self._transport = transport or _request_json
+        self._stream_transport = getattr(transport, "stream", None) if transport else _stream_request_json
 
     @classmethod
     def from_env(cls) -> "OmniRouteProvider":
@@ -145,6 +186,40 @@ class OmniRouteProvider:
         if not isinstance(message, dict) or not isinstance(message.get("content"), str) or not message["content"].strip():
             raise RuntimeError("OmniRoute returned an empty or unsupported chat response")
         return message["content"].strip()
+
+
+    def stream_complete(
+        self,
+        prompt: str,
+        *,
+        system: str | None = None,
+        max_completion_tokens: int = 512,
+        temperature: float = 0.6,
+    ) -> Iterator[str]:
+        if not isinstance(prompt, str) or not prompt.strip():
+            raise ValueError("prompt must not be empty")
+        if system is not None and not isinstance(system, str):
+            raise ValueError("system must be a string or None")
+        if type(max_completion_tokens) is not int or not 1 <= max_completion_tokens <= MAX_COMPLETION_TOKENS:
+            raise ValueError(f"max_completion_tokens must be between 1 and {MAX_COMPLETION_TOKENS}")
+        if isinstance(temperature, bool) or not isinstance(temperature, (int, float)) or not math.isfinite(float(temperature)) or not 0 <= float(temperature) <= 2:
+            raise ValueError("temperature must be finite and between 0 and 2")
+
+        messages = []
+        if system and system.strip():
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt.strip()})
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "stream": True,
+            "max_tokens": max_completion_tokens,
+            "temperature": float(temperature),
+        }
+        streamer = self._stream_transport or _stream_request_json
+        yield from streamer(
+            f"{self.base_url}/chat/completions", payload, self.api_key, self.timeout
+        )
 
 
 __all__ = ["OmniRouteProvider"]

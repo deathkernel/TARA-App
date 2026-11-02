@@ -65,6 +65,28 @@ class HealthEndpointTests(unittest.TestCase):
         self.assertIn("diagnostics", payload)
         self.assertIn("hardware", payload["diagnostics"])
 
+    def test_settings_endpoints(self):
+        # Test GET /api/settings
+        with urlopen(self.base_url + "/api/settings", timeout=2) as response:
+            self.assertEqual(response.status, 200)
+            payload = json.loads(response.read().decode("utf-8"))
+        self.assertEqual(payload["status"], "success")
+        self.assertIn("settings", payload)
+        self.assertIn("secrets", payload["settings"])
+
+        # Test POST /api/settings/secret
+        req = Request(
+            self.base_url + "/api/settings/secret",
+            data=json.dumps({"key": "TEST_VAULT_KEY", "value": "secret_123"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urlopen(req, timeout=2) as response:
+            self.assertEqual(response.status, 200)
+            res_payload = json.loads(response.read().decode("utf-8"))
+        self.assertEqual(res_payload["status"], "success")
+        self.assertEqual(res_payload["key"], "TEST_VAULT_KEY")
+
     def test_health_rejects_untrusted_origin(self):
         request = Request(
             self.base_url + "/api/health",

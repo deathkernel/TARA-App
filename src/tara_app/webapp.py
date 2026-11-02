@@ -83,6 +83,22 @@ class _Handler(BaseHTTPRequestHandler):
             )
             self._json(200, {"status": "success", "diagnostics": report})
             return
+        if endpoint == "/api/settings":
+            if not self._local_origin():
+                self._json(403, {"status": "permission_denied", "error": "request origin is not allowed"})
+                return
+            from tara_app.security_vault import SecurityVault
+            vault = SecurityVault()
+            masked = vault.get_masked_secrets()
+            self._json(200, {
+                "status": "success",
+                "settings": {
+                    "omniroute_base_url": os.environ.get("TARA_OMNIROUTE_BASE_URL", "http://127.0.0.1:20128/v1"),
+                    "omniroute_model": os.environ.get("TARA_OMNIROUTE_MODEL", "auto"),
+                    "secrets": masked,
+                }
+            })
+            return
         if endpoint == "/api/sessions":
             if not self._local_origin():
                 self._json(403, {"status": "permission_denied", "error": "request origin is not allowed"})
@@ -148,7 +164,7 @@ class _Handler(BaseHTTPRequestHandler):
         if endpoint not in {
             "/api/chat", "/api/approve", "/api/cancel",
             "/api/models/pull", "/api/models/unload", "/api/models/remove",
-            "/api/sessions/new", "/api/sessions/delete",
+            "/api/sessions/new", "/api/sessions/delete", "/api/settings/secret",
         }:
             self._json(404, {"status": "unavailable", "error": "endpoint not found"})
             return
@@ -179,6 +195,8 @@ class _Handler(BaseHTTPRequestHandler):
             fields = {"metadata", "session_id"}
         elif endpoint == "/api/sessions/delete":
             fields = {"session_id"}
+        elif endpoint == "/api/settings/secret":
+            fields = {"key", "value"}
         else:
             fields = {"approval_id", "session_id"}
         if not isinstance(payload, dict) or set(payload) - fields:
@@ -226,6 +244,19 @@ class _Handler(BaseHTTPRequestHandler):
                 return
             deleted = self.server.app.delete_session(sid)
             self._json(200, {"status": "success", "deleted": deleted, "session_id": sid})
+            return
+        if endpoint == "/api/settings/secret":
+            key = payload.get("key")
+            value = payload.get("value")
+            if not isinstance(key, str) or not key.strip() or not isinstance(value, str):
+                self._json(400, {"status": "invalid_request", "error": "key and value are required"})
+                return
+            from tara_app.security_vault import SecurityVault
+            try:
+                SecurityVault().set_secret(key.strip(), value.strip())
+                self._json(200, {"status": "success", "key": key.strip()})
+            except Exception as exc:
+                self._json(400, {"status": "failed", "error": str(exc)})
             return
         if endpoint == "/api/chat":
             if "history" in payload:

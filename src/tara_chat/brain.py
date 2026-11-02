@@ -122,3 +122,64 @@ class TARABrain:
             self.memory.remember(remember_key, prompt.strip(), importance=importance)
             self.memory.save()
         return BrainResponse(text=text.strip(), recalled=recalled)
+
+
+    def stream_respond(
+        self,
+        prompt: str,
+        *,
+        remember_key: str | None = None,
+        importance: float = 1.0,
+        max_new_tokens: int = 2048,
+        temperature: float = 0.6,
+        **_unused,
+    ):
+        if not isinstance(prompt, str) or not prompt.strip():
+            raise ValueError("prompt must not be empty")
+        if self.llm_provider is None:
+            raise RuntimeError("No OmniRoute provider configured. Set TARA_OMNIROUTE_API_KEY and start the OmniRoute gateway.")
+        if isinstance(max_new_tokens, bool) or not isinstance(max_new_tokens, int) or max_new_tokens <= 0:
+            raise ValueError("max_new_tokens must be a positive integer")
+
+        recalled = tuple(self.memory.retrieve(prompt, limit=5))
+        sections = []
+        if recalled:
+            memory_lines = [
+                f"- {item['key']}: {item['value']}"
+                for item in recalled
+                if isinstance(item, dict) and "key" in item and "value" in item
+            ]
+            if memory_lines:
+                sections.append("Relevant saved memories (user-managed; use only when relevant):\n" + "\n".join(memory_lines))
+
+        if self.conversation_history:
+            history_lines = []
+            for role, content in self.conversation_history[-self.max_history_turns * 2:]:
+                history_lines.append(f"{role}: {content}")
+            sections.append("Recent conversation:\n" + "\n".join(history_lines))
+
+        sections.append("User: " + prompt.strip())
+        context = "\n\n".join(sections)
+
+        if not hasattr(self.llm_provider, "stream_complete"):
+            res = self.respond(prompt, remember_key=remember_key, importance=importance, max_new_tokens=max_new_tokens, temperature=temperature)
+            yield res.text
+            return
+
+        chunks = []
+        for chunk in self.llm_provider.stream_complete(
+            context,
+            system=self.system_prompt,
+            max_completion_tokens=max_new_tokens,
+            temperature=temperature,
+        ):
+            chunks.append(chunk)
+            yield chunk
+
+        full_text = "".join(chunks).strip()
+        if full_text:
+            self.conversation_history.extend((("User", prompt.strip()), ("TARA", full_text)))
+            self.conversation_history = self.conversation_history[-self.max_history_turns * 2:]
+            if remember_key is not None:
+                self.memory.remember(remember_key, prompt.strip(), importance=importance)
+                self.memory.save()

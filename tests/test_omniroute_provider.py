@@ -74,6 +74,25 @@ class OmniRouteProviderTests(unittest.TestCase):
             provider = provider_from_env()
         self.assertIsInstance(provider, OmniRouteProvider)
 
+    def test_stream_complete_yields_tokens(self):
+        calls = []
+
+        def fake_stream(url, payload, api_key, timeout):
+            calls.append((url, payload, api_key, timeout))
+            yield "Hello"
+            yield " from"
+            yield " TARA"
+
+        provider = OmniRouteProvider(api_key="test-key")
+        provider._stream_transport = fake_stream
+
+        chunks = list(provider.stream_complete("Hi", system="You are TARA"))
+        self.assertEqual(chunks, ["Hello", " from", " TARA"])
+        url, payload, key, timeout = calls[0]
+        self.assertEqual(url, "http://127.0.0.1:20128/v1/chat/completions")
+        self.assertEqual(payload["stream"], True)
+        self.assertEqual(payload["model"], "auto")
+
     def test_factory_rejects_ollama_backend(self):
         with patch.dict(os.environ, {"TARA_LLM_BACKEND": "ollama"}, clear=True):
             with self.assertRaisesRegex(ValueError, "OmniRoute only"):
