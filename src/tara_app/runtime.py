@@ -56,13 +56,11 @@ _LEGACY_LOCAL_MODEL_ENV = frozenset({
 })
 _OLLAMA_DEFAULT_MODELS = {
     "chat": "llama3.2:3b",
-    "code": "qwen2.5-coder:3b",
     "creative": "llama3.2:3b",
     "vision": "gemma3:4b",
 }
 _OLLAMA_MODULE_ENV = {
     "chat": ("TARA_LLAMA_MODEL", "OLLAMA_HOST"),
-    "code": ("TARA_CODE_MODEL", "TARA_CODE_OLLAMA_URL"),
     "creative": ("TARA_CREATIVE_MODEL", "TARA_CREATIVE_OLLAMA_URL"),
     "vision": ("TARA_VISION_MODEL", "TARA_VISION_OLLAMA_URL"),
 }
@@ -189,7 +187,7 @@ def _ollama_settings(value: Any) -> dict[str, dict[str, str]]:
         raise RuntimeConfigurationError("ollama.base_url must target a local Ollama origin")
 
     models = _table(config.get("models", {}), "ollama.models")
-    if set(models) - set(_OLLAMA_DEFAULT_MODELS):
+    if set(models) - (set(_OLLAMA_DEFAULT_MODELS) | {"code"}):
         raise RuntimeConfigurationError("ollama.models contains an unsupported specialist")
     settings: dict[str, dict[str, str]] = {}
     for module_id, default_model in _OLLAMA_DEFAULT_MODELS.items():
