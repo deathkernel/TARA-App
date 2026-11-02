@@ -27,7 +27,12 @@ def main() -> int:
         app = create_application(args.config)
         if app.model_catalog is not None:
             app.model_catalog.ensure_service_started()
-            if "chat" in app.model_catalog.profiles:
+            chat_adapter = app.registry.adapter("chat")
+            chat_environment = getattr(chat_adapter, "environment", {})
+            chat_backend = chat_environment.get("TARA_LLM_BACKEND", "ollama").strip().lower()
+            if "chat" in app.model_catalog.profiles and chat_backend == "omniroute":
+                print("OmniRoute is selected for TARA Chat; skipping the local chat-model download and warm-up.", flush=True)
+            elif "chat" in app.model_catalog.profiles:
                 print("Preparing TARA's local chat model before the app opens.", flush=True)
                 try:
                     app.model_catalog.ensure_model_installed("chat")
