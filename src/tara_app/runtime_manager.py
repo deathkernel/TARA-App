@@ -13,7 +13,7 @@ from collections.abc import Iterator
 from typing import Callable, Any
 
 from tara_app.config import SettingsError, load_runtime_settings
-from tara_app.contracts import ModelInfo, ModelProvider, ProviderStatus
+from tara_app.contracts import CancellableModelProvider, ModelInfo, ModelProvider, ProviderStatus
 from tara_app.providers.ollama import OllamaProvider, ProviderError
 
 
@@ -172,12 +172,11 @@ class RuntimeManager:
                 if cancel_event is not None:
                     if cancel_event.is_set():
                         raise RuntimeConfigurationError("provider request was cancelled")
-                    cancellable_chat = getattr(provider, "chat_cancellable", None)
-                    if not callable(cancellable_chat):
+                    if not isinstance(provider, CancellableModelProvider):
                         raise RuntimeConfigurationError(
                             "configured provider does not support request cancellation"
                         )
-                    return cancellable_chat(model, messages, cancel_event=cancel_event)
+                    return provider.chat_cancellable(model, messages, cancel_event=cancel_event)
                 return provider.chat(model, messages)
         except ProviderError as exc:
             if "cancelled" in str(exc).lower():
