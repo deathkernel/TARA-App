@@ -70,7 +70,6 @@ id = "models"
 allow_remote = true
 command = ["{python}", "-c", "pass"]
 working_directory = "."
-allow_remote = true
 environment = ["TARA_MODELS_API_BASE_URL", "TARA_MODELS_API_KEY", "TARA_MODELS_MODEL"]
 """,
                 encoding="utf-8",
