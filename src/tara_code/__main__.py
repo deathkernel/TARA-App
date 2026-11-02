@@ -161,7 +161,7 @@ def handle_request(request: Any) -> dict[str, Any]:
         "model": model,
         "stream": False,
         "messages": [
-            {"role": "system", "content": "You are TARA-Code, a local review-first coding specialist. Produce careful, testable reasoning with explicit assumptions."},
+            {"role": "system", "content": "You are TARA-Code, an OmniRoute-backed review-first coding specialist. Produce careful, testable reasoning with explicit assumptions."},
             {"role": "user", "content": prompt},
         ],
         "temperature": 0.15,
