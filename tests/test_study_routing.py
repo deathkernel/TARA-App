@@ -30,6 +30,9 @@ class StudyRoutingTests(unittest.TestCase):
     def test_omniroute_auto_route_selection_routes_to_model_hub(self):
         result=self.route("Use auto/coding:cheap: review this function",["chat.respond","models.generate"])
         self.assertEqual((result.module,result.action),("models","generate"))
+    def test_plain_model_id_selection_routes_to_model_hub(self):
+        result=self.route("Use model gpt-4o: explain photosynthesis",["chat.respond","models.generate"])
+        self.assertEqual((result.module,result.action),("models","generate"))
     def test_rain_question_routes_to_weather(self):
         result=self.route("Will it rain in Pune?",["chat.respond","weather.forecast"])
         self.assertEqual((result.module,result.action),("weather","forecast"))
