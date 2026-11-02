@@ -67,7 +67,7 @@ def handle_request(request: Any) -> dict[str, Any]:
         response = brain.respond(question.strip())
     except (OSError, RuntimeError, TypeError, ValueError):
         return _result(request_id, "unavailable", error="TARA-Chat could not produce a response", duration_ms=max(0, int((time.monotonic() - start) * 1000)))
-    return _result(request_id, "success", {"text": response.text}, duration_ms=max(0, int((time.monotonic() - start) * 1000)))
+    return _result(request_id, "success", {"text": response.text, "provider": "omniroute", "remote_data_transfer": True}, duration_ms=max(0, int((time.monotonic() - start) * 1000)))
 
 
 def main() -> int:
