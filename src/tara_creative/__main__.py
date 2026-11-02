@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import sys
 import time
-from .service import MODULE_ID, execute
+from .service import MODULE_ID, _omniroute_config, execute
 MAX_REQUEST_BYTES = 1_000_000
 _ALLOWED = {"schema_version", "request_id", "session_id", "module", "action", "inputs", "workspace_root", "timeout_seconds", "approval_token"}
 def _reply(request_id, status, data, error, duration_ms):
@@ -25,7 +25,12 @@ def main():
     action,inputs=request.get("action"),request.get("inputs",{})
     if not isinstance(action,str) or not isinstance(inputs,dict):
         _reply(rid,"invalid_request",{},"action or inputs are invalid",0); return 0
-    if action=="health": _reply(rid,"success",{"healthy":True},None,0); return 0
+    if action=="health":
+        try:
+            _omniroute_config()
+        except ValueError:
+            _reply(rid,"unavailable",{},"OmniRoute is not configured",0); return 0
+        _reply(rid,"success",{"healthy":True,"provider":"omniroute"},None,0); return 0
     start=time.monotonic()
     try:
         status,data,error=execute(action,inputs,approval_token=request.get("approval_token"))
