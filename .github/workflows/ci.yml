@@ -1,5 +1,11 @@
 name: TARA-App Core CI
 
+# Keep only the newest CI run for a branch. Push and pull_request events
+# share the same group so they do not occupy duplicate runner slots.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+
 on:
   push:
   pull_request:
