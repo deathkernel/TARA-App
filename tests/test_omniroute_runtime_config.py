@@ -39,30 +39,35 @@ working_directory = "."
 
 [[modules]]
 id = "chat"
+allow_remote = true
 command = ["{python}", "-c", "pass"]
 working_directory = "."
 environment = ["TARA_LLM_BACKEND", "TARA_OMNIROUTE_API_KEY", "TARA_OMNIROUTE_BASE_URL", "TARA_OMNIROUTE_MODEL"]
 
 [[modules]]
 id = "code"
+allow_remote = true
 command = ["{python}", "-c", "pass"]
 working_directory = "."
 environment = ["TARA_CODE_API_BASE_URL", "TARA_CODE_API_KEY", "TARA_CODE_MODEL"]
 
 [[modules]]
 id = "vision"
+allow_remote = true
 command = ["{python}", "-c", "pass"]
 working_directory = "."
 environment = ["TARA_VISION_API_BASE_URL", "TARA_VISION_API_KEY", "TARA_VISION_MODEL"]
 
 [[modules]]
 id = "creative"
+allow_remote = true
 command = ["{python}", "-c", "pass"]
 working_directory = "."
 environment = ["TARA_CREATIVE_API_BASE_URL", "TARA_CREATIVE_API_KEY", "TARA_CREATIVE_MODEL"]
 
 [[modules]]
 id = "models"
+allow_remote = true
 command = ["{python}", "-c", "pass"]
 working_directory = "."
 allow_remote = true
