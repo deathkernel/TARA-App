@@ -168,14 +168,14 @@ class BuiltinRouter:
                 target = ("weather", "forecast", "weather_lookup", "The user asks for current weather or a forecast.")
             elif _STUDY.search(normalized):
                 target = ("study", "create", "study_intent", "The request asks for study notes, a quiz, flashcards, or a revision plan.")
+            elif _CODE.search(normalized):
+                target = ("code", "plan", "coding_intent", "The request is a coding task.")
             elif _RESEARCH.search(normalized):
                 target = ("research", "answer", "research_intent", "The request asks for current or sourced information.")
             elif _PLANNER.search(normalized):
                 target = ("planner", "plan", "planning_intent", "The request asks for a structured plan.")
             elif _CREATIVE.search(normalized):
                 target = ("creative", "write", "creative_intent", "The request asks for creative writing.")
-            elif _CODE.search(normalized):
-                target = ("code", "plan", "coding_intent", "The request is a coding task.")
             else:
                 target = ("chat", "respond", "conversation", "General conversation.")
 
