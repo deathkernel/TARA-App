@@ -114,8 +114,10 @@ def create_application(config_path: str | Path) -> Orchestrator:
         env_names = item.get("environment", [])
         if not isinstance(env_names, list) or any(not isinstance(name, str) or not _ENV_NAME.fullmatch(name) for name in env_names):
             raise RuntimeConfigurationError(f"modules[{index}].environment must contain environment variable names")
-        module_environment = {name: os.environ[name] for name in env_names if name in os.environ}
-        module_environment.update(ollama_settings.get(module_id, {}))
+        module_environment = dict(ollama_settings.get(module_id, {}))
+        # Explicit process environment wins over local Ollama defaults. This lets
+        # TARA_LLM_BACKEND=omniroute select the gateway when [ollama] is present.
+        module_environment.update({name: os.environ[name] for name in env_names if name in os.environ})
         adapter_args = {
             "working_directory": _directory(root, item.get("working_directory")),
             "timeout_seconds": _integer(item.get("timeout_seconds", 30), f"modules[{index}].timeout_seconds", 1, 600),
