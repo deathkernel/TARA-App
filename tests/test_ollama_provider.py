@@ -195,6 +195,7 @@ class OllamaProviderTests(unittest.TestCase):
         import threading
 
         cancelled = threading.Event()
+        read_started = threading.Event()
         read_released = threading.Event()
         response_socket = Mock()
         response_socket.shutdown.side_effect = lambda *_: read_released.set()
@@ -203,6 +204,7 @@ class OllamaProviderTests(unittest.TestCase):
         response.fp.raw._sock = response_socket
 
         def blocked_read(_limit):
+            read_started.set()
             self.assertTrue(read_released.wait(2))
             raise OSError("response socket interrupted")
 
@@ -213,6 +215,7 @@ class OllamaProviderTests(unittest.TestCase):
         provider = OllamaProvider(chat_timeout_seconds=5)
 
         def cancel_soon():
+            self.assertTrue(read_started.wait(1))
             cancelled.set()
 
         with patch("tara_app.providers.ollama.http.client.HTTPConnection", return_value=connection):
