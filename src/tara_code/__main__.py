@@ -1,4 +1,4 @@
-"""Bounded JSON-over-stdio adapter for the local TARA-Code Ollama specialist."""
+"""Bounded JSON-over-stdio adapter for the OmniRoute-backed TARA-Code specialist."""
 from __future__ import annotations
 
 import base64
@@ -32,16 +32,54 @@ def _result(request_id: str, status: str, data: dict[str, Any] | None = None, er
     return {"schema_version": "1.0", "request_id": request_id, "status": status, "data": data or {}, "error": error, "duration_ms": duration_ms}
 
 
-def _ollama_origin() -> str:
-    value = os.environ.get("TARA_CODE_OLLAMA_URL", "http://127.0.0.1:11434").strip().rstrip("/")
+def _omniroute_base_url() -> str:
+    value = os.environ.get("TARA_CODE_API_BASE_URL", "http://127.0.0.1:20128/v1").strip().rstrip("/")
     try:
         parsed = urlsplit(value)
         port = parsed.port
     except ValueError as exc:
-        raise ValueError("local model endpoint is invalid") from exc
-    if parsed.scheme != "http" or parsed.hostname not in {"localhost", "127.0.0.1", "::1"} or parsed.username or parsed.password or parsed.path or parsed.query or parsed.fragment or (port is not None and not 1 <= port <= 65535):
-        raise ValueError("TARA-Code only accepts a loopback Ollama endpoint")
+        raise ValueError("OmniRoute endpoint is invalid") from exc
+    if (
+        parsed.scheme != "http"
+        or parsed.hostname not in {"localhost", "127.0.0.1", "::1"}
+        or parsed.username
+        or parsed.password
+        or parsed.path != "/v1"
+        or parsed.query
+        or parsed.fragment
+        or (port is not None and not 1 <= port <= 65535)
+    ):
+        raise ValueError("TARA-Code only accepts the local OmniRoute /v1 endpoint")
     return value
+
+
+def _omniroute_api_key() -> str:
+    value = os.environ.get("TARA_CODE_API_KEY", "").strip()
+    if not value or len(value) > 4096 or any(ord(char) < 33 or ord(char) == 127 for char in value):
+        raise ValueError("TARA_CODE_API_KEY is missing or invalid")
+    return value
+
+
+def _omniroute_opener():
+    return build_opener(ProxyHandler({}), _NoRedirect())
+
+
+def _check_gateway(base_url: str, api_key: str) -> bool:
+    request_obj = Request(
+        base_url + "/models",
+        headers={"Authorization": f"Bearer {api_key}", "Accept": "application/json"},
+        method="GET",
+    )
+    try:
+        with _omniroute_opener().open(request_obj, timeout=20) as response:
+            raw = response.read()
+    except (HTTPError, URLError, TimeoutError, OSError):
+        return False
+    try:
+        body = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return False
+    return isinstance(body, Mapping) and isinstance(body.get("data"), list)
 
 
 def _read_attachments(value: Any) -> str:
@@ -84,7 +122,14 @@ def handle_request(request: Any) -> dict[str, Any]:
     if not isinstance(action, str) or not isinstance(inputs, Mapping):
         return _result(request_id, "invalid_request", error="action or inputs are invalid")
     if action == "health":
-        return _result(request_id, "success", {"healthy": True, "provider": "ollama"})
+        try:
+            base_url = _omniroute_base_url()
+            api_key = _omniroute_api_key()
+        except ValueError:
+            return _result(request_id, "unavailable", error="OmniRoute is not configured")
+        if not _check_gateway(base_url, api_key):
+            return _result(request_id, "unavailable", error="OmniRoute gateway is unavailable")
+        return _result(request_id, "success", {"healthy": True, "provider": "omniroute"})
     if action != "plan":
         return _result(request_id, "permission_denied", error="TARA-Code only supports review-first planning")
     question = inputs.get("question")
@@ -92,10 +137,14 @@ def handle_request(request: Any) -> dict[str, Any]:
         return _result(request_id, "invalid_request", error="question must be non-empty bounded text")
     try:
         source = _read_attachments(inputs.get("attachments", []))
-        origin = _ollama_origin()
+        origin = _omniroute_base_url()
     except ValueError as exc:
         return _result(request_id, "invalid_request", error=str(exc))
-    model = os.environ.get("TARA_CODE_MODEL", "qwen2.5-coder:3b").strip()
+    try:
+        api_key = _omniroute_api_key()
+    except ValueError:
+        return _result(request_id, "unavailable", error="OmniRoute API key is not configured")
+    model = os.environ.get("TARA_CODE_MODEL", "auto/coding:cheap").strip()
     if not _MODEL_RE.fullmatch(model):
         return _result(request_id, "invalid_request", error="configured local model name is invalid")
     prompt = (
@@ -115,30 +164,53 @@ def handle_request(request: Any) -> dict[str, Any]:
             {"role": "system", "content": "You are TARA-Code, a local review-first coding specialist. Produce careful, testable reasoning with explicit assumptions."},
             {"role": "user", "content": prompt},
         ],
-        "options": {"temperature": 0.15},
+        "temperature": 0.15,
     }
     request_obj = Request(
-        origin + "/api/chat",
+        origin + "/chat/completions",
         data=json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8"),
-        headers={"Content-Type": "application/json", "Accept": "application/json"},
+        headers={
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        },
         method="POST",
     )
     started = time.monotonic()
     try:
-        with build_opener(ProxyHandler({}), _NoRedirect()).open(request_obj, timeout=180) as response:
+        with _omniroute_opener().open(request_obj, timeout=150) as response:
             raw = response.read(MAX_RESPONSE_BYTES + 1)
-    except (HTTPError, URLError, TimeoutError, OSError):
-        return _result(request_id, "unavailable", error="local Ollama coding model is unavailable", duration_ms=int((time.monotonic() - started) * 1000))
+            response_model = response.headers.get("X-OmniRoute-Model") or model
+    except HTTPError as exc:
+        if exc.code in {401, 403}:
+            message = "OmniRoute rejected the configured API key"
+        elif exc.code == 429:
+            message = "OmniRoute route is rate-limited or out of quota"
+        else:
+            message = "OmniRoute gateway returned an HTTP error"
+        return _result(request_id, "unavailable", error=message, duration_ms=int((time.monotonic() - started) * 1000))
+    except (URLError, TimeoutError, OSError):
+        return _result(request_id, "unavailable", error="OmniRoute gateway is unavailable", duration_ms=int((time.monotonic() - started) * 1000))
     if len(raw) > MAX_RESPONSE_BYTES:
-        return _result(request_id, "failed", error="local Ollama returned an oversized coding response", duration_ms=int((time.monotonic() - started) * 1000))
+        return _result(request_id, "failed", error="OmniRoute returned an oversized coding response", duration_ms=int((time.monotonic() - started) * 1000))
     try:
         body = json.loads(raw.decode("utf-8"))
-        text = body.get("message", {}).get("content") if isinstance(body, Mapping) else None
+        choices = body.get("choices") if isinstance(body, Mapping) else None
+        first_choice = choices[0] if isinstance(choices, list) and choices else None
+        message = first_choice.get("message") if isinstance(first_choice, Mapping) else None
+        text = message.get("content") if isinstance(message, Mapping) else None
+        if isinstance(body, Mapping) and isinstance(body.get("model"), str):
+            response_model = body["model"]
     except (UnicodeDecodeError, json.JSONDecodeError):
         text = None
     if not isinstance(text, str) or not text.strip() or len(text) > MAX_RESPONSE_BYTES:
-        return _result(request_id, "failed", error="local Ollama returned an invalid coding response", duration_ms=int((time.monotonic() - started) * 1000))
-    return _result(request_id, "success", {"text": text, "model": model, "execution_performed": False}, duration_ms=int((time.monotonic() - started) * 1000))
+        return _result(request_id, "failed", error="OmniRoute returned an invalid coding response", duration_ms=int((time.monotonic() - started) * 1000))
+    return _result(request_id, "success", {
+        "text": text,
+        "model": response_model,
+        "provider": "omniroute",
+        "execution_performed": False,
+    }, duration_ms=int((time.monotonic() - started) * 1000))
 
 
 def main() -> int:
