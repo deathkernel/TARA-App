@@ -256,3 +256,13 @@ tara-app
 ```
 
 When `src/tara_app/web/react-dist/` exists, the local server serves the compiled React UI at `/` and its hashed assets from `/assets/`. Without a build, it serves the existing static UI. The Vite development server uses `127.0.0.1:5173` and proxies API requests to the local TARA-App server on `127.0.0.1:8765`.
+
+
+## Optional OmniRoute Auto Router
+
+TARA-Chat can route inference through a locally hosted OmniRoute gateway. OmniRoute
+chooses the underlying model/provider; TARA retains its own capability routing,
+conversation context, local memory, security policy, and desktop tool execution.
+See [OmniRoute integration setup](docs/OMNIROUTE_INTEGRATION.md) for Windows
+configuration. The API key is supplied through the Chat process environment and
+must never be committed to the repository or placed in frontend configuration.
