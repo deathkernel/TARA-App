@@ -108,6 +108,7 @@ command = ["{python}", "-c", "pass"]
 working_directory = "."
 [[modules]]
 id = "chat"
+allow_remote = true
 command = ["{python}", "-c", "pass"]
 working_directory = "."
 environment = ["TARA_OMNIROUTE_MODEL", "TARA_OMNIROUTE_API_KEY"]
