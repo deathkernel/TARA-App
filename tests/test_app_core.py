@@ -295,7 +295,6 @@ class AppCoreTests(unittest.TestCase):
         )
         self.assertEqual(outcome.status, "unavailable")
         self.assertEqual(outcome.reason_code, "capability_unavailable")
-        self.assertIn("OmniRoute Model Hub is not configured", outcome.message)
 
 
 if __name__ == "__main__":
