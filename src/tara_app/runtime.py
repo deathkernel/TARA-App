@@ -45,7 +45,7 @@ _POLICIES: dict[str, tuple[Capability, ...]] = {
     "action": (Capability("action", "execute", "Open allowlisted local apps or websites and create allowlisted GitHub issues after explicit approval", False, True),),
     "handler": (Capability("handler", "diagnose", "Inspect the local developer environment", True),),
 }
-_REMOTE_MODULES = frozenset({"research", "voice", "weather", "models"})
+_REMOTE_MODULES = frozenset({"research", "voice", "weather", "models", "chat", "code", "vision", "creative"})
 _OMNIROUTE_MODULES = frozenset({"chat", "code", "vision", "creative", "models"})
 _LEGACY_LOCAL_MODEL_ENV = frozenset({
     "TARA_LLAMA_MODEL", "OLLAMA_HOST", "TARA_CODE_OLLAMA_URL",
