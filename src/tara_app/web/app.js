@@ -786,7 +786,7 @@
   async function refreshModelStatus() {
     if (modelPollTimer !== null) window.clearTimeout(modelPollTimer);
     modelPollTimer = null;
-    modelServiceStatus.textContent = "Checking local Ollama...";
+    modelServiceStatus.textContent = "Checking OmniRoute model gateway...";
     modelsRefresh.disabled = true;
     modelList.replaceChildren();
     try {
@@ -794,19 +794,19 @@
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Could not read model status");
       if (payload.status === "not_configured") {
-        modelServiceStatus.textContent = "No local Ollama profiles are configured.";
+        modelServiceStatus.textContent = "Model inventory and lifecycle are managed by OmniRoute. Use the Model Hub to list available models.";
         return;
       }
       const pull = payload.pull || {};
       const pullActive = ["queued", "pulling"].includes(pull.status);
       if (pull.status === "failed") {
-        modelServiceStatus.textContent = pull.message || "Model download failed. Check Ollama and try again.";
+        modelServiceStatus.textContent = pull.message || "Model request failed in the configured OmniRoute gateway.";
       } else if (pullActive) {
-        modelServiceStatus.textContent = "Installing " + String(pull.model || "local model") + "...";
+        modelServiceStatus.textContent = "Requesting " + String(pull.model || "local model") + "...";
       } else if (payload.service_available !== true) {
-        modelServiceStatus.textContent = "Ollama is not responding. Start the local Ollama service, then refresh.";
+        modelServiceStatus.textContent = "OmniRoute is not responding. Start the local gateway, then refresh.";
       } else {
-        modelServiceStatus.textContent = "Ollama is available on this device.";
+        modelServiceStatus.textContent = "Model routing is managed by OmniRoute.";
       }
       for (const model of Array.isArray(payload.models) ? payload.models : []) {
         const item = document.createElement("li");
@@ -890,14 +890,14 @@
         modelPollTimer = window.setTimeout(refreshModelStatus, 2500);
       }
     } catch (error) {
-      modelServiceStatus.textContent = error.message || "Local model status is unavailable.";
+      modelServiceStatus.textContent = error.message || "OmniRoute model status is unavailable.";
     } finally {
       modelsRefresh.disabled = false;
     }
   }
 
   async function startModelPull(specialist) {
-    modelServiceStatus.textContent = "Starting local model download...";
+    modelServiceStatus.textContent = "Model lifecycle is managed by OmniRoute...";
     try {
       const response = await fetch("/api/models/pull", {
         method: "POST",
@@ -908,12 +908,12 @@
       if (!response.ok) throw new Error(payload.error || "Could not start model download");
       await refreshModelStatus();
     } catch (error) {
-      modelServiceStatus.textContent = error.message || "Could not start local model download.";
+      modelServiceStatus.textContent = error.message || "Model lifecycle is managed by OmniRoute.";
     }
   }
 
   async function unloadModel(specialist) {
-    modelServiceStatus.textContent = "Freeing local model memory...";
+    modelServiceStatus.textContent = "Model lifecycle is managed by OmniRoute...";
     try {
       const response = await fetch("/api/models/unload", {
         method: "POST",
@@ -928,7 +928,7 @@
       await refreshModelStatus();
       modelServiceStatus.textContent = message;
     } catch (error) {
-      modelServiceStatus.textContent = error.message || "Could not unload local model.";
+      modelServiceStatus.textContent = error.message || "Model lifecycle is managed by OmniRoute.";
     }
   }
 
@@ -940,7 +940,7 @@
       "Remove " + modelName + " from this device? It can be installed again later." + sharedProfiles
     );
     if (!confirmed) return;
-    modelServiceStatus.textContent = "Removing local model files...";
+    modelServiceStatus.textContent = "Model lifecycle is managed by OmniRoute...";
     try {
       const response = await fetch("/api/models/remove", {
         method: "POST",
@@ -955,7 +955,7 @@
       await refreshModelStatus();
       modelServiceStatus.textContent = message;
     } catch (error) {
-      modelServiceStatus.textContent = error.message || "Could not remove local model.";
+      modelServiceStatus.textContent = error.message || "Model lifecycle is managed by OmniRoute.";
     }
   }
 
