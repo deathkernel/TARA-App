@@ -22,7 +22,7 @@ id = "chat"
 allow_remote = true # Sends prompts, recent history, and relevant memory snippets through OmniRoute.
 command = ["{python}", "-m", "tara_chat.app_adapter"]
 working_directory = "."
-timeout_seconds = 180
+timeout_seconds = 240
 environment = ["TARA_LLM_BACKEND", "TARA_CHAT_MEMORY_PATH", "TARA_OMNIROUTE_API_KEY", "TARA_OMNIROUTE_BASE_URL", "TARA_OMNIROUTE_MODEL", "TARA_OMNIROUTE_TIMEOUT_SECONDS"]
 
 [[modules]]
@@ -51,7 +51,7 @@ id = "vision"
 allow_remote = true # Sends user-supplied images through the configured OmniRoute vision route.
 command = ["{python}", "-m", "tara_vision"]
 working_directory = "."
-timeout_seconds = 180
+timeout_seconds = 240
 environment = ["TARA_VISION_API_BASE_URL", "TARA_VISION_API_KEY", "TARA_VISION_MODEL"]
 
 [[modules]]
@@ -121,6 +121,6 @@ allow_remote = true # Public Open-Meteo geocoding/forecast API; no API key requi
 id = "models"
 command = ["{python}", "-m", "tara_models"]
 working_directory = "."
-timeout_seconds = 60
+timeout_seconds = 180
 allow_remote = true # Model discovery and generation use the configured OmniRoute gateway.
 environment = ["TARA_MODELS_API_BASE_URL", "TARA_MODELS_API_KEY", "TARA_MODELS_MODEL"]
