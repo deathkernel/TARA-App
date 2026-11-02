@@ -63,7 +63,7 @@ class OmniRouteProvider:
         timeout: float = 180.0,
         transport=None,
     ) -> None:
-        if not isinstance(api_key, str) or not api_key.strip() or len(api_key) > 4096:
+        if not isinstance(api_key, str) or not api_key.strip() or len(api_key) > 4096 or any(ord(char) < 33 or ord(char) == 127 for char in api_key):
             raise ValueError("TARA_OMNIROUTE_API_KEY must be a non-empty bounded value")
         if not isinstance(base_url, str) or not base_url.strip() or len(base_url) > 2048:
             raise ValueError("TARA_OMNIROUTE_BASE_URL must be a non-empty bounded URL")
@@ -80,10 +80,10 @@ class OmniRouteProvider:
             or parsed.query
             or parsed.fragment
             or (port is not None and not 1 <= port <= 65535)
-            or not parsed.path.rstrip("/").endswith("/v1")
+            or parsed.path.rstrip("/") != "/v1"
         ):
             raise ValueError("TARA_OMNIROUTE_BASE_URL must target the local OmniRoute HTTP /v1 endpoint")
-        if not isinstance(model, str) or not model.strip() or len(model) > 200 or any(c.isspace() for c in model):
+        if not isinstance(model, str) or not model.strip() or len(model) > 200 or any(c.isspace() or ord(c) < 33 for c in model):
             raise ValueError("TARA_OMNIROUTE_MODEL must be a bounded model/route identifier")
         if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or not math.isfinite(float(timeout)) or not 1 <= float(timeout) <= 3600:
             raise ValueError("TARA_OMNIROUTE_TIMEOUT_SECONDS must be between 1 and 3600")
