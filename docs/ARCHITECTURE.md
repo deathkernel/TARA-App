@@ -2,11 +2,11 @@
 
 ## Purpose
 
-TARA-App is the central application and runtime manager for TARA's AI models and specialist systems. It is not itself an AI model. It provides one UI, model catalogue, configuration surface, lifecycle/resource management, and orchestrator.
+TARA-App is the user-facing AI assistant and specialist orchestrator. It is not itself an AI model. OmniRoute is its only language-model gateway; it owns underlying provider/model selection and lifecycle. TARA owns the UI, sessions, local memory, permissions, specialist routing, and desktop tools.
 
 Keep these concepts distinct:
 - **Model:** learned weights/artifact that performs inference.
-- **Runtime/provider:** software that loads and serves a model (for example, a configured local inference server).
+- **Gateway/provider:** OmniRoute exposes an OpenAI-compatible API and routes requests to configured model providers. TARA does not directly invoke model runtimes.
 - **Specialist engine/tool:** a system that provides a capability, such as conversation management, code-task workflows, or deterministic environment maintenance.
 - **TARA-App:** the application that brings them together.
 
@@ -15,10 +15,10 @@ Keep these concepts distinct:
 ```text
 TARA-App
   +-- UI, sessions, settings, model catalogue
-  +-- Model Runtime Manager
-  |     +-- configured TARA models
-  |     +-- configured local/remote providers
-  |     +-- load/unload, health, cancellation, resource limits
+  +-- OmniRoute Gateway / Model Router
+  |     +-- only language-model inference path
+  |     +-- model/route catalogue via GET /v1/models
+  |     +-- provider selection, fallback, quotas and lifecycle managed by OmniRoute
   +-- Orchestrator / Capability Registry
         +-- TARA-Chat adapter
         +-- TARA-Code adapter
@@ -26,15 +26,15 @@ TARA-App
         +-- future TARA models and tools
 ```
 
-The exact TARA model inventory and artifact formats are not established by the current repositories. They must be specified before implementing download/loading behavior.
+OmniRoute exposes the available model IDs and route aliases. Underlying model weights and provider lifecycle remain outside TARA; the current TARA-App launcher does not download or load LLM weights.
 
 ## Runtime flow
 
 1. UI creates a request with request/session IDs and selects or requests a capability.
-2. The orchestrator validates the request and resolves the needed model/provider or specialist engine.
+2. The orchestrator validates the request and selects the needed TARA specialist; OmniRoute later selects the underlying model/provider.
 3. Policy checks availability, permissions, resource limits, workspace scope, timeout, and approval requirements.
-4. The runtime manager ensures the requested model is loaded and healthy, or returns an actionable unavailable/resource-limit status.
-5. A versioned adapter invokes the selected engine or model runtime.
+4. For language-model inference, the specialist sends a bounded OpenAI-compatible request to the loopback OmniRoute gateway; if the gateway is unavailable, the request fails closed.
+5. A versioned adapter invokes the selected specialist or local tool; model inference is delegated to OmniRoute.
 6. The adapter normalizes output and records model/provider/version when inference was used.
 7. Audit records the request, policy decision, outcome, resource use, and redacted error.
 8. UI presents the response or proposed change for human review.
@@ -43,11 +43,11 @@ The exact TARA model inventory and artifact formats are not established by the c
 
 | Component | Owns | Does not own |
 |---|---|---|
-| TARA-App | UX, model catalogue, runtime lifecycle, resource management, sessions, orchestration, config, permissions, audit | Model weights or the internal implementation of every engine |
-| TARA-CHAT | Conversation, provider access, bounded context, explicit saved memory | Coding execution or global OS repair |
+| TARA-App | UX, OmniRoute model catalogue, sessions, orchestration, config, permissions, local tools and audit | Underlying model weights/provider lifecycle |
+| TARA-CHAT | Conversation, OmniRoute access, bounded context, explicit saved memory | Coding execution or global OS repair |
 | TARA-Code | Coding task model, plan, workspace boundary, review/test reports, sandbox runner contract | Chat UI, global OS repair, automatic Git merge |
 | TARA-Handler | Deterministic environment inspection and guarded maintenance/repair through native CLI | LLM inference or natural-language intent understanding |
-| Model runtime/provider | Load/inference lifecycle for supported model artifacts | Application UI and cross-engine policy |
+| OmniRoute | Provider/model routing, fallback, quotas and model catalogue | TARA's local permissions, memory and desktop actions |
 
 ## Failure strategy
 
@@ -61,7 +61,7 @@ The exact TARA model inventory and artifact formats are not established by the c
 
 ## Data boundaries
 
-Only pass the minimum context necessary to each module/model. Do not forward persistent chat memory, secrets, full environment dumps, or unrelated repository files automatically. Model output, tool output, and project content are untrusted. A model-generated plan can request a capability but cannot grant itself permission.
+Only pass the minimum context necessary to each module. Chat history and relevant memory context, prompts, supplied Code attachments, Creative briefs, and Vision images may be sent through OmniRoute to its configured provider. Do not send secrets or confidential workspace contents unless the user accepts that transfer. Model output, tool output, and project content are untrusted. A model-generated plan can request a capability but cannot grant itself permission.
 
 ## Implemented foundation: policy-gated dispatch
 

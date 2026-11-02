@@ -283,7 +283,7 @@ class AppCoreTests(unittest.TestCase):
         self.assertNotIn("content_base64", router.payloads[0]["attachments"][0])
 
 
-    def test_free_model_catalog_works_when_optional_models_adapter_is_disabled(self):
+    def test_model_catalog_is_unavailable_without_the_omniroute_adapter(self):
         registry = CapabilityRegistry()
         decision = RouteDecision(
             "req-models", "unavailable", None, None, "capability_unavailable",
@@ -291,13 +291,10 @@ class AppCoreTests(unittest.TestCase):
             intended_module="models", intended_action="catalog",
         )
         outcome = Orchestrator(registry, FakeRouter(decision)).handle_question(
-            "List all available free models", request_id="req-models"
+            "List all available models", request_id="req-models"
         )
-        self.assertEqual(outcome.status, "success")
-        self.assertEqual(outcome.route.action, "catalog")
-        self.assertIn("gemini-3.5-flash-lite", outcome.result.data["text"])
-        self.assertIn("gpt-oss:20b", outcome.result.data["text"])
-        self.assertFalse(outcome.result.data["remote_data_transfer"])
+        self.assertEqual(outcome.status, "unavailable")
+        self.assertEqual(outcome.route.reason_code, "capability_unavailable")
 
 
 if __name__ == "__main__":

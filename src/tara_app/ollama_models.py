@@ -1,4 +1,4 @@
-"""Inventory and explicitly requested downloads for local Ollama models."""
+"""Legacy local Ollama model catalogue; the current TARA-App launcher delegates model lifecycle to OmniRoute."""
 
 from __future__ import annotations
 
