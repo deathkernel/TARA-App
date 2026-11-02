@@ -48,7 +48,7 @@ class _Handler(BaseHTTPRequestHandler):
                 "api_version": "1.0",
                 "capability_count": len(capabilities),
                 "capabilities": list(capabilities),
-                "model_runtime": "configured" if catalog is not None and catalog.profiles and catalog.base_url else "not_configured",
+                "model_runtime": "omniroute",
             })
             return
         if endpoint == "/api/models":
@@ -57,10 +57,11 @@ class _Handler(BaseHTTPRequestHandler):
                 return
             catalog = self.server.app.model_catalog
             payload = catalog.status() if catalog is not None else {
-                "status": "not_configured",
-                "provider": "ollama",
+                "status": "managed_externally",
+                "provider": "omniroute",
                 "service_available": False,
                 "models": [],
+                "pull": {"status": "disabled", "message": "Model lifecycle is managed by OmniRoute."},
             }
             self._json(200, payload)
             return
@@ -145,7 +146,7 @@ class _Handler(BaseHTTPRequestHandler):
                 return
             catalog = self.server.app.model_catalog
             if catalog is None:
-                self._json(409, {"status": "unavailable", "error": "local Ollama profiles are not configured"})
+                self._json(409, {"status": "unavailable", "error": "model lifecycle is managed by OmniRoute"})
                 return
             try:
                 if endpoint == "/api/models/pull":
