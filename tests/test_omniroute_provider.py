@@ -46,6 +46,10 @@ class OmniRouteProviderTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             OmniRouteProvider(api_key="test-key", base_url="http://127.0.0.1:20128")
 
+    def test_rejects_non_loopback_gateway(self):
+        with self.assertRaises(ValueError):
+            OmniRouteProvider(api_key="test-key", base_url="https://gateway.example/v1")
+
     def test_rejects_redirect_like_invalid_model_input(self):
         with self.assertRaises(ValueError):
             OmniRouteProvider(api_key="test-key", model="auto route")
