@@ -51,6 +51,19 @@ class ModelHubTests(unittest.TestCase):
         self.assertTrue(result["data"]["remote_data_transfer"])
         self.assertTrue(call.call_args.args[0].endswith("/chat/completions"))
 
+    def test_generate_parses_explicit_model_route_from_question(self):
+        payload = {"choices": [{"message": {"content": "Hello"}}], "model": "provider/model-a"}
+        with patch.dict(os.environ, self.env), patch("tara_models.__main__._http_json", return_value=payload) as call:
+            result = handle_request({
+                "schema_version": "1.0", "request_id": "selected",
+                "module": "models", "action": "generate",
+                "inputs": {"question": "Use model provider/model-a: say hello"},
+            })
+        self.assertEqual(result["status"], "success")
+        body = call.call_args.kwargs["body"]
+        self.assertEqual(body["model"], "provider/model-a")
+        self.assertEqual(body["messages"][1]["content"], "say hello")
+
     def test_invalid_request_rejected(self):
         result = handle_request({
             "schema_version": "1.0", "request_id": "x",
