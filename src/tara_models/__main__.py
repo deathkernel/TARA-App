@@ -177,7 +177,7 @@ def handle_request(request: Any) -> dict[str, Any]:
         if model is None:
             selection = re.match(
                 r"^\s*(?:please\s+)?(?:use|switch to|try|ask|run with)\s+(?:model\s+)?"
-                r"(?P<model>[A-Za-z0-9][A-Za-z0-9._:/-]{0,199})\s*[:,-]?\s*",
+                r"(?P<model>[A-Za-z0-9][A-Za-z0-9._:/-]{0,198}[A-Za-z0-9])\s*[:,-]?\s*",
                 question,
                 re.I,
             )
