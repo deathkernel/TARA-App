@@ -26,6 +26,7 @@ environment = ["TARA_LLM_BACKEND", "TARA_CHAT_MEMORY_PATH", "TARA_OMNIROUTE_API_
 
 [[modules]]
 id = "code"
+allow_remote = true # Sends the coding request and user-supplied source attachments through OmniRoute.
 command = ["{python}", "-m", "tara_code"]
 working_directory = "."
 timeout_seconds = 180
@@ -46,6 +47,7 @@ timeout_seconds = 30
 
 [[modules]]
 id = "vision"
+allow_remote = true # Sends user-supplied images through the configured OmniRoute vision route.
 command = ["{python}", "-m", "tara_vision"]
 working_directory = "."
 timeout_seconds = 180
@@ -72,6 +74,7 @@ timeout_seconds = 30
 
 [[modules]]
 id = "creative"
+allow_remote = true # Sends the creative brief through OmniRoute.
 command = ["{python}", "-m", "tara_creative"]
 working_directory = "."
 timeout_seconds = 180
