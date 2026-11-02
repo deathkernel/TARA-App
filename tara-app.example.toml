@@ -1,19 +1,16 @@
 # Copy to tara-app.toml and adjust only the local settings you need.
-# TARA-App contains its Router and specialist packages in this repository.
-# Ollama runs local open-weight models; TARA-App starts the service, prepares
-# Chat before opening the interface, and downloads other specialists on first use.
-
-[ollama]
-base_url = "http://127.0.0.1:11434"
-
-[ollama.models]
-chat = "llama3.2:3b"
-vision = "gemma3:4b"
-creative = "llama3.2:3b"
+# All TARA language-model inference is routed through the local OmniRoute gateway.
+# Keep the API key in TARA_OMNIROUTE_API_KEY (environment variable), never here.
 
 [omniroute]
 base_url = "http://127.0.0.1:20128/v1"
-model = "auto/coding:cheap"
+
+[omniroute.models]
+chat = "auto"
+code = "auto/coding:cheap"
+vision = "auto"
+creative = "auto/cheap"
+models = "auto"
 
 [router]
 command = ["{python}", "-m", "tara_router"]
@@ -22,17 +19,19 @@ timeout_seconds = 10
 
 [[modules]]
 id = "chat"
+allow_remote = true # Sends prompts, recent history, and relevant memory snippets through OmniRoute.
 command = ["{python}", "-m", "tara_chat.app_adapter"]
 working_directory = "."
-timeout_seconds = 180
-environment = ["TARA_LLM_BACKEND", "TARA_LLAMA_MODEL", "OLLAMA_HOST", "TARA_POWER_MODE", "TARA_LLM_TIMEOUT_SECONDS", "TARA_CHAT_MEMORY_PATH", "TARA_OMNIROUTE_API_KEY", "TARA_OMNIROUTE_BASE_URL", "TARA_OMNIROUTE_MODEL", "TARA_OMNIROUTE_TIMEOUT_SECONDS"]
+timeout_seconds = 240
+environment = ["TARA_LLM_BACKEND", "TARA_CHAT_MEMORY_PATH", "TARA_OMNIROUTE_API_KEY", "TARA_OMNIROUTE_BASE_URL", "TARA_OMNIROUTE_MODEL", "TARA_OMNIROUTE_TIMEOUT_SECONDS"]
 
 [[modules]]
 id = "code"
+allow_remote = true # Sends the coding request and user-supplied source attachments through OmniRoute.
 command = ["{python}", "-m", "tara_code"]
 working_directory = "."
 timeout_seconds = 180
-environment = ["TARA_CODE_API_KEY"]
+environment = ["TARA_CODE_API_BASE_URL", "TARA_CODE_API_KEY", "TARA_CODE_MODEL"]
 
 [[modules]]
 id = "research"
@@ -49,10 +48,11 @@ timeout_seconds = 30
 
 [[modules]]
 id = "vision"
+allow_remote = true # Sends user-supplied images through the configured OmniRoute vision route.
 command = ["{python}", "-m", "tara_vision"]
 working_directory = "."
-timeout_seconds = 180
-environment = ["TARA_VISION_MODEL", "TARA_VISION_OLLAMA_URL"]
+timeout_seconds = 240
+environment = ["TARA_VISION_API_BASE_URL", "TARA_VISION_API_KEY", "TARA_VISION_MODEL"]
 
 [[modules]]
 id = "planner"
@@ -75,10 +75,11 @@ timeout_seconds = 30
 
 [[modules]]
 id = "creative"
+allow_remote = true # Sends the creative brief through OmniRoute.
 command = ["{python}", "-m", "tara_creative"]
 working_directory = "."
 timeout_seconds = 180
-environment = ["TARA_CREATIVE_MODEL", "TARA_CREATIVE_OLLAMA_URL"]
+environment = ["TARA_CREATIVE_API_BASE_URL", "TARA_CREATIVE_API_KEY", "TARA_CREATIVE_MODEL"]
 
 [[modules]]
 id = "action"
@@ -120,6 +121,6 @@ allow_remote = true # Public Open-Meteo geocoding/forecast API; no API key requi
 id = "models"
 command = ["{python}", "-m", "tara_models"]
 working_directory = "."
-timeout_seconds = 60
-allow_remote = true # Gemini sends the selected prompt to Google; local gpt-oss stays on Ollama.
-environment = ["GEMINI_API_KEY"]
+timeout_seconds = 180
+allow_remote = true # Model discovery and generation use the configured OmniRoute gateway.
+environment = ["TARA_MODELS_API_BASE_URL", "TARA_MODELS_API_KEY", "TARA_MODELS_MODEL"]

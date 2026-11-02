@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import mimetypes
+import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,11 @@ _ASSETS = {
     "/app.js": ("app.js", "text/javascript; charset=utf-8"),
 }
 _MAX_REQUEST_BYTES = 1_000_000
+
+
+def _react_ui_enabled() -> bool:
+    """Keep the feature-complete static UI as default until React parity is verified."""
+    return os.environ.get("TARA_ENABLE_REACT_UI", "").strip() == "1"
 
 
 class _Server(ThreadingHTTPServer):
@@ -48,7 +54,7 @@ class _Handler(BaseHTTPRequestHandler):
                 "api_version": "1.0",
                 "capability_count": len(capabilities),
                 "capabilities": list(capabilities),
-                "model_runtime": "configured" if catalog is not None and catalog.profiles and catalog.base_url else "not_configured",
+                "model_runtime": "omniroute",
             })
             return
         if endpoint == "/api/models":
@@ -57,10 +63,11 @@ class _Handler(BaseHTTPRequestHandler):
                 return
             catalog = self.server.app.model_catalog
             payload = catalog.status() if catalog is not None else {
-                "status": "not_configured",
-                "provider": "ollama",
+                "status": "managed_externally",
+                "provider": "omniroute",
                 "service_available": False,
                 "models": [],
+                "pull": {"status": "disabled", "message": "Model lifecycle is managed by OmniRoute."},
             }
             self._json(200, payload)
             return
@@ -68,7 +75,7 @@ class _Handler(BaseHTTPRequestHandler):
         # original static UI remains a safe fallback for source-only installs.
         react_root = (_WEB_ROOT / "react-dist").resolve()
         react_file: Path | None = None
-        if react_root.is_dir():
+        if _react_ui_enabled() and react_root.is_dir():
             if endpoint == "/":
                 react_file = react_root / "index.html"
             elif endpoint.startswith("/assets/"):
@@ -145,7 +152,7 @@ class _Handler(BaseHTTPRequestHandler):
                 return
             catalog = self.server.app.model_catalog
             if catalog is None:
-                self._json(409, {"status": "unavailable", "error": "local Ollama profiles are not configured"})
+                self._json(409, {"status": "unavailable", "error": "model lifecycle is managed by OmniRoute"})
                 return
             try:
                 if endpoint == "/api/models/pull":

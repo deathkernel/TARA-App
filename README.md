@@ -1,6 +1,6 @@
 # TARA-App
 
-**TARA-App is an application/platform, not an AI model.** It is the central place where TARA's AI models and specialist systems will be installed, configured, selected, started, monitored, and used through one unified interface. It should support multiple model runtimes and providers rather than being tied to one model.
+**TARA-App is the user-facing AI assistant/application, not an AI model.** TARA owns conversations, specialist capabilities, memory, permissions, and local desktop actions. OmniRoute is the only language-model gateway: it selects the underlying provider/model and returns inference results to TARA.
 
 Chat, Code, Handler, Router, and the other specialist capabilities are maintained as components inside this `TARA-App` repository. The app must not depend on deleted sibling model repositories or private cross-repository imports. Chat is a conversation runtime, Code is a coding specialist, and Handler is a deterministic native developer-environment tool; these are not all individual AI models. Actual model inventory and runtime support must be discovered/configured explicitly.
 
@@ -11,8 +11,8 @@ Chat, Code, Handler, Router, and the other specialist capabilities are maintaine
 - One app and unified UI for the TARA ecosystem.
 - Multiple model profiles selectable by task, with model/runtime lifecycle management.
 - Chat, coding, and environment-management workflows integrated as specialist capabilities.
-- Local-first model execution where supported, with explicit provider configuration.
-- Model downloads/updates, memory, GPU/CPU/RAM visibility, concurrency, and resource limits managed deliberately.
+- One consistent OmniRoute gateway for all language-model inference; TARA does not directly call Ollama, Gemini, or another model provider.
+- Provider selection, quotas, fallback, and model lifecycle are managed by OmniRoute; TARA handles local memory, permissions, desktop actions, and resource-aware orchestration.
 - Clear distinction between an AI model, a model runtime/provider, and a tool/engine.
 - Safe defaults: no arbitrary host command execution, no hidden mutation, and no automatic Git merge.
 
@@ -20,22 +20,22 @@ Chat, Code, Handler, Router, and the other specialist capabilities are maintaine
 
 TARA-App is being consolidated as a single Python monorepo. The current integrated source packages, all maintained within this repository, are:
 
-- `tara_app`: the local app, capability registry, approval flow, Ollama lifecycle manager, conversation controls, and safe Markdown chat UI.
+- `tara_app`: the local app, capability registry, approval flow, OmniRoute gateway configuration, conversation controls, and safe Markdown chat UI.
 - `tara_router`: a deterministic local router included in this repository; it requires no API key or paid inference.
 - `tara_chat`: the conversation-only specialist, kept separate from Code.
-- `tara_code`: a coding specialist using the local Ollama profile; it returns review-first proposals and never executes code.
+- `tara_code`: a coding specialist routed through OmniRoute; it returns review-first proposals and never executes code.
 - `tara_research`: a source-first module that queries free Crossref and Wikipedia public APIs and returns links and excerpts.
 - `tara_planner`: bounded plans with validated dependencies; plans are never executed.
 - `tara_memory`: local SQLite memory; write and delete requests require Security review and per-request approval.
-- `tara_creative`: local Ollama writing, with no paid inference provider.
+- `tara_creative`: OmniRoute-routed writing.
 - `tara_security`: deterministic policy assessment for sensitive capabilities.
 - `tara_action`: local desktop and browser actions plus optional GitHub issue creation; every action is gated by TARA-Security and explicit approval, while GitHub writes also require credentials and a repository allowlist.
 - `tara_voice`: optional faster-whisper transcription when compatible wheels are available; read-aloud uses installed local browser voices.
-- `tara_vision`: local Ollama image analysis; images stay on the device.
+- `tara_vision`: OmniRoute-routed image analysis; uploaded images are sent through the configured gateway.
 - `tara_data`: deterministic, read-only CSV summaries.
 - `tara_study`: optional local-first study notes, fill-in-the-blank quizzes, flashcards, and bounded revision plans.
 - `tara_weather`: public Open-Meteo geocoding and weather forecasts, with attribution.
-- `tara_models`: a free-first model catalogue, Gemini free-tier API adapter, and local OpenAI gpt-oss via Ollama.
+- `tara_models`: an OmniRoute model catalogue and inference adapter.
 
 TARA-Handler's C++17 source is included in TARA-App. The launchers explicitly prepare its optional native diagnostic before starting the app; only the environment-diagnosis command is exposed. If CMake or a C++ compiler is unavailable, the app uses read-only Python diagnostics. GitHub issue creation remains inactive until local credentials and a repository allowlist are configured.
 
@@ -50,10 +50,10 @@ TARA-App (one application)
   |
   +-- UI / sessions / settings / model catalogue
   |
-  +-- Model Runtime Manager
-  |     +-- Local Ollama profiles (configured below)
-  |     +-- Other configured local/remote model providers
-  |     +-- Resource scheduling, load/unload, health and limits
+  +-- OmniRoute Gateway / Model Router
+  |     +-- Only language-model inference path
+  |     +-- Model/route catalogue exposed by OmniRoute
+  |     +-- Provider selection, fallback, quotas and model lifecycle managed by OmniRoute
   |
   +-- Task Orchestrator / Capability Registry
         +-- TARA-Chat adapter --> conversation + memory
@@ -111,37 +111,30 @@ This layout is a target, not a claim that those modules are already implemented.
 See [runtime and development option notes](docs/runtime-evaluation.md) for the current scope of Amp, GitHub Copilot sandboxing, GitHub Package Firewall, and AWS TorchNeuron. These are optional references, not built-in TARA runtimes. The [native Handler integration notes](docs/native-handler.md) describe its explicit build step and read-only app boundary.
 
 
-## Optional BharatCode hosted model (integration planned)
+## OmniRoute-only AI inference
 
-**Recommended hosted model for TARA: BharatCode Qwen 3.8 27B** (`qwen-3.8-27b`). This is a hosted model accessed through BharatCode; BharatCode is the API platform, not the model itself. This provider is a documented integration target, not a claim that the current TARA build already has a BharatCode adapter.
+All TARA language-model requests use the local OmniRoute gateway. This includes Chat, Code, Vision, Creative, and Model Hub. TARA's own specialist router still decides which capability handles a task; OmniRoute chooses the underlying model/provider for that inference request.
 
-- **Student access:** verified eligible Indian students receive up to 10,000,000 total Qwen tokens per IST day. Input, cached input, output, and reasoning tokens count; the allowance resets at midnight IST.
-- **Other access:** Qwen API access is included in BharatCode Lite and Pro paid plans. DeepSeek V4.1 Flash (`deepseek-v4.1-flash`) is Pro-only; it is not part of the free student Qwen allowance.
-- **Endpoint:** `https://bharatcode.ai/api/model/v1` (OpenAI-compatible). Use `qwen-3.8-27b` as the model ID.
-- **Supported API routes:** `POST /responses` and `POST /chat/completions`. The Responses API supports text/image input, streaming, structured output, and caller-defined function tools.
-- **Important API limits:** requests are stateless; send the required conversation history and function-call outputs with each request. `store:true`, `previous_response_id`, hosted tools, background jobs, and audio/video/file input are unsupported. Output limits include reasoning; incomplete/length responses must not be treated as complete tool calls.
-- **Capacity:** student requests use shared capacity and may queue, time out, or be delayed during busy periods. The 10M/day allowance is not unlimited throughput or a service-level guarantee.
-- **Security:** keep `BHARATCODE_API_KEY` on the server side, never in browser bundles, desktop frontend code, source control, or logs. Remote inference sends the submitted prompt/context (and any supported image input) to BharatCode; do not send secrets or sensitive workspace contents without explicit user consent.
-- **TARA integration design:** make hosted inference an explicit opt-in provider profile. Keep local Ollama available as the local/offline option and fallback. Do not silently upload repository files, memory, desktop data, or tool output. Route tool calls back to TARA's local capability registry; validate arguments with TARA-Security and require the existing approval flow for mutations. The model must never execute host commands directly.
-- **Cost classification:** free only for verified student Qwen access within its daily allowance. Lite/Pro are paid subscriptions. Do not describe all BharatCode models or all API calls as free.
+- **Gateway:** `http://127.0.0.1:20128/v1`
+- **Chat route:** `auto`
+- **Code route:** `auto/coding:cheap`
+- **Vision route:** `auto` (must resolve to a vision-capable model)
+- **Creative route:** `auto/cheap`
+- **Model Hub route:** `auto`
+- **Authentication:** set `TARA_OMNIROUTE_API_KEY` in the process environment. Never commit the key or place it in frontend configuration.
+- **No local fallback:** if OmniRoute or its API key is unavailable, the affected inference request fails closed. TARA does not silently fall back to direct Ollama or Gemini calls.
 
-Official references: [BharatCode model/API guide](https://auth.bharatcode.ai/build), [BharatCode pricing and student terms](https://www.bharatcode.ai/), and [BharatCode Terms of Service](https://auth.bharatcode.ai/terms).
+The route aliases are passed to OmniRoute; they are not concrete model IDs. Provider availability, model IDs, quotas, billing, and fallback behavior depend on the connected providers and routing policy configured inside OmniRoute.
 
-The existing local Ollama profiles below remain local fallbacks and are not removed by this hosted-provider option. Model availability, IDs, student eligibility, pricing, and API capabilities can change; check BharatCode's live `GET /models` before relying on a model ID.
+**Data handling:** Chat prompts, recent history and relevant saved-memory snippets, creative briefs, and any explicitly supplied code attachments or images are sent to OmniRoute and may be forwarded to a cloud provider configured there. Chat, Code, Vision, Creative, and Model Hub each require `allow_remote = true` in `tara-app.toml`; otherwise that specialist stays disabled. Do not send secrets or confidential workspace data unless you have reviewed the selected provider and consent to that transfer. Vision reports `images_sent_to_remote=true`. TARA keeps memory, permissions, capability routing, and desktop tool execution on the local machine; model output is never executed as a host command.
 
-## Local Ollama model profiles
+Local speech transcription via optional faster-whisper and browser read-aloud are separate speech features, not language-model fallback paths. They remain local when enabled.
 
-TARA-App is the only user-facing process. It starts or reuses local Ollama, prepares the Chat model before the interface becomes ready, and routes each request to the matching specialist and its configured model. Other specialist models download on first use.
+See [OmniRoute integration setup](docs/OMNIROUTE_INTEGRATION.md) for Windows configuration and troubleshooting.
 
-| Specialist | Default model | Use |
-| --- | --- | --- |
-| Chat | `llama3.2:3b` | Local conversation |
-| Planner | deterministic dependency checks | Reviewable plans; no execution |
-| Creative | `llama3.2:3b` | Local writing and rewriting |
-| Code | `qwen2.5-coder:3b` | Local code analysis and proposed changes |
-| Vision | `gemma3:4b` | Local image understanding |
+### Web UI selection
 
-These are free-to-download model weights served locally by Ollama; no paid inference API is configured. Model names can be changed in `[ollama.models]`. On startup, TARA-App installs the Chat profile if needed and preloads it into Ollama memory, so the first chat request does not wait for model setup. Other specialist models are loaded when their tasks are selected. The Chat profile uses balanced CPU scheduling and stays loaded for 15 minutes after its last request, subject to available memory.
+The feature-complete static web UI remains the default. The React frontend is built into `src/tara_app/web/react-dist` for integration testing and can be enabled explicitly with `TARA_ENABLE_REACT_UI=1`; it must not become the default until attachment, approval, voice, and conversation-management feature parity has been verified. The React UI sends language-model prompts through OmniRoute and must describe remote data handling accurately.
 
 ### Chat experience
 
@@ -151,7 +144,7 @@ Research uses Crossref and Wikipedia public APIs for source records. No API key 
 
 ## Target integration contracts
 
-Adapters should expose health, capabilities, and a structured execute operation. Model providers additionally need a model catalogue, load/unload lifecycle, inference settings, cancellation, timeout, resource limits, and health reporting. Model identity and version should be recorded for each inference request.
+Adapters should expose health, capabilities, and a structured execute operation. TARA queries OmniRoute for the model catalogue and delegates provider/model selection and lifecycle to the gateway. TARA adapters still enforce request bounds, cancellation, timeouts, local permission checks, and audit reporting. Model identity and route should be recorded for each inference request.
 
 Use a versioned request with `schema_version`, `request_id`, `session_id`, `module`, `action`, structured `inputs`, `workspace_root` when applicable, `timeout_seconds`, and `approval_token` when a mutating operation requires approval.
 
@@ -169,24 +162,26 @@ A result should include `schema_version`, `request_id`, `ok`, `status`, structur
 
 ## Local development
 
-TARA-App now includes the local Router, Chat, Code, Planner, Memory, Creative, Security, Action, Data, Vision, Voice, and Research packages in the same repository. Chat and Code remain distinct specialists. Code suggestions and plans are data only; the current module does not run commands or modify a workspace. Voice transcription uses the optional local faster-whisper package when the Python runtime supports its dependencies; read-aloud uses installed local browser voices. Vision and Creative use local Ollama models; Data performs bounded, read-only CSV analysis.
+TARA-App now includes the local Router, Chat, Code, Planner, Memory, Creative, Security, Action, Data, Vision, Voice, and Research packages in the same repository. Chat and Code remain distinct specialists. Code suggestions and plans are data only; the current module does not run commands or modify a workspace. Voice transcription uses the optional local faster-whisper package when the Python runtime supports its dependencies; read-aloud uses installed local browser voices. Vision and Creative use OmniRoute; Data performs bounded, read-only CSV analysis.
 
 ### Run on Windows
 
-1. Install Python 3.11 or newer and Ollama once.
+1. Install Python 3.11 or newer and configure a running OmniRoute gateway.
 2. Clone this repository.
-3. Double-click `run-tara.bat`.
+3. Set `$env:TARA_OMNIROUTE_API_KEY = Read-Host 'OmniRoute API key'` in PowerShell.
+4. Run `.\run-tara.bat` in that same PowerShell window.
 
-The launcher creates a local virtual environment, installs this repository, creates `tara-app.toml` from the example when needed, prepares the optional native Handler diagnostic, and starts TARA-App. TARA-App starts or reuses Ollama and prepares the Chat model before showing the ready message. The first launch may download Chat; other specialist models download only when that specialist is first selected.
+The launcher creates a local virtual environment, installs this repository, creates `tara-app.toml` from the example when needed, prepares the optional native Handler diagnostic, and starts TARA-App. TARA does not install, start, or call Ollama for language-model inference; the configured OmniRoute gateway handles model routing.
 
 
 ### Run on macOS or Linux
 
-1. Install Python 3.11 or newer and Ollama once.
+1. Install Python 3.11 or newer and configure a running OmniRoute gateway.
 2. Clone this repository.
-3. Run `./run-tara.sh` from the repository folder.
+3. Export `TARA_OMNIROUTE_API_KEY` in the shell environment.
+4. Run `./run-tara.sh` from the repository folder.
 
-The script creates a virtual environment, installs TARA-App, initializes the local config, explicitly prepares the optional native Handler diagnostic, and starts the app. If a local CMake/C++ toolchain is missing, Handler keeps working through the read-only Python fallback.
+The script creates a virtual environment, installs TARA-App, initializes the local config, explicitly prepares the optional native Handler diagnostic, and starts the app. If a local CMake/C++ toolchain is missing, Handler keeps working through the read-only Python fallback. All language-model requests still go through OmniRoute.
 
 ### Run from a terminal
 
@@ -207,7 +202,7 @@ If installation previously stopped with `No matching distributions found for onn
 
 ### Consolidation status
 
-The consolidated Router, Chat, Code, Planner, Memory, Creative, Security, Action, Data, Vision, Voice, and Research packages are merged into `main`. The native Handler source and on-demand adapter are included; the app exposes only environment diagnosis. GitHub issue creation requires local credentials, a repo allowlist, Security review, and one-time user approval. A final smoke run on the target computer is still needed to confirm Ollama availability and hardware-specific model performance.
+The consolidated Router, Chat, Code, Planner, Memory, Creative, Security, Action, Data, Vision, Voice, and Research packages are maintained in this repository. The native Handler source and on-demand adapter are included; the app exposes only environment diagnosis. GitHub issue creation requires local credentials, a repo allowlist, Security review, and one-time user approval. OmniRoute gateway connectivity and provider routing still need an end-to-end smoke test on the target computer.
 
 
 ## Study Mode (free and local-first)
@@ -223,23 +218,23 @@ TARA-App includes an optional, read-only Study specialist for source-grounded no
 The first release intentionally avoids pretending deterministic sentence extraction is a full AI tutor. More advanced subject explanations, real MCQ distractors, spaced repetition, OCR, semantic search, and study progress tracking are follow-up batches.
 
 
-## Free Model Hub and Weather
+## OmniRoute Model Hub and Weather
 
-- **Gemini API:** when `GEMINI_API_KEY` is configured, TARA discovers the current available model list and exposes only the text models in its maintained free-tier allowlist. Free-tier quotas, eligibility, and model availability depend on the Google AI Studio project. Gemini requests send the selected prompt to Google; do not use this mode for sensitive data unless you accept that transfer.
-- **OpenAI open weights:** `gpt-oss:20b` and `gpt-oss:120b` can be run through local Ollama. They are not free OpenAI API models; model weights are free, but hardware, electricity, storage, and hosting can cost money. TARA does not automatically download these large models.
-- **Model Hub prompts:** ask `List all available free models`, `Use Gemini: ...`, `Use gemini-3.5-flash-lite: ...`, or `Use gpt-oss:20b: ...`. Only explicitly selected Gemini prompts go to the remote API.
+- **Model catalogue:** TARA Model Hub reads the available model list from OmniRoute's `GET /v1/models` endpoint.
+- **Model generation:** Model Hub prompts use OmniRoute's `POST /v1/chat/completions` endpoint. A selected model ID or configured route alias is sent through the gateway.
+- **No direct provider access:** TARA Model Hub no longer calls Gemini APIs or local Ollama endpoints. Model availability, cost, quotas, and access depend on OmniRoute's connected providers.
+- **Example prompts:** ask `List available models`, or `Use provider/model-id: explain photosynthesis`.
 - **Weather:** ask `weather in Pune` or `forecast for London for the next 7 days`. TARA uses Open-Meteo's public geocoding and forecast APIs without an API key, includes attribution, and limits response size and network timeouts. Its free endpoint is for non-commercial use and subject to provider rate limits.
 - **Readable answers:** TARA normalizes excessive whitespace and bullet glyphs and uses wider answer cards, consistent line spacing, and clearer heading hierarchy.
 
+### Configure OmniRoute (PowerShell)
 
-### Configure the optional Gemini free tier (PowerShell)
+1. Start OmniRoute and confirm its local gateway is reachable at `http://127.0.0.1:20128`.
+2. In the same PowerShell window used to start TARA, set `$env:TARA_OMNIROUTE_API_KEY = Read-Host "OmniRoute API key"`.
+3. Start TARA normally. The example config selects `auto` for Chat, `auto/coding:cheap` for Code, `auto` for Vision, and `auto/cheap` for Creative.
+4. Check `GET /v1/models` through OmniRoute to inspect connected model IDs.
 
-1. Create an API key in [Google AI Studio](https://aistudio.google.com/apikey).
-2. In the same PowerShell window used to start TARA, set the environment variable: `$env:GEMINI_API_KEY = "your-key"`.
-3. Start TARA normally, then ask `List all available free models` or `Use Gemini: explain photosynthesis`.
-
-Keep the key local and never commit it. Gemini free-tier usage is subject to Google’s current model eligibility and quota. Without a key, the Model Hub still lists documented candidates but cannot verify access for your project.
-
+Keep the key local and never commit it. If the gateway or key is unavailable, TARA fails closed and does not switch to Ollama or Gemini.
 
 ## React + TypeScript frontend (migration in progress)
 
@@ -258,11 +253,6 @@ tara-app
 When `src/tara_app/web/react-dist/` exists, the local server serves the compiled React UI at `/` and its hashed assets from `/assets/`. Without a build, it serves the existing static UI. The Vite development server uses `127.0.0.1:5173` and proxies API requests to the local TARA-App server on `127.0.0.1:8765`.
 
 
-## Optional OmniRoute Auto Router
+## OmniRoute-only AI inference
 
-TARA-Chat can route inference through a locally hosted OmniRoute gateway. OmniRoute
-chooses the underlying model/provider; TARA retains its own capability routing,
-conversation context, local memory, security policy, and desktop tool execution.
-See [OmniRoute integration setup](docs/OMNIROUTE_INTEGRATION.md) for Windows
-configuration. The API key is supplied through the Chat process environment and
-must never be committed to the repository or placed in frontend configuration.
+Chat, Code, Vision, Creative, and Model Hub all use the locally hosted OmniRoute gateway for language-model inference. OmniRoute chooses the underlying model/provider; TARA retains its own capability routing, conversation context, local memory, security policy, and desktop tool execution. See [OmniRoute integration setup](docs/OMNIROUTE_INTEGRATION.md) for Windows configuration. The API key is supplied through the app process environment and must never be committed to the repository or placed in frontend configuration.

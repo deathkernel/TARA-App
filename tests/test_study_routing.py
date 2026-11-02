@@ -24,11 +24,14 @@ class StudyRoutingTests(unittest.TestCase):
     def test_free_model_catalog_routes_to_model_hub(self):
         result=self.route("List all available free models",["chat.respond","models.catalog"])
         self.assertEqual((result.module,result.action),("models","catalog"))
-    def test_explicit_gemini_selection_routes_to_model_hub(self):
-        result=self.route("Use Gemini: explain photosynthesis",["chat.respond","models.generate"])
+    def test_explicit_omniroute_model_selection_routes_to_model_hub(self):
+        result=self.route("Use model provider/model-id: explain photosynthesis",["chat.respond","models.generate"])
         self.assertEqual((result.module,result.action),("models","generate"))
-    def test_openai_gpt_oss_selection_routes_to_model_hub(self):
-        result=self.route("Use OpenAI gpt-oss:20b: explain this topic",["chat.respond","models.generate"])
+    def test_omniroute_auto_route_selection_routes_to_model_hub(self):
+        result=self.route("Use auto/coding:cheap: review this function",["chat.respond","models.generate"])
+        self.assertEqual((result.module,result.action),("models","generate"))
+    def test_plain_model_id_selection_routes_to_model_hub(self):
+        result=self.route("Use model gpt-4o: explain photosynthesis",["chat.respond","models.generate"])
         self.assertEqual((result.module,result.action),("models","generate"))
     def test_rain_question_routes_to_weather(self):
         result=self.route("Will it rain in Pune?",["chat.respond","weather.forecast"])

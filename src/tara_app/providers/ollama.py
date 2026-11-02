@@ -1,4 +1,4 @@
-"""Loopback-only Ollama adapter. It never installs or launches a runtime."""
+"""Legacy Ollama adapter retained for compatibility/tests; not registered by the current TARA-App launcher."""
 from __future__ import annotations
 
 import http.client

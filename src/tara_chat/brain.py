@@ -84,7 +84,7 @@ class TARABrain:
         if not isinstance(prompt, str) or not prompt.strip():
             raise ValueError("prompt must not be empty")
         if self.llm_provider is None:
-            raise RuntimeError("No language provider configured. Start TARA with the Ollama backend.")
+            raise RuntimeError("No OmniRoute provider configured. Set TARA_OMNIROUTE_API_KEY and start the OmniRoute gateway.")
         if isinstance(max_new_tokens, bool) or not isinstance(max_new_tokens, int) or max_new_tokens <= 0:
             raise ValueError("max_new_tokens must be a positive integer")
 

@@ -4,3 +4,7 @@ __pycache__/
 .pytest_cache/
 tara-app.toml
 .env
+frontend/node_modules/
+frontend/tsconfig.tsbuildinfo
+src/tara_app/web/react-dist/
+frontend/package-lock.json

@@ -1,4 +1,4 @@
-"""Small fail-closed provider registry/runtime manager.
+"""Legacy standalone model runtime manager; not registered by the current TARA-App launcher. Active language-model inference is routed through OmniRoute.
 
 The manager never installs or launches provider processes. A provider must be
 explicitly enabled in a local JSON config before it can be queried.

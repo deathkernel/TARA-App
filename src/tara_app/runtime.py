@@ -13,7 +13,6 @@ from urllib.parse import urlsplit
 from tara_app.contracts import Capability
 from tara_app.handler_adapter import HandlerProcessAdapter
 from tara_app.module_client import StdioModuleAdapter
-from tara_app.ollama_models import OllamaModelCatalog
 from tara_app.orchestrator import Orchestrator
 from tara_app.registry import CapabilityRegistry
 from tara_app.router_client import StdioRouterClient
@@ -30,15 +29,15 @@ _POLICIES: dict[str, tuple[Capability, ...]] = {
         Capability("memory", "store", "Store information after explicit approval", False, True),
         Capability("memory", "forget", "Forget information after explicit approval", False, True),
     ),
-    "vision": (Capability("vision", "analyze", "Analyze user supplied images using local inference", True),),
+    "vision": (Capability("vision", "analyze", "Analyze user supplied images through OmniRoute", True),),
     "data": (Capability("data", "analyze", "Analyze bounded tabular input", True),),
     "study": (Capability("study", "create", "Create source-grounded study notes, quizzes and flashcards or a bounded revision plan", True),),
     "weather": (Capability("weather", "forecast", "Fetch current conditions and short forecasts from public Open-Meteo endpoints", True),),
     "models": (
-        Capability("models", "catalog", "Discover free-tier Gemini text models and installed local models", True),
-        Capability("models", "generate", "Generate an answer with a selected free-tier Gemini model or installed local OpenAI gpt-oss model", True),
+        Capability("models", "catalog", "Discover models exposed by the configured OmniRoute gateway", True),
+        Capability("models", "generate", "Generate an answer through the configured OmniRoute gateway", True),
     ),
-    "creative": (Capability("creative", "write", "Generate writing using local inference", True),),
+    "creative": (Capability("creative", "write", "Generate writing through OmniRoute", True),),
     "voice": (
         Capability("voice", "transcribe", "Transcribe user supplied audio", True),
         Capability("voice", "speak", "Synthesize speech from text", True),
@@ -46,7 +45,14 @@ _POLICIES: dict[str, tuple[Capability, ...]] = {
     "action": (Capability("action", "execute", "Open allowlisted local apps or websites and create allowlisted GitHub issues after explicit approval", False, True),),
     "handler": (Capability("handler", "diagnose", "Inspect the local developer environment", True),),
 }
-_REMOTE_MODULES = frozenset({"research", "voice", "weather", "models"})
+_REMOTE_MODULES = frozenset({"research", "voice", "weather", "models", "chat", "code", "vision", "creative"})
+_OMNIROUTE_MODULES = frozenset({"chat", "code", "vision", "creative", "models"})
+_LEGACY_LOCAL_MODEL_ENV = frozenset({
+    "TARA_LLAMA_MODEL", "OLLAMA_HOST", "TARA_CODE_OLLAMA_URL",
+    "TARA_CREATIVE_OLLAMA_URL", "TARA_VISION_OLLAMA_URL",
+    "TARA_POWER_MODE", "TARA_LLM_TIMEOUT_SECONDS", "TARA_OLLAMA_KEEP_ALIVE",
+    "GEMINI_API_KEY",
+})
 _OLLAMA_DEFAULT_MODELS = {
     "chat": "llama3.2:3b",
     "creative": "llama3.2:3b",
@@ -114,20 +120,18 @@ def create_application(config_path: str | Path) -> Orchestrator:
         env_names = item.get("environment", [])
         if not isinstance(env_names, list) or any(not isinstance(name, str) or not _ENV_NAME.fullmatch(name) for name in env_names):
             raise RuntimeConfigurationError(f"modules[{index}].environment must contain environment variable names")
-        module_environment = dict(ollama_settings.get(module_id, {}))
-
-        if module_id == "code":
-            module_environment.update(omniroute_settings)
-            module_environment.pop("TARA_CODE_OLLAMA_URL", None)
-
-        # Explicit process environment wins over local configuration defaults.
-        module_environment.update({name: os.environ[name] for name in env_names if name in os.environ})
-
-        if module_id == "code" and not module_environment.get("TARA_CODE_API_KEY"):
-            shared_api_key = os.environ.get("TARA_OMNIROUTE_API_KEY", "").strip()
-            if shared_api_key:
-                module_environment["TARA_CODE_API_KEY"] = shared_api_key
-
+        if module_id in _OMNIROUTE_MODULES:
+            module_environment = dict(omniroute_settings.get(module_id, {}))
+            module_environment.update({
+                name: os.environ[name]
+                for name in env_names
+                if name in os.environ and name not in _LEGACY_LOCAL_MODEL_ENV
+            })
+            if module_id == "chat":
+                module_environment["TARA_LLM_BACKEND"] = "omniroute"
+        else:
+            module_environment = dict(ollama_settings.get(module_id, {}))
+            module_environment.update({name: os.environ[name] for name in env_names if name in os.environ})
         adapter_args = {
             "working_directory": _directory(root, item.get("working_directory")),
             "timeout_seconds": _integer(item.get("timeout_seconds", 30), f"modules[{index}].timeout_seconds", 1, 600),
@@ -149,17 +153,9 @@ def create_application(config_path: str | Path) -> Orchestrator:
                 **adapter_args,
             )
         registry.register(adapter)
-    profiles: dict[str, str] = {}
-    base_url: str | None = None
-    for module_id, (model_env, url_env) in _OLLAMA_MODULE_ENV.items():
-        module_settings = ollama_settings.get(module_id, {})
-        model = module_settings.get(model_env)
-        module_url = module_settings.get(url_env)
-        if model and module_url:
-            profiles[module_id] = model
-            base_url = module_url
-    model_catalog = OllamaModelCatalog(profiles, base_url) if profiles else OllamaModelCatalog()
-    return Orchestrator(registry, router, model_catalog=model_catalog)
+    # TARA no longer starts or calls Ollama for language-model inference.
+    # Model selection and lifecycle belong to OmniRoute.
+    return Orchestrator(registry, router, model_catalog=None)
 
 
 def _ollama_settings(value: Any) -> dict[str, dict[str, str]]:
@@ -201,7 +197,7 @@ def _ollama_settings(value: Any) -> dict[str, dict[str, str]]:
             not isinstance(model, str)
             or not model.strip()
             or len(model) > 200
-            or any(char.isspace() or ord(char) < 32 for char in model)
+            or any(char.isspace() or ord(char) < 33 or ord(char) == 127 for char in model)
         ):
             raise RuntimeConfigurationError(f"ollama.models.{module_id} must be a bounded model identifier")
         model_env, url_env = _OLLAMA_MODULE_ENV[module_id]
@@ -213,15 +209,11 @@ def _ollama_settings(value: Any) -> dict[str, dict[str, str]]:
     return settings
 
 
-
-def _omniroute_settings(value: Any) -> dict[str, str]:
-    """Validate the loopback OmniRoute gateway and expose non-secret settings."""
+def _omniroute_settings(value: Any) -> dict[str, dict[str, str]]:
+    """Validate the local OmniRoute gateway and build per-specialist settings."""
     config = {} if value is None else _table(value, "omniroute")
-    if set(config) - {"base_url", "model"}:
+    if set(config) - {"base_url", "model", "models"}:
         raise RuntimeConfigurationError("omniroute contains unsupported settings")
-    # .env values are loaded before this function. Explicit OmniRoute
-    # environment settings must override example TOML defaults so the Code
-    # specialist uses the same model that was verified against the gateway.
     base_url = os.environ.get("TARA_OMNIROUTE_BASE_URL", config.get("base_url", "http://127.0.0.1:20128/v1"))
     if not isinstance(base_url, str) or not base_url.strip() or len(base_url) > 2048:
         raise RuntimeConfigurationError("omniroute.base_url must be a bounded local URL")
@@ -229,31 +221,53 @@ def _omniroute_settings(value: Any) -> dict[str, str]:
     try:
         parsed = urlsplit(base_url)
         port = parsed.port
-    except ValueError as exc:
-        raise RuntimeConfigurationError("omniroute.base_url is invalid") from exc
+    except ValueError:
+        raise RuntimeConfigurationError("omniroute.base_url is invalid") from None
     if (
         parsed.scheme != "http"
         or parsed.hostname not in {"localhost", "127.0.0.1", "::1"}
-        or parsed.username
-        or parsed.password
+        or parsed.username or parsed.password
         or parsed.path != "/v1"
-        or parsed.query
-        or parsed.fragment
+        or parsed.query or parsed.fragment
         or (port is not None and not 1 <= port <= 65535)
     ):
         raise RuntimeConfigurationError("omniroute.base_url must target the local OmniRoute /v1 endpoint")
-    model = os.environ.get("TARA_OMNIROUTE_MODEL", config.get("model", "auto/coding:cheap"))
-    if (
-        not isinstance(model, str)
-        or not model.strip()
-        or len(model) > 200
-        or any(char.isspace() or ord(char) < 32 for char in model)
-    ):
-        raise RuntimeConfigurationError("omniroute.model must be a bounded model identifier")
-    return {
-        "TARA_CODE_API_BASE_URL": base_url,
-        "TARA_CODE_MODEL": model.strip(),
+
+    model_config = _table(config.get("models", {}), "omniroute.models")
+    chat_default = config.get("model", "auto")
+    if not isinstance(chat_default, str) or not chat_default.strip() or len(chat_default) > 200:
+        raise RuntimeConfigurationError("omniroute.model must be a bounded route identifier")
+    defaults = {
+        "chat": ("TARA_OMNIROUTE_MODEL", chat_default),
+        "code": ("TARA_CODE_MODEL", "auto/coding:cheap"),
+        "vision": ("TARA_VISION_MODEL", "auto"),
+        "creative": ("TARA_CREATIVE_MODEL", "auto/cheap"),
+        "models": ("TARA_MODELS_MODEL", "auto"),
     }
+    if set(model_config) - set(defaults):
+        raise RuntimeConfigurationError("omniroute.models contains an unsupported specialist")
+    api_key = os.environ.get("TARA_OMNIROUTE_API_KEY", "").strip()
+    if len(api_key) > 4096 or any(ord(char) < 33 or ord(char) == 127 for char in api_key):
+        raise RuntimeConfigurationError("TARA_OMNIROUTE_API_KEY is invalid")
+
+    result: dict[str, dict[str, str]] = {}
+    for module_id, (model_env, default_model) in defaults.items():
+        model = os.environ.get(model_env, model_config.get(module_id, default_model))
+        if not isinstance(model, str) or not model.strip() or len(model) > 200 or any(char.isspace() or ord(char) < 32 for char in model):
+            raise RuntimeConfigurationError(f"omniroute.models.{module_id} must be a bounded route identifier")
+        common = {"TARA_OMNIROUTE_BASE_URL": base_url, "TARA_OMNIROUTE_API_KEY": api_key}
+        if module_id == "chat":
+            common.update({"TARA_OMNIROUTE_MODEL": model.strip(), "TARA_LLM_BACKEND": "omniroute"})
+        elif module_id == "code":
+            common.update({"TARA_CODE_API_BASE_URL": base_url, "TARA_CODE_API_KEY": api_key, "TARA_CODE_MODEL": model.strip()})
+        elif module_id == "vision":
+            common.update({"TARA_VISION_API_BASE_URL": base_url, "TARA_VISION_API_KEY": api_key, "TARA_VISION_MODEL": model.strip()})
+        elif module_id == "creative":
+            common.update({"TARA_CREATIVE_API_BASE_URL": base_url, "TARA_CREATIVE_API_KEY": api_key, "TARA_CREATIVE_MODEL": model.strip()})
+        else:
+            common.update({"TARA_MODELS_API_BASE_URL": base_url, "TARA_MODELS_API_KEY": api_key, "TARA_MODELS_MODEL": model.strip()})
+        result[module_id] = common
+    return result
 
 
 def _load_env_file(path: Path) -> None:

@@ -32,7 +32,11 @@ def handle_request(request: Any) -> dict[str, Any]:
     if not isinstance(action, str) or not isinstance(inputs, Mapping):
         return _result(request_id, "invalid_request", error="action or inputs are invalid")
     if action == "health":
-        return _result(request_id, "success", {"healthy": True})
+        try:
+            provider = provider_from_env()
+        except (OSError, RuntimeError, ValueError):
+            return _result(request_id, "unavailable", error="OmniRoute provider configuration is unavailable")
+        return _result(request_id, "success", {"healthy": True, "provider": "omniroute"})
     if action != "respond":
         return _result(request_id, "permission_denied", error="unsupported TARA-Chat capability")
     question = inputs.get("question")
@@ -63,7 +67,7 @@ def handle_request(request: Any) -> dict[str, Any]:
         response = brain.respond(question.strip())
     except (OSError, RuntimeError, TypeError, ValueError):
         return _result(request_id, "unavailable", error="TARA-Chat could not produce a response", duration_ms=max(0, int((time.monotonic() - start) * 1000)))
-    return _result(request_id, "success", {"text": response.text}, duration_ms=max(0, int((time.monotonic() - start) * 1000)))
+    return _result(request_id, "success", {"text": response.text, "provider": "omniroute", "remote_data_transfer": True}, duration_ms=max(0, int((time.monotonic() - start) * 1000)))
 
 
 def main() -> int:

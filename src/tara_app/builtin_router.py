@@ -18,8 +18,8 @@ _RESEARCH = re.compile(r"\b(?:research|sources?|citations?|latest|current|recent
 _PLANNER = re.compile(r"\b(?:plan|break down|roadmap|steps|schedule|milestones|prioritize)\b", re.I)
 _STUDY = re.compile(r"\b(?:study mode|make (?:me )?(?:notes|a quiz|flashcards?)|create (?:notes|a quiz|flashcards?)|generate (?:notes|a quiz|flashcards?)|(?:mcq|flashcards?) from|study plan|revision plan|quiz me on|summari[sz]e (?:this|these|the chapter|the notes))\b", re.I)
 _WEATHER = re.compile(r"\b(?:weather|forecast|temperature|rain(?:\s+chance)?|humidity|wind speed)\b", re.I)
-_MODELS_CATALOG = re.compile(r"\b(?:list|show|discover|available|catalogue|catalog)\b.{0,35}\b(?:models?|gemini|gpt-oss|openai)\b|\b(?:models?|gemini|gpt-oss)\b.{0,35}\b(?:free|available|catalogue|catalog)\b", re.I)
-_MODELS_USE = re.compile(r"\b(?:use|switch to|try|ask|run with)\s+(?:(?:the|openai)\s+)?(?P<model>gemini(?:-[a-z0-9.-]+)?|gpt-oss(?::[a-z0-9.-]+)?)\b", re.I)
+_MODELS_CATALOG = re.compile(r"\b(?:list|show|discover|available|catalogue|catalog)\b.{0,35}\b(?:models?|model hub)\b|\b(?:models?|model hub)\b.{0,35}\b(?:free|available|catalogue|catalog)\b", re.I)
+_MODELS_USE = re.compile(r"\b(?:use|switch to|try|ask|run with)\s+(?:model\s+(?P<plain>[a-z0-9][a-z0-9._:/-]{0,199})|(?P<route>auto(?:/[a-z0-9._:-]+)?|[a-z0-9][a-z0-9._-]*/[a-z0-9][a-z0-9._:/-]*))\b", re.I)
 _CREATIVE = re.compile(r"\b(?:poem|story|lyrics|brainstorm|creative|rewrite|draft|write a|compose)\b", re.I)
 _MEMORY_STORE = re.compile(r"\b(?:remember|save to memory|store this)\b", re.I)
 _MEMORY_FORGET = re.compile(r"\b(?:forget|delete from memory|remove memory)\b", re.I)
@@ -161,9 +161,9 @@ class BuiltinRouter:
             elif _VOICE_SPEAK.search(normalized):
                 target = ("voice", "speak", "read_aloud", "The user asked for local read-aloud.")
             elif _MODELS_CATALOG.search(normalized):
-                target = ("models", "catalog", "model_catalog", "The user asks to discover available free-first models.")
+                target = ("models", "catalog", "model_catalog", "The user asks to discover models exposed by OmniRoute.")
             elif _MODELS_USE.search(normalized):
-                target = ("models", "generate", "model_selection", "The user explicitly selected a model provider.")
+                target = ("models", "generate", "model_selection", "The user explicitly selected an OmniRoute model route.")
             elif _WEATHER.search(normalized):
                 target = ("weather", "forecast", "weather_lookup", "The user asks for current weather or a forecast.")
             elif _STUDY.search(normalized):
