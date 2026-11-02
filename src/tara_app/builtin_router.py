@@ -161,9 +161,9 @@ class BuiltinRouter:
             elif _VOICE_SPEAK.search(normalized):
                 target = ("voice", "speak", "read_aloud", "The user asked for local read-aloud.")
             elif _MODELS_CATALOG.search(normalized):
-                target = ("models", "catalog", "model_catalog", "The user asks to discover available free-first models.")
+                target = ("models", "catalog", "model_catalog", "The user asks to discover models exposed by OmniRoute.")
             elif _MODELS_USE.search(normalized):
-                target = ("models", "generate", "model_selection", "The user explicitly selected a model provider.")
+                target = ("models", "generate", "model_selection", "The user explicitly selected an OmniRoute model route.")
             elif _WEATHER.search(normalized):
                 target = ("weather", "forecast", "weather_lookup", "The user asks for current weather or a forecast.")
             elif _STUDY.search(normalized):
