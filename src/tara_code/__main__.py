@@ -71,11 +71,9 @@ def _check_gateway(base_url: str, api_key: str) -> bool:
         method="GET",
     )
     try:
-        with _omniroute_opener().open(request_obj, timeout=8) as response:
-            raw = response.read(32_000 + 1)
+        with _omniroute_opener().open(request_obj, timeout=20) as response:
+            raw = response.read()
     except (HTTPError, URLError, TimeoutError, OSError):
-        return False
-    if len(raw) > 32_000:
         return False
     try:
         body = json.loads(raw.decode("utf-8"))
