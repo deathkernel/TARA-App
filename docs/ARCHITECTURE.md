@@ -26,7 +26,7 @@ TARA-App
         +-- future TARA models and tools
 ```
 
-The exact TARA model inventory and artifact formats are not established by the current repositories. They must be specified before implementing download/loading behavior.
+OmniRoute exposes the available model IDs and route aliases. Underlying model weights and provider lifecycle remain outside TARA; the current TARA-App launcher does not download or load LLM weights.
 
 ## Runtime flow
 
