@@ -35,8 +35,10 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Configure native Handler
         run: cmake -S src/tara_app/native/handler -B build/native-handler -DCMAKE_BUILD_TYPE=Release
-      - name: Build native Handler
-        run: cmake --build build/native-handler --config Release --target tara-handler --parallel 2
+      - name: Build native Handler and risk tests
+        run: cmake --build build/native-handler --config Release --target tara-handler tara-handler-risk-tests --parallel 2
+      - name: Run native Handler risk tests
+        run: ctest --test-dir build/native-handler -C Release --output-on-failure
 
   frontend-build:
     runs-on: ubuntu-latest
