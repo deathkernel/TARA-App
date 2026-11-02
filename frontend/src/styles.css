@@ -226,3 +226,106 @@ body{background:#08090d;color:#e6e8ef}
   .welcome{width:calc(100% - 28px)}
 }
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+
+
+/* TARA Phase B — JARVIS-inspired command interface */
+:root{
+  --accent:#67c9d8;
+  --accent-ink:#061419;
+}
+.app-shell{background:#050a0e;color:#dcebf0}
+.sidebar{background:#060d12;border-right:1px solid #17313a}
+.brand-mark{background:#163640;color:#9be8f0;border:1px solid #2a6873;border-radius:50%;font-weight:700}
+.brand-dot,.plus-icon,.side-icon{color:#70d4e2}
+.new-chat{background:#0b1820;border-color:#1b3d47;color:#d8edf1}
+.new-chat:hover,.side-link:hover{background:#10232c}
+.sidebar-search{background:#09151c;border-color:#1a3740}
+.sidebar-search:focus-within{border-color:#347987}
+.side-link{color:#a8c0c7}
+.side-link.selected,.conversation-row.active{background:#102630;color:#e5f8fa}
+.conversation-row.active .conversation-bullet{color:#6ed7e4}
+.account-card{border-top-color:#1a343c}
+.avatar{background:#12323a;color:#9ce8ef}
+.privacy-note{color:#78959d}
+.privacy-dot{background:#62c6d4}
+.workspace{background:#071016;color:#dcebf0}
+.topbar{background:#071016;border-bottom-color:#18323a}
+.context-name{color:#e3f5f7}
+.context-subtitle{color:#78939c}
+.connection-pill{color:#89aab2}
+.connection-pill i{background:#65d6bd}
+.top-action,.top-more{background:#0c1a22;border-color:#1d3a44;color:#c3dce1}
+.top-action span{color:#6ccedc}
+.top-action:hover,.top-action.active{background:#102832;border-color:#397e89;color:#e9fcff}
+.chat-area{background:
+  radial-gradient(ellipse at 50% 0%,#0d2630 0%,#08151d 38%,#071016 78%);
+}
+.chat-area:before{
+  display:block;opacity:.18;
+  background-image:linear-gradient(#5eb7c20b 1px,transparent 1px),linear-gradient(90deg,#5eb7c20b 1px,transparent 1px);
+  background-size:36px 36px;
+  mask-image:linear-gradient(to bottom,black,transparent 85%);
+}
+.welcome-orbit{
+  width:76px;height:76px;margin-bottom:24px;border:1px solid #34727d;border-radius:50%;
+  background:radial-gradient(circle at 50% 50%,#153b46 0%,#0b202a 58%,#091720 100%);
+  color:#a4f3f5;font-size:30px;box-shadow:inset 0 0 22px #4cc7d51c,0 0 0 7px #48c3d10a;
+  animation:jarvis-pulse 3.6s ease-in-out infinite;
+}
+.welcome-orbit:before,.welcome-orbit:after{
+  display:block;content:"";position:absolute;inset:-8px;border:1px solid #4aabb64d;border-radius:50%;
+  transform:rotate(25deg) scaleY(.72);animation:jarvis-rotate 16s linear infinite;
+}
+.welcome-orbit:after{inset:-15px;border-color:#68cbd42b;transform:rotate(-25deg) scaleY(.72);animation-direction:reverse;animation-duration:23s}
+.welcome-orbit i,.welcome-orbit b{display:block;background:#83e9e9;box-shadow:0 0 8px #83e9e988}
+.welcome-orbit i{top:8px;right:9px}.welcome-orbit b{bottom:7px;left:10px}
+@keyframes jarvis-pulse{0%,100%{box-shadow:inset 0 0 18px #4cc7d514,0 0 0 6px #48c3d108}50%{box-shadow:inset 0 0 30px #4cc7d52b,0 0 0 11px #48c3d110}}
+@keyframes jarvis-rotate{to{transform:rotate(385deg) scaleY(.72)}}
+.welcome-kicker{color:#74bdc7;letter-spacing:.24em}
+.welcome h1{color:#e8f5f6}
+.welcome h1 em{color:#85dce4;background:none;-webkit-text-fill-color:initial}
+.welcome>p{color:#91aeb5}
+.prompt-grid button{background:linear-gradient(145deg,#10232c,#0b1921);border-color:#1d414b;border-radius:10px;box-shadow:inset 0 1px #ffffff08}
+.prompt-grid button:hover{transform:translateY(-2px);background:#12303a;border-color:#397d88;box-shadow:0 8px 24px #0005}
+.prompt-icon{background:#15343d!important;color:#83dce4!important}
+.prompt-grid strong{color:#e0f1f3}.prompt-grid small{color:#88a7af}.prompt-grid button>b{color:#75aab4}
+.messages{color:#dcebf0}
+.message-avatar{background:#0f2932;border-color:#28545e;color:#8ce3e9;box-shadow:inset 0 0 12px #5bd0dc12}
+.message.user .message-avatar{background:#17252c;border-color:#344a52;color:#c4d6da;box-shadow:none}
+.message-meta strong{color:#e0f0f2}
+.assistant-tag{background:#10323a;border:1px solid #24545d;color:#8edce2}
+.message-text{color:#cbdde1}
+.user-text{background:#10232c;border-color:#25434c;color:#e0edf0}
+.message-tools button{color:#83a2aa}.message-tools button:hover{background:#14313a;color:#a5e9ec}
+.thinking-label{color:#9abac1}
+.thinking-dots i{background:#69d3df;box-shadow:0 0 8px #69d3df66}
+.assistant-avatar{background:#10323a;border-color:#28616b}
+.composer{background:linear-gradient(145deg,#10232c,#0b1921);border-color:#28505a;box-shadow:0 12px 34px #0005,inset 0 1px #ffffff08}
+.composer:focus-within{border-color:#4c9eaa;box-shadow:0 0 0 3px #56c8d214,0 12px 34px #0005}
+.composer textarea{color:#e5f4f5}.composer textarea::placeholder{color:#78979f}
+.composer-hints{color:#7d9da5}.composer-spark,footer span{color:#76d7e1;text-shadow:0 0 10px #76d7e155}
+.send{background:linear-gradient(145deg,#a0eef0,#54c0cf);color:#062027;box-shadow:0 3px 14px #50c9d233}
+.send:hover:not(:disabled){background:#b7f7f5;box-shadow:0 4px 18px #50c9d255}
+.send:disabled{background:#203943;color:#718d94;box-shadow:none}
+.composer-disclaimer,footer{color:#718c94}
+.models-panel{background:linear-gradient(145deg,#10232c,#0b1921);border-color:#24434c;box-shadow:0 12px 35px #0005}
+.eyebrow{color:#78c6ce}
+.panel-heading h2,.model-info strong,.free-hub strong{color:#e3f2f3}
+.panel-heading p,.model-card p,.free-hub p,.muted{color:#8eabb2}
+.soft-button,.model-actions button,.free-hub button{background:#142a33;border-color:#2b505b;color:#c9e0e4}
+.soft-button:hover,.model-actions button:hover,.free-hub button:hover{background:#18343e;border-color:#4b8d98}
+.model-card{background:#0b1921;border-color:#24434c}
+.model-info small{color:#7f9ca4}
+.free-hub{background:#102a32;border-color:#2b5962}
+.notice{background:#281b20;border-color:#67434a;color:#edb5b5}
+.markdown-body h1,.markdown-body h2,.markdown-body h3,.markdown-body h4,.markdown-body strong{color:#e6f4f5}
+.markdown-body p,.markdown-body li{color:#cbdde1}
+.markdown-body blockquote{border-left-color:#62c9d5;background:#102830;color:#a9c7cd}
+.markdown-body pre{background:#050c11;border-color:#25434c;color:#d9edf0;box-shadow:inset 0 1px #ffffff08}
+.markdown-body :not(pre)>code{background:#12303a;border-color:#2c5963;color:#91e4e8}
+.markdown-body th{background:#14303a;color:#e2f1f2}
+.markdown-body th,.markdown-body td{border-color:#2a4b55}
+.markdown-body a{color:#82dce4}
+.markdown-body hr{border-top-color:#294751}
+.mobile-scrim{background:#02090dbd}
+@media(prefers-reduced-motion:reduce){.welcome-orbit,.welcome-orbit:before,.welcome-orbit:after{animation:none}}
