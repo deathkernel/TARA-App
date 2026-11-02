@@ -29,7 +29,7 @@ _POLICIES: dict[str, tuple[Capability, ...]] = {
         Capability("memory", "store", "Store information after explicit approval", False, True),
         Capability("memory", "forget", "Forget information after explicit approval", False, True),
     ),
-    "vision": (Capability("vision", "analyze", "Analyze user supplied images through OmniRoute", False, True),),
+    "vision": (Capability("vision", "analyze", "Analyze user supplied images through OmniRoute", True),),
     "data": (Capability("data", "analyze", "Analyze bounded tabular input", True),),
     "study": (Capability("study", "create", "Create source-grounded study notes, quizzes and flashcards or a bounded revision plan", True),),
     "weather": (Capability("weather", "forecast", "Fetch current conditions and short forecasts from public Open-Meteo endpoints", True),),
