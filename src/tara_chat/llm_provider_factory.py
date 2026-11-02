@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 
 from .ollama_provider import OllamaProvider
+from .omniroute_provider import OmniRouteProvider
 
 
 def provider_from_env():
@@ -17,9 +18,11 @@ def provider_from_env():
         return None
     if backend in {"ollama", "llama"}:
         return OllamaProvider.from_env()
+    if backend == "omniroute":
+        return OmniRouteProvider.from_env()
     raise ValueError(
         f"Unsupported TARA_LLM_BACKEND {backend!r}; supported values are "
-        "'ollama'/'llama' or 'none'"
+        "'omniroute', 'ollama'/'llama', or 'none'"
     )
 
 
