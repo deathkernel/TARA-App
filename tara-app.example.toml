@@ -19,6 +19,7 @@ timeout_seconds = 10
 
 [[modules]]
 id = "chat"
+allow_remote = true # Sends prompts, recent history, and relevant memory snippets through OmniRoute.
 command = ["{python}", "-m", "tara_chat.app_adapter"]
 working_directory = "."
 timeout_seconds = 180
