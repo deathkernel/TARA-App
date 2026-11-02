@@ -211,14 +211,6 @@ export default function App() {
         {modelsOpen && <section className="models-panel">
           <div className="panel-heading"><div><h2>OmniRoute models</h2><p>Model selection and lifecycle are managed by the OmniRoute gateway.</p></div><button className="secondary" onClick={() => void refreshModels()} disabled={modelBusy === "refresh"}>{modelBusy === "refresh" ? "Refreshing…" : "Refresh"}</button></div>
           {modelStatus?.status === "managed_externally" && <p className="muted">TARA does not install or manage model weights locally. Use the Model Hub to browse models exposed by OmniRoute.</p>}
-          {(modelStatus?.models ?? []).map((model) => <div className="model-card" key={model.specialist}>
-            <div><strong>{model.specialist}</strong><p>{model.model}</p><small>{model.memory_bytes ? `RAM ${formatBytes(model.memory_bytes)} · ` : ""}{model.vram_bytes ? `VRAM ${formatBytes(model.vram_bytes)} · ` : ""}{model.running ? "Loaded" : model.installed ? "Installed" : "Not installed"}</small></div>
-            <div className="model-actions">
-              {!model.installed && <button onClick={() => void modelAction("pull", model.specialist)} disabled={!!modelBusy}>Install</button>}
-              {model.installed && model.running && <button className="secondary" onClick={() => void modelAction("unload", model.specialist)} disabled={!!modelBusy}>Unload</button>}
-              {model.installed && <button className="danger" onClick={() => void modelAction("remove", model.specialist)} disabled={!!modelBusy}>Remove</button>}
-            </div>
-          </div>)}
           <div className="free-hub"><div><strong>OmniRoute Model Hub</strong><p>Browse model IDs exposed by OmniRoute. Availability, quotas, and billing depend on its connected providers.</p></div><button onClick={() => void sendMessage(FREE_MODELS_PROMPT)} disabled={sending}>List models</button></div>
         </section>}
 
