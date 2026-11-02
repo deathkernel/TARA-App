@@ -12,7 +12,7 @@ Chat, Code, Handler, Router, and the other specialist capabilities are maintaine
 - Multiple model profiles selectable by task, with model/runtime lifecycle management.
 - Chat, coding, and environment-management workflows integrated as specialist capabilities.
 - One consistent OmniRoute gateway for all language-model inference; TARA does not directly call Ollama, Gemini, or another model provider.
-- Model downloads/updates, memory, GPU/CPU/RAM visibility, concurrency, and resource limits managed deliberately.
+- Provider selection, quotas, fallback, and model lifecycle are managed by OmniRoute; TARA handles local memory, permissions, desktop actions, and resource-aware orchestration.
 - Clear distinction between an AI model, a model runtime/provider, and a tool/engine.
 - Safe defaults: no arbitrary host command execution, no hidden mutation, and no automatic Git merge.
 
@@ -50,10 +50,10 @@ TARA-App (one application)
   |
   +-- UI / sessions / settings / model catalogue
   |
-  +-- Model Runtime Manager
-  |     +-- OmniRoute gateway (only language-model inference path)
-  |     +-- OmniRoute model/route catalogue
-  |     +-- Provider selection, fallback and quotas managed by OmniRoute
+  +-- OmniRoute Gateway / Model Router
+  |     +-- Only language-model inference path
+  |     +-- Model/route catalogue exposed by OmniRoute
+  |     +-- Provider selection, fallback, quotas and model lifecycle managed by OmniRoute
   |
   +-- Task Orchestrator / Capability Registry
         +-- TARA-Chat adapter --> conversation + memory
@@ -140,7 +140,7 @@ Research uses Crossref and Wikipedia public APIs for source records. No API key 
 
 ## Target integration contracts
 
-Adapters should expose health, capabilities, and a structured execute operation. Model providers additionally need a model catalogue, load/unload lifecycle, inference settings, cancellation, timeout, resource limits, and health reporting. Model identity and version should be recorded for each inference request.
+Adapters should expose health, capabilities, and a structured execute operation. TARA queries OmniRoute for the model catalogue and delegates provider/model selection and lifecycle to the gateway. TARA adapters still enforce request bounds, cancellation, timeouts, local permission checks, and audit reporting. Model identity and route should be recorded for each inference request.
 
 Use a versioned request with `schema_version`, `request_id`, `session_id`, `module`, `action`, structured `inputs`, `workspace_root` when applicable, `timeout_seconds`, and `approval_token` when a mutating operation requires approval.
 
