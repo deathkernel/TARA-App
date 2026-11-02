@@ -37,6 +37,8 @@ models = "auto"
 
 These are OmniRoute route aliases, not necessarily concrete model IDs. The route can be changed per specialist in the TOML configuration or with its corresponding environment variable:
 
+Each of the Chat, Code, Vision, Creative, and Model Hub entries in `tara-app.toml` must explicitly set `allow_remote = true`. This is the opt-in that allows the specialist to send user content through OmniRoute. If it is false or omitted, TARA leaves that specialist disabled; the app does not silently enable remote transfer.
+
 | Specialist | Environment variable | Default route |
 |---|---|---|
 | Chat | `TARA_OMNIROUTE_MODEL` | `auto` |
