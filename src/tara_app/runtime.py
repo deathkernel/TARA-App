@@ -122,6 +122,12 @@ def create_application(config_path: str | Path) -> Orchestrator:
 
         # Explicit process environment wins over local configuration defaults.
         module_environment.update({name: os.environ[name] for name in env_names if name in os.environ})
+
+        if module_id == "code" and not module_environment.get("TARA_CODE_API_KEY"):
+            shared_api_key = os.environ.get("TARA_OMNIROUTE_API_KEY", "").strip()
+            if shared_api_key:
+                module_environment["TARA_CODE_API_KEY"] = shared_api_key
+
         adapter_args = {
             "working_directory": _directory(root, item.get("working_directory")),
             "timeout_seconds": _integer(item.get("timeout_seconds", 30), f"modules[{index}].timeout_seconds", 1, 600),
