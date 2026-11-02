@@ -96,7 +96,7 @@ export default function App() {
       const assistantMessage: Message = {role:"assistant",text:answerText(payload),status:payload?.status ?? "success"};
       updateActive((item) => ({...item,updatedAt:Date.now(),messages:[...item.messages,assistantMessage].slice(-24)}));
     } catch(error) {
-      updateActive((item) => ({...item,updatedAt:Date.now(),messages:[...item.messages,{role:"assistant",text:error instanceof Error ? error.message : "Local server unavailable.",status:"unavailable"}].slice(-24)}));
+      updateActive((item) => ({...item,updatedAt:Date.now(),messages:[...item.messages,{role:"assistant" as const,text:error instanceof Error ? error.message : "Local server unavailable.",status:"unavailable"}].slice(-24)}));
     } finally { setSending(false); }
   }
   function onComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
