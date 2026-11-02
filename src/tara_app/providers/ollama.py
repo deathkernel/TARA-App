@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import socket
 from dataclasses import dataclass
 from threading import Event, Thread
 from time import monotonic
@@ -57,12 +58,47 @@ class OllamaProvider:
             raise ProviderError("Ollama request was cancelled")
         deadline = monotonic() + timeout
         connection = http.client.HTTPConnection("127.0.0.1", self._port, timeout=timeout)
+
+        def connect_with_cancellation() -> None:
+            # HTTPConnection normally blocks inside socket.create_connection until its
+            # full timeout elapses. Poll short connect attempts so cancellation can
+            # interrupt a still-pending loopback connection attempt promptly.
+            while True:
+                if cancel_event is not None and cancel_event.is_set():
+                    raise OSError("request cancelled")
+                remaining = deadline - monotonic()
+                if remaining <= 0:
+                    raise TimeoutError("request deadline expired")
+                try:
+                    sock = socket.create_connection(
+                        (connection.host, connection.port),
+                        timeout=min(0.1, remaining),
+                        source_address=connection.source_address,
+                    )
+                except socket.timeout:
+                    continue
+                sock.settimeout(max(0.001, deadline - monotonic()))
+                connection.sock = sock
+                return
+
+        # The adapter only ever connects to 127.0.0.1; replace the standard blocking
+        # connect method with the bounded, cancellation-aware loop above.
+        connection.connect = connect_with_cancellation
         body = None if payload is None else json.dumps(payload)
         headers = {"Accept": "application/json"}
         if body is not None:
             headers["Content-Type"] = "application/json"
         stop_monitor = Event()
         interruption: list[str] = []
+        active_response: list[Any | None] = [None]
+
+        def response_socket(response: Any | None) -> Any | None:
+            if response is None:
+                return None
+            file_pointer = getattr(response, "fp", None)
+            raw = getattr(file_pointer, "raw", None)
+            sock = getattr(raw, "_sock", None)
+            return sock if sock is not None else getattr(file_pointer, "_sock", None)
 
         def interrupt_blocked_request() -> None:
             while not stop_monitor.wait(0.05):
@@ -71,11 +107,24 @@ class OllamaProvider:
                 elif monotonic() >= deadline:
                     interruption.append("timed out")
                 if interruption:
-                    sock = getattr(connection, "sock", None)
-                    if sock is not None:
+                    # HTTPResponse may detach its socket from HTTPConnection when the
+                    # server closes the response side. Keep and interrupt both handles.
+                    candidates = (
+                        getattr(connection, "sock", None),
+                        response_socket(active_response[0]),
+                    )
+                    interrupted: list[Any] = []
+                    for sock in candidates:
+                        if sock is None or any(sock is item for item in interrupted):
+                            continue
+                        interrupted.append(sock)
                         try:
-                            sock.shutdown(2)
-                        except OSError:
+                            sock.shutdown(socket.SHUT_RDWR)
+                        except (OSError, AttributeError):
+                            pass
+                        try:
+                            sock.close()
+                        except (OSError, AttributeError):
                             pass
                     connection.close()
                     return
@@ -87,6 +136,7 @@ class OllamaProvider:
                 raise ProviderError("Ollama request was cancelled")
             connection.request("GET" if body is None else "POST", path, body=body, headers=headers)
             response = connection.getresponse()
+            active_response[0] = response
             raw = response.read(2 * 1024 * 1024 + 1)
             if interruption:
                 raise ProviderError(f"Ollama request {interruption[0]}")
