@@ -49,7 +49,7 @@ OmniRoute must have eligible connected providers/models for each task type. In p
 
 ## Data handling and security
 
-- Chat prompts and conversation context are sent to OmniRoute for inference.
+- Chat prompts, recent conversation history, and relevant saved-memory snippets are sent to OmniRoute for inference.
 - Code questions and any source attachments explicitly supplied to Code are sent to OmniRoute.
 - Creative briefs are sent to OmniRoute.
 - Images submitted to Vision are encoded as OpenAI-compatible image content and sent through OmniRoute. Successful Vision responses include `images_sent_to_remote: true`.
