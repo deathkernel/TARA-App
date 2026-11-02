@@ -71,6 +71,14 @@ class ModelHubTests(unittest.TestCase):
         })
         self.assertEqual(result["status"], "invalid_request")
 
+    def test_invalid_request_is_rejected_before_gateway_configuration(self):
+        with patch.dict(os.environ, {}, clear=True):
+            result = handle_request({
+                "schema_version": "1.0", "request_id": "invalid-no-gateway",
+                "module": "models", "action": "generate", "inputs": {"question": " "},
+            })
+        self.assertEqual(result["status"], "invalid_request")
+
     def test_missing_gateway_key_does_not_fall_back_to_another_provider(self):
         with patch.dict(os.environ, {"TARA_MODELS_API_BASE_URL": self.env["TARA_MODELS_API_BASE_URL"]}, clear=True):
             result = handle_request({
