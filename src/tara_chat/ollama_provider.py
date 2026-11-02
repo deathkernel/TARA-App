@@ -1,4 +1,4 @@
-"""Local Llama inference through Ollama with resource-aware power profiles.
+"""Legacy direct Ollama chat adapter retained for compatibility/tests; TARA Chat now uses OmniRoute only."""
 
 TARA keeps memory, planning, tools, and verification. Ollama serves a pretrained
 local language model; this adapter does not train or fine-tune it.
