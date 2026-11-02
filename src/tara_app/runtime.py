@@ -194,7 +194,7 @@ def _ollama_settings(value: Any) -> dict[str, dict[str, str]]:
             not isinstance(model, str)
             or not model.strip()
             or len(model) > 200
-            or any(char.isspace() or ord(char) < 32 for char in model)
+            or any(char.isspace() or ord(char) < 33 or ord(char) == 127 for char in model)
         ):
             raise RuntimeConfigurationError(f"ollama.models.{module_id} must be a bounded model identifier")
         model_env, url_env = _OLLAMA_MODULE_ENV[module_id]
@@ -231,8 +231,11 @@ def _omniroute_settings(value: Any) -> dict[str, dict[str, str]]:
         raise RuntimeConfigurationError("omniroute.base_url must target the local OmniRoute /v1 endpoint")
 
     model_config = _table(config.get("models", {}), "omniroute.models")
+    chat_default = config.get("model", "auto")
+    if not isinstance(chat_default, str) or not chat_default.strip() or len(chat_default) > 200:
+        raise RuntimeConfigurationError("omniroute.model must be a bounded route identifier")
     defaults = {
-        "chat": ("TARA_OMNIROUTE_MODEL", "auto"),
+        "chat": ("TARA_OMNIROUTE_MODEL", chat_default),
         "code": ("TARA_CODE_MODEL", "auto/coding:cheap"),
         "vision": ("TARA_VISION_MODEL", "auto"),
         "creative": ("TARA_CREATIVE_MODEL", "auto/cheap"),
