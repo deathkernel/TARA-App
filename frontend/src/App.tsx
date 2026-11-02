@@ -59,15 +59,6 @@ function answerText(payload: any): string {
   return found ?? JSON.stringify(payload, null, 2);
 }
 
-function formatBytes(value?: number | null): string {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return "";
-  const units = ["B", "KiB", "MiB", "GiB", "TiB"];
-  let size = value;
-  let index = 0;
-  while (size >= 1024 && index < units.length - 1) { size /= 1024; index += 1; }
-  return `${size.toFixed(index ? 1 : 0)} ${units[index]}`;
-}
-
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...init,
