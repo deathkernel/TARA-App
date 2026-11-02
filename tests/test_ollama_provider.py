@@ -1,5 +1,6 @@
 """Offline contract tests for the loopback-only Ollama adapter."""
 import json
+import socket
 import sys
 import unittest
 from pathlib import Path
@@ -155,6 +156,77 @@ class OllamaProviderTests(unittest.TestCase):
                 provider.chat("tinyllama", [{"role": "user", "content": "hi"}])
 
         self.assertTrue(closed.is_set())
+
+    def test_cancellation_interrupts_a_pending_connection_attempt(self):
+        """Cancellation is polled while the loopback TCP connect is still pending."""
+        import threading
+
+        connection = Mock()
+        connection.sock = None
+        cancelled = threading.Event()
+        connect_started = threading.Event()
+
+        def blocked_connect(address, timeout, source_address=None):
+            connect_started.set()
+            cancelled.wait(timeout=timeout)
+            raise socket.timeout()
+
+        connection.request.side_effect = lambda *args, **kwargs: connection.connect()
+        provider = OllamaProvider(chat_timeout_seconds=5)
+
+        def cancel_after_connect_starts():
+            self.assertTrue(connect_started.wait(1))
+            cancelled.set()
+
+        with patch("tara_app.providers.ollama.http.client.HTTPConnection", return_value=connection), patch(
+            "tara_app.providers.ollama.socket.create_connection", side_effect=blocked_connect
+        ):
+            canceller = threading.Thread(target=cancel_after_connect_starts)
+            canceller.start()
+            with self.assertRaisesRegex(ProviderError, "cancelled"):
+                provider.chat_cancellable(
+                    "tinyllama", [{"role": "user", "content": "hi"}],
+                    cancel_event=cancelled,
+                )
+            canceller.join(1)
+
+    def test_cancellation_interrupts_detached_response_socket(self):
+        """The watchdog also closes the response socket after HTTPConnection detaches it."""
+        import threading
+
+        cancelled = threading.Event()
+        read_released = threading.Event()
+        response_socket = Mock()
+        response_socket.shutdown.side_effect = lambda *_: read_released.set()
+        response = Mock()
+        response.status = 200
+        response.fp.raw._sock = response_socket
+
+        def blocked_read(_limit):
+            self.assertTrue(read_released.wait(2))
+            raise OSError("response socket interrupted")
+
+        response.read.side_effect = blocked_read
+        connection = Mock()
+        connection.sock = None
+        connection.getresponse.return_value = response
+        provider = OllamaProvider(chat_timeout_seconds=5)
+
+        def cancel_soon():
+            cancelled.set()
+
+        with patch("tara_app.providers.ollama.http.client.HTTPConnection", return_value=connection):
+            canceller = threading.Thread(target=cancel_soon)
+            canceller.start()
+            with self.assertRaisesRegex(ProviderError, "cancelled"):
+                provider.chat_cancellable(
+                    "tinyllama", [{"role": "user", "content": "hi"}],
+                    cancel_event=cancelled,
+                )
+            canceller.join(1)
+
+        response_socket.shutdown.assert_called_once()
+        response_socket.close.assert_called_once()
 
     def test_http_errors_are_normalized(self):
         connection = fake_connection({"error": "not found"}, status=500)
