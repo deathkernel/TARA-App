@@ -2,7 +2,7 @@
 
 TARA uses OmniRoute as its **only language-model gateway**. TARA's specialist router decides whether a request belongs to Chat, Code, Vision, Creative, or Model Hub. OmniRoute selects the actual model/provider and forwards the request. TARA retains conversation context, local memory, permissions, security policy, and desktop tool execution.
 
-TARA does not directly call Ollama, Gemini, BharatCode, or another model provider for language-model inference. There is no silent local-model fallback: if OmniRoute or its API key is unavailable, the inference request fails closed.
+TARA does not directly call Ollama, Gemini, BharatCode, or another model provider for language-model inference. Legacy Ollama adapter/runtime-manager source files remain for compatibility and their isolated tests, but the current TARA-App launcher does not register or instantiate them. There is no silent local-model fallback: if OmniRoute or its API key is unavailable, the inference request fails closed.
 
 ## Windows PowerShell setup
 
