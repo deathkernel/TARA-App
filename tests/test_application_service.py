@@ -1,6 +1,8 @@
 """Tests for the headless application service facade."""
+import sqlite3
 import sys
 import tempfile
+from datetime import datetime, timedelta, timezone
 import unittest
 from pathlib import Path
 
@@ -11,14 +13,18 @@ from tara_app.application_service import ApplicationServiceError, TARAApplicatio
 from tara_app.audit import JsonlAuditLog
 from tara_app.contracts import ModelInfo
 from tara_app.model_catalogue import ModelCatalogue
-from tara_app.sessions import SessionStore
+from tara_app.sessions import SessionError, SessionStore
 
 
 class FakeRuntime:
+    def __init__(self):
+        self.chat_calls = 0
+
     def list_models(self, provider_id="ollama"):
         return [ModelInfo(provider_id, "test-model", family="test")]
 
     def chat(self, model, messages, provider_id="ollama"):
+        self.chat_calls += 1
         return "reply:" + messages[-1]["content"]
 
 
@@ -53,6 +59,59 @@ class ApplicationServiceTests(unittest.TestCase):
             self.service.chat(session_id=session.session_id, provider_id="ollama",
                               model="missing", message=" ")
 
+
+    def test_chat_rejects_when_only_one_message_slot_remains(self):
+        """Verify capacity is checked before invoking the provider."""
+        runtime = FakeRuntime()
+        sessions = SessionStore(max_messages_per_session=2)
+        service = TARAApplicationService(
+            runtime=runtime, audit=self.audit, sessions=sessions, catalogue=self.catalogue,
+        )
+        self.assertEqual(service.refresh_model_catalogue(), 1)
+        session = service.create_session()
+        sessions.append_message(session.session_id, "user", "previous")
+
+        with self.assertRaisesRegex(ApplicationServiceError, "two message slots"):
+            service.chat(
+                session_id=session.session_id, provider_id="ollama",
+                model="test-model", message="hello",
+            )
+
+        self.assertEqual(runtime.chat_calls, 0)
+        self.assertEqual(
+            [(message.role, message.content) for message in sessions.history(session.session_id)],
+            [("user", "previous")],
+        )
+
+    def test_chat_does_not_partially_commit_if_capacity_changes_during_inference(self):
+        """Verify a capacity race cannot append only half a chat turn."""
+        sessions = SessionStore(max_messages_per_session=3)
+
+        class CapacityChangingRuntime(FakeRuntime):
+            def chat(self, model, messages, provider_id="ollama"):
+                self.chat_calls += 1
+                sessions.append_message(session.session_id, "tool", "concurrent update")
+                return "reply:" + messages[-1]["content"]
+
+        runtime = CapacityChangingRuntime()
+        service = TARAApplicationService(
+            runtime=runtime, audit=self.audit, sessions=sessions, catalogue=self.catalogue,
+        )
+        self.assertEqual(service.refresh_model_catalogue(), 1)
+        session = service.create_session()
+        sessions.append_message(session.session_id, "user", "previous")
+
+        with self.assertRaisesRegex(ApplicationServiceError, "two message slots"):
+            service.chat(
+                session_id=session.session_id, provider_id="ollama",
+                model="test-model", message="hello",
+            )
+
+        self.assertEqual(runtime.chat_calls, 1)
+        self.assertEqual(
+            [(message.role, message.content) for message in sessions.history(session.session_id)],
+            [("user", "previous"), ("tool", "concurrent update")],
+        )
 
     def test_provider_failure_does_not_commit_partial_user_turn(self):
         class FailingRuntime(FakeRuntime):
@@ -114,6 +173,32 @@ class ApplicationServiceTests(unittest.TestCase):
         session = self.service.create_session()
         self.assertTrue(self.service.close_session(session.session_id))
         self.assertFalse(self.service.close_session(session.session_id))
+
+
+    def test_service_wires_explicit_session_retention_to_persistent_store(self):
+        database = Path(self.temp.name) / "retained-sessions.sqlite3"
+        first = TARAApplicationService(
+            runtime=FakeRuntime(), audit=self.audit, session_database_path=database,
+        )
+        session = first.create_session()
+        first.sessions.append_message(session.session_id, "user", "old conversation")
+        with sqlite3.connect(database) as db:
+            old = (datetime.now(timezone.utc) - timedelta(days=14)).isoformat()
+            db.execute("UPDATE sessions SET updated_at = ? WHERE session_id = ?", (old, session.session_id))
+
+        restarted = TARAApplicationService(
+            runtime=FakeRuntime(), audit=self.audit, session_database_path=database,
+            session_retention_seconds=7 * 24 * 60 * 60,
+        )
+        with self.assertRaisesRegex(SessionError, "session not found"):
+            restarted.sessions.get(session.session_id)
+
+    def test_service_rejects_retention_options_with_an_injected_session_store(self):
+        with self.assertRaisesRegex(ValueError, "configured sessions store"):
+            TARAApplicationService(
+                runtime=FakeRuntime(), audit=self.audit, sessions=SessionStore(),
+                session_retention_seconds=3600,
+            )
 
 
 if __name__ == "__main__":
