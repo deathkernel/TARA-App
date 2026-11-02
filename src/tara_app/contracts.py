@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
-from typing import Any, Mapping, Protocol
+from typing import Any, Mapping, Protocol, runtime_checkable
 
 SCHEMA_VERSION = "1.0"
 # Total serialized adapter-request payload limit. Allows larger attachments while
@@ -248,6 +248,15 @@ class ModelProvider(Protocol):
     def list_models(self) -> list[object]: ...
 
     def chat(self, model: str, messages: list[dict[str, str]]) -> str: ...
+
+
+@runtime_checkable
+class CancellableModelProvider(ModelProvider, Protocol):
+    """Optional provider contract for requests that support cooperative cancellation."""
+
+    def chat_cancellable(
+        self, model: str, messages: list[dict[str, str]], *, cancel_event: Event
+    ) -> str: ...
 
 
 SPECIALIST_CONTRACT_VERSION = 1
