@@ -236,12 +236,12 @@ export default function App() {
               {model.installed && <button className="danger" onClick={() => void modelAction("remove", model.specialist)} disabled={!!modelBusy}>Remove</button>}
             </div>
           </div>)}
-          <div className="free-hub"><div><strong>OmniRoute Model Hub</strong><p>Browse model IDs exposed by OmniRoute. Availability, quotas, and billing depend on its connected providers.</p></div><button onClick={() => void sendMessage(FREE_MODELS_PROMPT)} disabled={sending}>List free models</button></div>
+          <div className="free-hub"><div><strong>OmniRoute Model Hub</strong><p>Browse model IDs exposed by OmniRoute. Availability, quotas, and billing depend on its connected providers.</p></div><button onClick={() => void sendMessage(FREE_MODELS_PROMPT)} disabled={sending}>List models</button></div>
         </section>}
 
         {notice && <div className="notice" role="status">{notice}<button onClick={() => setNotice("")} aria-label="Dismiss notice">×</button></div>}
         <section className="chat-area" aria-label="Conversation">
-          {!active?.messages.length && <div className="welcome"><div className="welcome-mark">✦</div><h2>What can I help with?</h2><p>Local-first AI, with each request routed to the right specialist.</p><div className="prompt-grid">
+          {!active?.messages.length && <div className="welcome"><div className="welcome-mark">✦</div><h2>What can I help with?</h2><p>Your AI assistant, with each request routed to the right specialist and model via OmniRoute.</p><div className="prompt-grid">
             {["Explain a concept simply", "Make study notes from my file", "Help me debug this code", "List all available models"].map((prompt) => <button key={prompt} onClick={() => void sendMessage(prompt)}>{prompt}<span>↗</span></button>)}
           </div></div>}
           <div className="messages">
