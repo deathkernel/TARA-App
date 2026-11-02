@@ -87,7 +87,7 @@ environment = ["TARA_MODELS_API_BASE_URL", "TARA_MODELS_API_KEY", "TARA_MODELS_M
                 self.assertFalse(any("OLLAMA" in name for name in environment))
                 self.assertFalse(any(name == "GEMINI_API_KEY" for name in environment))
             self.assertEqual(app.registry.adapter("chat").environment["TARA_LLM_BACKEND"], "omniroute")
-            self.assertEqual(app.model_catalog.profiles, {})
+            self.assertIsNone(app.model_catalog)
 
     def test_process_environment_overrides_omniroute_route_alias(self):
         with tempfile.TemporaryDirectory() as directory:
