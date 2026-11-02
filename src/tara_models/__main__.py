@@ -168,7 +168,7 @@ def handle_request(request: Any) -> dict[str, Any]:
                 "text": "\n".join(lines),
                 "models": models,
                 "provider": "omniroute",
-                "remote_data_transfer": True,
+                "remote_data_transfer": False,
             })
         question = inputs.get("question")
         if not isinstance(question, str) or not question.strip() or len(question) > 20_000:
