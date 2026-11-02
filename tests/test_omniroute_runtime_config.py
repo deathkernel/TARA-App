@@ -65,9 +65,9 @@ environment = ["TARA_LLM_BACKEND", "TARA_OMNIROUTE_API_KEY", "TARA_OMNIROUTE_MOD
                 encoding="utf-8",
             )
             (root / ".env").write_text(
-                "TARA_LLM_BACKEND=omniroute\\n"
-                "TARA_OMNIROUTE_API_KEY='dotenv-key'\\n"
-                "TARA_OMNIROUTE_MODEL=auto\\n",
+                "TARA_LLM_BACKEND=omniroute\n"
+                "TARA_OMNIROUTE_API_KEY='dotenv-key'\n"
+                "TARA_OMNIROUTE_MODEL=auto\n",
                 encoding="utf-8",
             )
             with patch.dict(os.environ, {"TARA_LLM_BACKEND": "ollama"}, clear=True):
