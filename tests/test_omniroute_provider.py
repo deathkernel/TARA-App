@@ -65,6 +65,16 @@ class OmniRouteProviderTests(unittest.TestCase):
         self.assertIsInstance(provider, OmniRouteProvider)
         self.assertEqual(provider.model, "auto")
 
+    def test_factory_defaults_to_omniroute(self):
+        with patch.dict(os.environ, {"TARA_OMNIROUTE_API_KEY": "test-key"}, clear=True):
+            provider = provider_from_env()
+        self.assertIsInstance(provider, OmniRouteProvider)
+
+    def test_factory_rejects_ollama_backend(self):
+        with patch.dict(os.environ, {"TARA_LLM_BACKEND": "ollama"}, clear=True):
+            with self.assertRaisesRegex(ValueError, "OmniRoute only"):
+                provider_from_env()
+
 
 if __name__ == "__main__":
     unittest.main()
