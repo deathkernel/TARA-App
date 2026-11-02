@@ -8,10 +8,11 @@ from .omniroute_provider import OmniRouteProvider
 
 
 def provider_from_env():
-    """Return the configured provider, or None to keep TARA's built-in model.
+    """Return the explicitly configured provider, or None when inference is disabled.
 
-    Set TARA_LLM_BACKEND=ollama to enable local inference. Provider construction
-    is explicit and does not download models or start background services.
+    OmniRoute owns model selection when TARA_LLM_BACKEND=omniroute. TARA keeps
+    conversation context, memory, capabilities, permissions, and tool execution.
+    Provider construction never downloads models or starts background services.
     """
     backend = os.getenv("TARA_LLM_BACKEND", "").strip().lower()
     if backend in {"", "none", "local"}:
