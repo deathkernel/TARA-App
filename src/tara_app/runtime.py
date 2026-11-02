@@ -49,13 +49,11 @@ _POLICIES: dict[str, tuple[Capability, ...]] = {
 _REMOTE_MODULES = frozenset({"research", "voice", "weather", "models"})
 _OLLAMA_DEFAULT_MODELS = {
     "chat": "llama3.2:3b",
-    "code": "qwen2.5-coder:3b",
     "creative": "llama3.2:3b",
     "vision": "gemma3:4b",
 }
 _OLLAMA_MODULE_ENV = {
     "chat": ("TARA_LLAMA_MODEL", "OLLAMA_HOST"),
-    "code": ("TARA_CODE_MODEL", "TARA_CODE_OLLAMA_URL"),
     "creative": ("TARA_CREATIVE_MODEL", "TARA_CREATIVE_OLLAMA_URL"),
     "vision": ("TARA_VISION_MODEL", "TARA_VISION_OLLAMA_URL"),
 }
@@ -79,11 +77,12 @@ def create_application(config_path: str | Path) -> Orchestrator:
             config = tomllib.load(stream)
     except (OSError, tomllib.TOMLDecodeError) as exc:
         raise RuntimeConfigurationError("configuration file could not be read") from exc
-    if set(config) - {"router", "modules", "ollama"}:
+    if set(config) - {"router", "modules", "ollama", "omniroute"}:
         raise RuntimeConfigurationError("configuration contains unsupported top-level settings")
 
     root = config_file.parent
     ollama_settings = _ollama_settings(config.get("ollama"))
+    omniroute_settings = _omniroute_settings(config.get("omniroute"))
     router_config = _table(config.get("router"), "router")
     if set(router_config) - {"command", "working_directory", "timeout_seconds", "max_response_bytes"}:
         raise RuntimeConfigurationError("router contains unsupported settings")
@@ -115,8 +114,12 @@ def create_application(config_path: str | Path) -> Orchestrator:
         if not isinstance(env_names, list) or any(not isinstance(name, str) or not _ENV_NAME.fullmatch(name) for name in env_names):
             raise RuntimeConfigurationError(f"modules[{index}].environment must contain environment variable names")
         module_environment = dict(ollama_settings.get(module_id, {}))
-        # Explicit process environment wins over local Ollama defaults. This lets
-        # TARA_LLM_BACKEND=omniroute select the gateway when [ollama] is present.
+
+        if module_id == "code":
+            module_environment.update(omniroute_settings)
+            module_environment.pop("TARA_CODE_OLLAMA_URL", None)
+
+        # Explicit process environment wins over local configuration defaults.
         module_environment.update({name: os.environ[name] for name in env_names if name in os.environ})
         adapter_args = {
             "working_directory": _directory(root, item.get("working_directory")),
@@ -180,7 +183,9 @@ def _ollama_settings(value: Any) -> dict[str, dict[str, str]]:
         raise RuntimeConfigurationError("ollama.base_url must target a local Ollama origin")
 
     models = _table(config.get("models", {}), "ollama.models")
-    if set(models) - set(_OLLAMA_DEFAULT_MODELS):
+    # Accept the old local config's code entry for migration compatibility,
+    # but never pass it to the Code specialist or use it as an Ollama profile.
+    if set(models) - (set(_OLLAMA_DEFAULT_MODELS) | {"code"}):
         raise RuntimeConfigurationError("ollama.models contains an unsupported specialist")
     settings: dict[str, dict[str, str]] = {}
     for module_id, default_model in _OLLAMA_DEFAULT_MODELS.items():
@@ -199,6 +204,46 @@ def _ollama_settings(value: Any) -> dict[str, dict[str, str]]:
             settings[module_id]["TARA_POWER_MODE"] = "balanced"
             settings[module_id]["TARA_OLLAMA_KEEP_ALIVE"] = "15m"
     return settings
+
+
+
+def _omniroute_settings(value: Any) -> dict[str, str]:
+    """Validate the loopback OmniRoute gateway and expose non-secret settings."""
+    config = {} if value is None else _table(value, "omniroute")
+    if set(config) - {"base_url", "model"}:
+        raise RuntimeConfigurationError("omniroute contains unsupported settings")
+    base_url = config.get("base_url", "http://127.0.0.1:20128/v1")
+    if not isinstance(base_url, str) or not base_url.strip() or len(base_url) > 2048:
+        raise RuntimeConfigurationError("omniroute.base_url must be a bounded local URL")
+    base_url = base_url.strip().rstrip("/")
+    try:
+        parsed = urlsplit(base_url)
+        port = parsed.port
+    except ValueError as exc:
+        raise RuntimeConfigurationError("omniroute.base_url is invalid") from exc
+    if (
+        parsed.scheme != "http"
+        or parsed.hostname not in {"localhost", "127.0.0.1", "::1"}
+        or parsed.username
+        or parsed.password
+        or parsed.path != "/v1"
+        or parsed.query
+        or parsed.fragment
+        or (port is not None and not 1 <= port <= 65535)
+    ):
+        raise RuntimeConfigurationError("omniroute.base_url must target the local OmniRoute /v1 endpoint")
+    model = config.get("model", "auto/coding:cheap")
+    if (
+        not isinstance(model, str)
+        or not model.strip()
+        or len(model) > 200
+        or any(char.isspace() or ord(char) < 32 for char in model)
+    ):
+        raise RuntimeConfigurationError("omniroute.model must be a bounded model identifier")
+    return {
+        "TARA_CODE_API_BASE_URL": base_url,
+        "TARA_CODE_MODEL": model.strip(),
+    }
 
 
 def _table(value: Any, label: str) -> Mapping[str, Any]:
