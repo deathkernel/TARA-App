@@ -62,9 +62,27 @@ def handle_request(request: Any) -> dict[str, Any]:
     memory_path = os.environ.get("TARA_CHAT_MEMORY_PATH", "").strip()
     brain = TARABrain(llm_provider=provider, memory=LongTermMemory(memory_path or None))
     brain.conversation_history = normalized
+
+    raw_tokens = inputs.get("max_new_tokens")
+    if isinstance(raw_tokens, int) and not isinstance(raw_tokens, bool) and 1 <= raw_tokens <= 4096:
+        max_tokens = raw_tokens
+    else:
+        try:
+            max_tokens = int(os.environ.get("TARA_CHAT_MAX_TOKENS", "2048"))
+            if not 1 <= max_tokens <= 4096:
+                max_tokens = 2048
+        except (ValueError, TypeError):
+            max_tokens = 2048
+
+    raw_temp = inputs.get("temperature")
+    if isinstance(raw_temp, (int, float)) and not isinstance(raw_temp, bool) and 0.0 <= float(raw_temp) <= 2.0:
+        temperature = float(raw_temp)
+    else:
+        temperature = 0.6
+
     start = time.monotonic()
     try:
-        response = brain.respond(question.strip())
+        response = brain.respond(question.strip(), max_new_tokens=max_tokens, temperature=temperature)
     except (OSError, RuntimeError, TypeError, ValueError):
         return _result(request_id, "unavailable", error="TARA-Chat could not produce a response", duration_ms=max(0, int((time.monotonic() - start) * 1000)))
     return _result(request_id, "success", {"text": response.text, "provider": "omniroute", "remote_data_transfer": True}, duration_ms=max(0, int((time.monotonic() - start) * 1000)))

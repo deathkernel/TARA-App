@@ -16,9 +16,11 @@ from urllib.parse import urlsplit
 from uuid import uuid4
 
 from tara_app.adapters import RouterClient
+from tara_app.audit import JsonlAuditLog
 from tara_app.contracts import AdapterHealth, Capability, ModuleRequest, ModuleResult, RouteDecision
 from tara_app.ollama_models import OllamaModelCatalog
 from tara_app.registry import CapabilityRegistry
+from tara_app.sessions import SessionStore
 
 _AUDIO_MEDIA_TYPES = frozenset({
     "audio/mpeg", "audio/wav", "audio/mp4", "audio/webm", "audio/ogg", "audio/flac", "audio/aac",
@@ -88,10 +90,14 @@ class Orchestrator:
         router: RouterClient,
         *,
         model_catalog: OllamaModelCatalog | None = None,
+        sessions: SessionStore | None = None,
+        audit: JsonlAuditLog | None = None,
     ) -> None:
         self.registry = registry
         self.router = router
         self.model_catalog = model_catalog
+        self.sessions = sessions if sessions is not None else SessionStore()
+        self.audit = audit
         self._conversation_history: OrderedDict[str, list[dict[str, str]]] = OrderedDict()
         self._history_lock = RLock()
         self._pending_approvals: OrderedDict[str, PendingApproval] = OrderedDict()
@@ -124,6 +130,68 @@ class Orchestrator:
                 self._conversation_history.pop(session_id, None)
             while len(self._conversation_history) > 512:
                 self._conversation_history.popitem(last=False)
+            try:
+                self.sessions.get_or_create(session_id)
+                self.sessions.replace_messages(
+                    session_id, [(turn["role"], turn["content"]) for turn in safe_history]
+                )
+            except Exception:
+                pass
+
+    def get_conversation_history(self, session_id: str, limit: int = 24) -> list[dict[str, str]]:
+        with self._history_lock:
+            try:
+                stored = self.sessions.history(session_id, limit=limit)
+                if stored:
+                    return [{"role": msg.role, "content": msg.content} for msg in stored]
+            except Exception:
+                pass
+            raw = self._conversation_history.get(session_id, [])
+            return list(raw[-limit:])
+
+    def list_sessions(self) -> list[dict[str, Any]]:
+        with self._history_lock:
+            try:
+                return self.sessions.list_sessions()
+            except Exception:
+                return [
+                    {"session_id": sid, "message_count": len(msgs)}
+                    for sid, msgs in self._conversation_history.items()
+                ]
+
+    def get_session(self, session_id: str) -> dict[str, Any] | None:
+        with self._history_lock:
+            try:
+                session = self.sessions.get(session_id)
+                return {
+                    "session_id": session.session_id,
+                    "created_at": session.created_at,
+                    "updated_at": session.updated_at,
+                    "metadata": dict(session.metadata),
+                    "messages": [
+                        {"role": msg.role, "content": msg.content, "created_at": msg.created_at}
+                        for msg in session.messages
+                    ],
+                }
+            except Exception:
+                msgs = self._conversation_history.get(session_id)
+                if msgs is not None:
+                    return {
+                        "session_id": session_id,
+                        "created_at": "",
+                        "updated_at": "",
+                        "metadata": {},
+                        "messages": list(msgs),
+                    }
+                return None
+
+    def delete_session(self, session_id: str) -> bool:
+        with self._history_lock:
+            self._conversation_history.pop(session_id, None)
+            try:
+                return self.sessions.close(session_id)
+            except Exception:
+                return False
 
     def handle_question(
         self,
@@ -219,7 +287,7 @@ class Orchestrator:
             return self._outcome(operation_id, "invalid_request", decision, "invalid_attachment_content", "attachment content is invalid for the selected specialist")
         if decision.module == "chat" and decision.action == "respond":
             with self._history_lock:
-                inputs["history"] = [dict(turn) for turn in self._conversation_history.get(session_id, [])]
+                inputs["history"] = [dict(turn) for turn in self.get_conversation_history(session_id)]
         if decision.intended_module:
             inputs["intended_module"] = decision.intended_module
         if decision.intended_action:
@@ -265,6 +333,22 @@ class Orchestrator:
                     self._conversation_history.move_to_end(session_id)
                     while len(self._conversation_history) > 512:
                         self._conversation_history.popitem(last=False)
+                    try:
+                        self.sessions.get_or_create(session_id)
+                        self.sessions.append_message(session_id, "user", question.strip())
+                        self.sessions.append_message(session_id, "assistant", response_text.strip())
+                    except Exception:
+                        pass
+                if self.audit is not None:
+                    try:
+                        self.audit.record("chat_turn", {
+                            "session_id": session_id,
+                            "question": question.strip(),
+                            "response": response_text.strip(),
+                            "duration_ms": result.duration_ms,
+                        })
+                    except Exception:
+                        pass
 
         if decision.requires_approval:
             verdict = result.data.get("decision") if isinstance(result.data, Mapping) else None

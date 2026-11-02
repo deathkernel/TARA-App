@@ -77,7 +77,7 @@ class TARABrain:
         *,
         remember_key: str | None = None,
         importance: float = 1.0,
-        max_new_tokens: int = 128,
+        max_new_tokens: int = 2048,
         temperature: float = 0.6,
         **_unused,
     ) -> BrainResponse:

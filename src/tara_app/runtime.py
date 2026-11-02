@@ -14,7 +14,9 @@ from tara_app.contracts import Capability
 from tara_app.handler_adapter import HandlerProcessAdapter
 from tara_app.module_client import StdioModuleAdapter
 from tara_app.orchestrator import Orchestrator
+from tara_app.audit import JsonlAuditLog
 from tara_app.registry import CapabilityRegistry
+from tara_app.sessions import SessionStore
 from tara_app.router_client import StdioRouterClient
 
 _ENV_NAME = re.compile(r"^[A-Z][A-Z0-9_]{0,127}$")
@@ -83,7 +85,7 @@ def create_application(config_path: str | Path) -> Orchestrator:
             config = tomllib.load(stream)
     except (OSError, tomllib.TOMLDecodeError) as exc:
         raise RuntimeConfigurationError("configuration file could not be read") from exc
-    if set(config) - {"router", "modules", "ollama", "omniroute"}:
+    if set(config) - {"router", "modules", "ollama", "omniroute", "sessions", "audit"}:
         raise RuntimeConfigurationError("configuration contains unsupported top-level settings")
 
     root = config_file.parent
@@ -155,7 +157,15 @@ def create_application(config_path: str | Path) -> Orchestrator:
         registry.register(adapter)
     # TARA no longer starts or calls Ollama for language-model inference.
     # Model selection and lifecycle belong to OmniRoute.
-    return Orchestrator(registry, router, model_catalog=None)
+    sessions_config = _table(config.get("sessions", {}), "sessions") if "sessions" in config else {}
+    session_db = os.environ.get("TARA_SESSION_DB") or sessions_config.get("database_path")
+    sessions = SessionStore(database_path=session_db)
+
+    audit_config = _table(config.get("audit", {}), "audit") if "audit" in config else {}
+    audit_path = os.environ.get("TARA_AUDIT_LOG") or audit_config.get("log_path")
+    audit = JsonlAuditLog(Path(audit_path)) if audit_path else None
+
+    return Orchestrator(registry, router, model_catalog=None, sessions=sessions, audit=audit)
 
 
 def _ollama_settings(value: Any) -> dict[str, dict[str, str]]:

@@ -71,6 +71,24 @@ class _Handler(BaseHTTPRequestHandler):
             }
             self._json(200, payload)
             return
+        if endpoint == "/api/sessions":
+            if not self._local_origin():
+                self._json(403, {"status": "permission_denied", "error": "request origin is not allowed"})
+                return
+            sessions = self.server.app.list_sessions()
+            self._json(200, {"status": "success", "sessions": sessions})
+            return
+        if endpoint.startswith("/api/sessions/"):
+            if not self._local_origin():
+                self._json(403, {"status": "permission_denied", "error": "request origin is not allowed"})
+                return
+            session_id = endpoint[len("/api/sessions/"):].strip()
+            session_data = self.server.app.get_session(session_id)
+            if session_data is None:
+                self._json(404, {"status": "not_found", "error": "session not found"})
+                return
+            self._json(200, {"status": "success", "session": session_data})
+            return
         # Prefer the compiled React frontend when a build is present. The
         # original static UI remains a safe fallback for source-only installs.
         react_root = (_WEB_ROOT / "react-dist").resolve()
@@ -115,7 +133,11 @@ class _Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         endpoint = urlsplit(self.path).path
-        if endpoint not in {"/api/chat", "/api/approve", "/api/cancel", "/api/models/pull", "/api/models/unload", "/api/models/remove"}:
+        if endpoint not in {
+            "/api/chat", "/api/approve", "/api/cancel",
+            "/api/models/pull", "/api/models/unload", "/api/models/remove",
+            "/api/sessions/new", "/api/sessions/delete",
+        }:
             self._json(404, {"status": "unavailable", "error": "endpoint not found"})
             return
         if not self._local_origin():
@@ -141,6 +163,10 @@ class _Handler(BaseHTTPRequestHandler):
             fields = {"question", "session_id", "attachments", "history"}
         elif endpoint in {"/api/models/pull", "/api/models/unload", "/api/models/remove"}:
             fields = {"specialist"}
+        elif endpoint == "/api/sessions/new":
+            fields = {"metadata", "session_id"}
+        elif endpoint == "/api/sessions/delete":
+            fields = {"session_id"}
         else:
             fields = {"approval_id", "session_id"}
         if not isinstance(payload, dict) or set(payload) - fields:
@@ -171,6 +197,23 @@ class _Handler(BaseHTTPRequestHandler):
             result_status = "accepted" if endpoint == "/api/models/pull" else result["status"]
             response_key = "pull" if endpoint == "/api/models/pull" else "model"
             self._json(status_code, {"status": result_status, response_key: result})
+            return
+        if endpoint == "/api/sessions/new":
+            sid = payload.get("session_id")
+            meta = payload.get("metadata")
+            try:
+                session = self.server.app.sessions.create(meta, session_id=sid)
+                self._json(200, {"status": "success", "session_id": session.session_id, "created_at": session.created_at})
+            except Exception as exc:
+                self._json(400, {"status": "failed", "error": str(exc)})
+            return
+        if endpoint == "/api/sessions/delete":
+            sid = payload.get("session_id")
+            if not isinstance(sid, str) or not sid.strip():
+                self._json(400, {"status": "invalid_request", "error": "session_id is required"})
+                return
+            deleted = self.server.app.delete_session(sid)
+            self._json(200, {"status": "success", "deleted": deleted, "session_id": sid})
             return
         if endpoint == "/api/chat":
             if "history" in payload:
@@ -217,6 +260,22 @@ class _Handler(BaseHTTPRequestHandler):
         # Do not log prompts, attachment names, or provider responses.
         return
 
+
+
+    def do_DELETE(self) -> None:
+        endpoint = urlsplit(self.path).path
+        if not self._local_origin():
+            self._json(403, {"status": "permission_denied", "error": "request origin is not allowed"})
+            return
+        if endpoint.startswith("/api/sessions/"):
+            session_id = endpoint[len("/api/sessions/"):].strip()
+            deleted = self.server.app.delete_session(session_id)
+            if not deleted:
+                self._json(404, {"status": "not_found", "error": "session not found"})
+                return
+            self._json(200, {"status": "success", "deleted": True, "session_id": session_id})
+            return
+        self._json(404, {"status": "unavailable", "error": "endpoint not found"})
 
 def serve(app: Orchestrator, *, port: int = 8765) -> None:
     """Serve the local UI on loopback only until interrupted."""

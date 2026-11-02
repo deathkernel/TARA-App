@@ -131,17 +131,23 @@ class SessionStore:
     def _now() -> str:
         return datetime.now(timezone.utc).isoformat()
 
-    def create(self, metadata: dict[str, str] | None = None) -> Session:
+    def create(self, metadata: dict[str, str] | None = None, *, session_id: str | None = None) -> Session:
         if metadata is not None and (
             not isinstance(metadata, dict)
             or any(not isinstance(k, str) or not isinstance(v, str) for k, v in metadata.items())
         ):
             raise SessionError("session metadata must contain string keys and values")
+        if session_id is not None:
+            if not isinstance(session_id, str) or not session_id.strip() or len(session_id) > 128:
+                raise SessionError("session_id must be a bounded non-empty string")
         with self._lock:
             if len(self._sessions) >= self.max_sessions:
                 raise SessionError("session capacity reached; close a session before creating another")
+            sid = session_id.strip() if session_id else str(uuid4())
+            if sid in self._sessions:
+                raise SessionError(f"session already exists: {sid}")
             now = self._now()
-            session = Session(str(uuid4()), now, now, dict(metadata or {}))
+            session = Session(sid, now, now, dict(metadata or {}))
             if self.database_path is not None:
                 try:
                     with self._connect() as db:
@@ -225,6 +231,35 @@ class SessionStore:
                  "metadata": dict(s.metadata)}
                 for s in self._sessions.values()
             ]
+
+    def get_or_create(self, session_id: str, metadata: dict[str, str] | None = None) -> Session:
+        if not isinstance(session_id, str) or not session_id.strip() or len(session_id) > 128:
+            raise SessionError("session_id must be a bounded non-empty string")
+        sid = session_id.strip()
+        with self._lock:
+            if sid in self._sessions:
+                return self._snapshot(self._sessions[sid])
+            return self.create(metadata, session_id=sid)
+
+    def clear_messages(self, session_id: str) -> None:
+        with self._lock:
+            session = self._sessions.get(session_id)
+            if session is None:
+                raise SessionError("session not found")
+            if self.database_path is not None:
+                try:
+                    with self._connect() as db:
+                        db.execute("DELETE FROM session_messages WHERE session_id = ?", (session_id,))
+                except (sqlite3.Error, OSError):
+                    raise SessionError("session messages could not be cleared from persistent storage") from None
+            session.messages.clear()
+            session.updated_at = self._now()
+
+    def replace_messages(self, session_id: str, messages: list[tuple[str, str]]) -> None:
+        with self._lock:
+            self.clear_messages(session_id)
+            for role, content in messages:
+                self.append_message(session_id, role, content)
 
     @staticmethod
     def _snapshot(session: Session) -> Session:
