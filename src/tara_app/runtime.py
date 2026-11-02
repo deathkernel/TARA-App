@@ -219,7 +219,10 @@ def _omniroute_settings(value: Any) -> dict[str, str]:
     config = {} if value is None else _table(value, "omniroute")
     if set(config) - {"base_url", "model"}:
         raise RuntimeConfigurationError("omniroute contains unsupported settings")
-    base_url = config.get("base_url", "http://127.0.0.1:20128/v1")
+    # .env values are loaded before this function. Explicit OmniRoute
+    # environment settings must override example TOML defaults so the Code
+    # specialist uses the same model that was verified against the gateway.
+    base_url = os.environ.get("TARA_OMNIROUTE_BASE_URL", config.get("base_url", "http://127.0.0.1:20128/v1"))
     if not isinstance(base_url, str) or not base_url.strip() or len(base_url) > 2048:
         raise RuntimeConfigurationError("omniroute.base_url must be a bounded local URL")
     base_url = base_url.strip().rstrip("/")
@@ -239,7 +242,7 @@ def _omniroute_settings(value: Any) -> dict[str, str]:
         or (port is not None and not 1 <= port <= 65535)
     ):
         raise RuntimeConfigurationError("omniroute.base_url must target the local OmniRoute /v1 endpoint")
-    model = config.get("model", "auto/coding:cheap")
+    model = os.environ.get("TARA_OMNIROUTE_MODEL", config.get("model", "auto/coding:cheap"))
     if (
         not isinstance(model, str)
         or not model.strip()
