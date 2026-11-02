@@ -294,7 +294,7 @@ class AppCoreTests(unittest.TestCase):
             "List all available models", request_id="req-models"
         )
         self.assertEqual(outcome.status, "unavailable")
-        self.assertEqual(outcome.reason_code, "capability_unavailable")
+        self.assertEqual(outcome.route.reason_code, "capability_unavailable")
 
 
 if __name__ == "__main__":
