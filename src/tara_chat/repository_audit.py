@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import ast
-import os
 from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
@@ -30,24 +29,14 @@ class AuditReport:
 
 
 class RepositoryAuditor:
-    # Paths required by the current TARA-App monorepo.
     REQUIRED_FILES = (
-        "pyproject.toml",
-        "src/tara_app/__init__.py",
-        "src/tara_app/cli.py",
-        "src/tara_chat/__init__.py",
-        "src/tara_chat/brain.py",
-        "src/tara_chat/ollama_provider.py",
-        "src/tara_chat/memory.py",
-        "tests/test_app_core.py",
-        ".github/workflows/ci.yml",
+        "requirements.txt",
+        "src/__main__.py",
+        "src/brain.py",
+        "src/ollama_provider.py",
+        "src/memory.py",
+        "tests/test_tara_cli.py",
     )
-
-    IGNORED_DIRECTORIES = frozenset({
-        ".git", ".venv", "venv", "__pycache__", ".pytest_cache",
-        ".mypy_cache", ".ruff_cache", "node_modules", "build", "dist",
-        "coverage", ".tox",
-    })
 
     def __init__(self, root: str | Path):
         self.root = Path(root).resolve()
@@ -56,22 +45,20 @@ class RepositoryAuditor:
 
     def audit(self) -> AuditReport:
         issues: list[AuditIssue] = []
-        python_files = sorted(self._python_files())
-        workflow_directory = self.root / ".github" / "workflows"
-        workflow_files = (
-            sorted(
-                path for path in workflow_directory.iterdir()
-                if self._is_repository_file(path)
-            )
-            if workflow_directory.is_dir() and not workflow_directory.is_symlink()
-            else []
+        python_files = sorted(
+            path for path in self.root.rglob("*.py")
+            if not self._ignored(path)
+        )
+        workflow_files = sorted(
+            path for path in (self.root / ".github" / "workflows").glob("*")
+            if path.is_file()
         )
 
         for path in python_files:
             self._audit_python(path, issues)
 
         for relative in self.REQUIRED_FILES:
-            if not self._is_repository_file(self.root / relative):
+            if not (self.root / relative).is_file():
                 issues.append(AuditIssue("MISSING_REQUIRED_FILE", relative, "required conversation runtime file is missing"))
 
         pytest_workflows = []
@@ -100,28 +87,6 @@ class RepositoryAuditor:
             fingerprint=fingerprint,
         )
 
-    def _is_repository_file(self, path: Path) -> bool:
-        """Accept regular files whose resolved targets remain inside the audit root."""
-        try:
-            if path.is_symlink() or not path.is_file():
-                return False
-            path.resolve(strict=True).relative_to(self.root)
-        except (OSError, RuntimeError, ValueError):
-            return False
-        return True
-
-    def _python_files(self):
-        """Walk the repository while pruning generated trees and external file links."""
-        for current, directories, filenames in os.walk(self.root, topdown=True, followlinks=False):
-            directories[:] = sorted(
-                name for name in directories
-                if name not in self.IGNORED_DIRECTORIES
-            )
-            for filename in sorted(filenames):
-                path = Path(current) / filename
-                if filename.endswith(".py") and self._is_repository_file(path):
-                    yield path
-
     def _audit_python(self, path: Path, issues: list[AuditIssue]) -> None:
         relative = str(path.relative_to(self.root))
         try:
@@ -137,6 +102,11 @@ class RepositoryAuditor:
                     "built-in hash() is process-randomized; use stable hashing for persisted/fingerprint logic",
                     severity="warning",
                 ))
+
+    @staticmethod
+    def _ignored(path: Path) -> bool:
+        return any(part in {".git", ".venv", "venv", "__pycache__"} for part in path.parts)
+
 
 def main() -> int:
     import argparse
