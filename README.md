@@ -126,7 +126,7 @@ All TARA language-model requests use the local OmniRoute gateway. This includes 
 
 The route aliases are passed to OmniRoute; they are not concrete model IDs. Provider availability, model IDs, quotas, billing, and fallback behavior depend on the connected providers and routing policy configured inside OmniRoute.
 
-**Data handling:** Chat prompts, recent history and relevant saved-memory snippets, creative briefs, and any explicitly supplied code attachments or images are sent to OmniRoute and may be forwarded to a cloud provider configured there. Do not send secrets or confidential workspace data unless you have reviewed the selected provider and consent to that transfer. Vision reports `images_sent_to_remote=true`. TARA keeps memory, permissions, capability routing, and desktop tool execution on the local machine; model output is never executed as a host command.
+**Data handling:** Chat prompts, recent history and relevant saved-memory snippets, creative briefs, and any explicitly supplied code attachments or images are sent to OmniRoute and may be forwarded to a cloud provider configured there. Chat, Code, Vision, Creative, and Model Hub each require `allow_remote = true` in `tara-app.toml`; otherwise that specialist stays disabled. Do not send secrets or confidential workspace data unless you have reviewed the selected provider and consent to that transfer. Vision reports `images_sent_to_remote=true`. TARA keeps memory, permissions, capability routing, and desktop tool execution on the local machine; model output is never executed as a host command.
 
 Local speech transcription via optional faster-whisper and browser read-aloud are separate speech features, not language-model fallback paths. They remain local when enabled.
 
