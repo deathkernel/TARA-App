@@ -46,6 +46,37 @@ environment = ["TARA_LLM_BACKEND", "TARA_OMNIROUTE_API_KEY", "TARA_OMNIROUTE_BAS
             self.assertEqual(adapter.environment["TARA_OMNIROUTE_MODEL"], "auto")
             self.assertEqual(adapter.environment["TARA_LLAMA_MODEL"], "llama3.2:3b")
 
+    def test_dotenv_loads_keys_and_preserves_process_environment(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config = root / "tara-app.toml"
+            config.write_text(
+                """
+[router]
+command = ["{python}", "-c", "pass"]
+working_directory = "."
+
+[[modules]]
+id = "chat"
+command = ["{python}", "-m", "tara_chat.app_adapter"]
+working_directory = "."
+environment = ["TARA_LLM_BACKEND", "TARA_OMNIROUTE_API_KEY", "TARA_OMNIROUTE_MODEL"]
+""",
+                encoding="utf-8",
+            )
+            (root / ".env").write_text(
+                "TARA_LLM_BACKEND=omniroute\\n"
+                "TARA_OMNIROUTE_API_KEY='dotenv-key'\\n"
+                "TARA_OMNIROUTE_MODEL=auto\\n",
+                encoding="utf-8",
+            )
+            with patch.dict(os.environ, {"TARA_LLM_BACKEND": "ollama"}, clear=True):
+                app = create_application(config)
+            adapter = app.registry.adapter("chat")
+            self.assertEqual(adapter.environment["TARA_LLM_BACKEND"], "ollama")
+            self.assertEqual(adapter.environment["TARA_OMNIROUTE_API_KEY"], "dotenv-key")
+            self.assertEqual(adapter.environment["TARA_OMNIROUTE_MODEL"], "auto")
+
 
 if __name__ == "__main__":
     unittest.main()
