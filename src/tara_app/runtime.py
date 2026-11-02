@@ -81,6 +81,7 @@ def create_application(config_path: str | Path) -> Orchestrator:
         raise RuntimeConfigurationError("configuration contains unsupported top-level settings")
 
     root = config_file.parent
+    _load_env_file(root / ".env")
     ollama_settings = _ollama_settings(config.get("ollama"))
     omniroute_settings = _omniroute_settings(config.get("omniroute"))
     router_config = _table(config.get("router"), "router")
@@ -244,6 +245,31 @@ def _omniroute_settings(value: Any) -> dict[str, str]:
         "TARA_CODE_API_BASE_URL": base_url,
         "TARA_CODE_MODEL": model.strip(),
     }
+
+
+def _load_env_file(path: Path) -> None:
+    """Load simple KEY=VALUE entries without overriding the parent process."""
+    try:
+        lines = path.read_text(encoding="utf-8-sig").splitlines()
+    except FileNotFoundError:
+        return
+    except OSError as exc:
+        raise RuntimeConfigurationError(".env file could not be read") from exc
+
+    for line_number, raw_line in enumerate(lines, start=1):
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[7:].lstrip()
+        name, separator, value = line.partition("=")
+        name = name.strip()
+        if not separator or not _ENV_NAME.fullmatch(name):
+            raise RuntimeConfigurationError(f".env contains an invalid entry on line {line_number}")
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+            value = value[1:-1]
+        os.environ.setdefault(name, value)
 
 
 def _table(value: Any, label: str) -> Mapping[str, Any]:
