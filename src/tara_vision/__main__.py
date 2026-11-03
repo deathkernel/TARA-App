@@ -10,6 +10,8 @@ import sys
 import time
 from collections.abc import Mapping
 from typing import Any
+
+from tara_app.omniroute_health import check_gateway
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
@@ -135,11 +137,13 @@ def handle_request(request: Any) -> dict[str, Any]:
         return _result(request_id, "invalid_request", error="action or inputs are invalid")
     if action == "health":
         try:
-            _omniroute_base_url()
-            _omniroute_api_key()
+            base_url = _omniroute_base_url()
+            api_key = _omniroute_api_key()
         except ValueError:
             return _result(request_id, "unavailable", error="OmniRoute is not configured")
-        return _result(request_id, "success", {"healthy": True, "provider": "omniroute", "gateway_configured": True})
+        if not check_gateway(base_url, api_key):
+            return _result(request_id, "unavailable", error="OmniRoute gateway or authenticated model catalogue is unavailable")
+        return _result(request_id, "success", {"healthy": True, "provider": "omniroute", "gateway_reachable": True})
     if action != "analyze":
         return _result(request_id, "permission_denied", error="unsupported TARA-Vision capability")
     question = inputs.get("question", "Describe the image and distinguish visible evidence from uncertainty.")
