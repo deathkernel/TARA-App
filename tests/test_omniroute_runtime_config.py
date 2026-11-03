@@ -93,6 +93,31 @@ environment = ["TARA_MODELS_API_BASE_URL", "TARA_MODELS_API_KEY", "TARA_MODELS_M
             self.assertEqual(app.registry.adapter("chat").environment["TARA_LLM_BACKEND"], "omniroute")
             self.assertIsNone(app.model_catalog)
 
+    def test_remote_specialist_opt_in_is_reported_without_being_enabled_implicitly(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config = root / "tara-app.toml"
+            config.write_text(
+                """
+[router]
+command = ["{python}", "-c", "pass"]
+working_directory = "."
+[[modules]]
+id = "chat"
+allow_remote = false
+command = ["{python}", "-c", "pass"]
+working_directory = "."
+""",
+                encoding="utf-8",
+            )
+            with patch.dict(os.environ, {"TARA_OMNIROUTE_API_KEY": "test-key"}, clear=True):
+                app = create_application(config)
+
+            self.assertIsNone(app.registry.adapter("chat"))
+            diagnostics = app.registry.disabled_modules()
+            self.assertIn("allow_remote = true", diagnostics["chat"])
+            self.assertIn("models", diagnostics)
+
     def test_process_environment_overrides_omniroute_route_alias(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

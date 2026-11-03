@@ -23,11 +23,17 @@ class _Adapter:
 
 
 class _Registry:
+    def __init__(self, chat_enabled=True):
+        self.chat_enabled = chat_enabled
+
     def capability_ids(self):
-        return ("chat.respond", "models.catalog")
+        return ("chat.respond", "models.catalog") if self.chat_enabled else ("models.catalog",)
 
     def adapter(self, module_id):
-        return _Adapter() if module_id == "chat" else None
+        return _Adapter() if module_id == "chat" and self.chat_enabled else None
+
+    def disabled_modules(self):
+        return {"chat": "Set allow_remote = true in the chat module entry."}
 
 
 class _App:
@@ -60,6 +66,14 @@ class HealthEndpointTests(unittest.TestCase):
         self.assertEqual(payload["model_runtime"], "omniroute")
         self.assertEqual(payload["model_gateway"]["status"], "healthy")
 
+
+    def test_health_explains_when_chat_specialist_is_disabled(self):
+        self.server.app.registry = _Registry(chat_enabled=False)
+        with urlopen(self.base_url + "/api/health", timeout=2) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        self.assertEqual(payload["status"], "degraded")
+        self.assertEqual(payload["specialists"]["chat"]["status"], "disabled")
+        self.assertIn("allow_remote = true", payload["specialists"]["chat"]["reason"])
 
     def test_health_reports_empty_catalog_as_not_configured(self):
         self.server.app.model_catalog = OllamaModelCatalog()
