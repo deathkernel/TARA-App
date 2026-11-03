@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tara-app-core"
+version = "0.1.0"
+description = "TARA-App contracts, capability registry, and safe module orchestration"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+voice = ["faster-whisper>=1.1,<2; python_version < '3.15'"]
+study = ["pypdf>=5,<7"]
+openai = ["openai>=1.68,<3"]
+
+[project.scripts]
+tara-app = "tara_app.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+tara_app = ["web/*.html", "web/*.css", "web/*.js", "web/react-dist/*", "web/react-dist/assets/*", "native/handler/CMakeLists.txt", "native/handler/UPSTREAM.md", "native/handler/include/handler/*.h", "native/handler/src/*.cpp"]

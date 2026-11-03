@@ -65,7 +65,7 @@ class _Handler(BaseHTTPRequestHandler):
             if chat_adapter is not None and gateway_status != "healthy":
                 specialists["chat"] = {
                     "status": "unavailable",
-                    "reason": "The Chat specialist is configured, but its authenticated OmniRoute model catalogue check failed.",
+                    "reason": "The Chat specialist is configured, but its authenticated OmniRoute model-catalogue check failed.",
                 }
             self._json(200, {
                 "status": "ok" if capabilities and gateway_status == "healthy" else "degraded",
