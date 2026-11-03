@@ -30,7 +30,7 @@ class CodeDiffPreviewTests(unittest.TestCase):
         create = format_proposed_changes_diff(
             [{"path": "new.txt", "action": "create", "new_content": "hi\n"}]
         )
-        self.assertIn("--- a/dev/null".replace("a/dev", "a/") or True, create)
+        self.assertIn("--- a/dev/null", create)
         self.assertIn("+++ b/new.txt", create)
         self.assertIn("+hi", create)
 
@@ -38,7 +38,7 @@ class CodeDiffPreviewTests(unittest.TestCase):
             [{"path": "gone.txt", "action": "delete", "old_content": "bye\n"}]
         )
         self.assertIn("--- a/gone.txt", delete)
-        self.assertIn("+++ b/dev/null".replace("b/dev", "b/") or True, delete)
+        self.assertIn("+++ b/dev/null", delete)
         self.assertIn("-bye", delete)
 
     def test_preformatted_diff_passthrough(self) -> None:
