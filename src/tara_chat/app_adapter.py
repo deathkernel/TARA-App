@@ -6,18 +6,34 @@ import sys
 import time
 from collections.abc import Mapping
 from typing import Any
-from .brain import TARABrain
+from .brain import DEFAULT_MAX_NEW_TOKENS, TARABrain
 from .llm_provider_factory import provider_from_env
 from .memory import LongTermMemory
 
 MODULE_ID = "chat"
 CAPABILITIES = ("respond",)
 MAX_REQUEST_BYTES = 1_000_000
-_ALLOWED_REQUEST_FIELDS = {"schema_version", "request_id", "session_id", "module", "action", "inputs", "workspace_root", "timeout_seconds", "approval_token"}
+_ALLOWED_REQUEST_FIELDS = {
+    "schema_version", "request_id", "session_id", "module", "action",
+    "inputs", "workspace_root", "timeout_seconds", "approval_token",
+}
 
 
-def _result(request_id: str, status: str, data: dict[str, Any] | None = None, error: str | None = None, duration_ms: int = 0) -> dict[str, Any]:
-    return {"schema_version": "1.0", "request_id": request_id, "status": status, "data": data or {}, "error": error, "duration_ms": duration_ms}
+def _result(
+    request_id: str,
+    status: str,
+    data: dict[str, Any] | None = None,
+    error: str | None = None,
+    duration_ms: int = 0,
+) -> dict[str, Any]:
+    return {
+        "schema_version": "1.0",
+        "request_id": request_id,
+        "status": status,
+        "data": data or {},
+        "error": error,
+        "duration_ms": duration_ms,
+    }
 
 
 def handle_request(request: Any) -> dict[str, Any]:
@@ -37,8 +53,16 @@ def handle_request(request: Any) -> dict[str, Any]:
         except (OSError, RuntimeError, ValueError):
             return _result(request_id, "unavailable", error="OmniRoute provider configuration is unavailable")
         if not provider.health():
-            return _result(request_id, "unavailable", error="OmniRoute gateway or authenticated model catalogue is unavailable")
-        return _result(request_id, "success", {"healthy": True, "provider": "omniroute", "gateway_reachable": True})
+            return _result(
+                request_id,
+                "unavailable",
+                error="OmniRoute gateway or authenticated model catalogue is unavailable",
+            )
+        return _result(
+            request_id,
+            "success",
+            {"healthy": True, "provider": "omniroute", "gateway_reachable": True},
+        )
     if action != "respond":
         return _result(request_id, "permission_denied", error="unsupported TARA-Chat capability")
     question = inputs.get("question")
@@ -66,16 +90,32 @@ def handle_request(request: Any) -> dict[str, Any]:
     brain.conversation_history = normalized
     start = time.monotonic()
     try:
-        response = brain.respond(question.strip())
+        response = brain.respond(
+            question.strip(),
+            max_new_tokens=DEFAULT_MAX_NEW_TOKENS,
+            temperature=0.5,
+        )
     except (OSError, RuntimeError, TypeError, ValueError):
-        return _result(request_id, "unavailable", error="TARA-Chat could not produce a response", duration_ms=max(0, int((time.monotonic() - start) * 1000)))
-    return _result(request_id, "success", {"text": response.text, "provider": "omniroute", "remote_data_transfer": True}, duration_ms=max(0, int((time.monotonic() - start) * 1000)))
+        return _result(
+            request_id,
+            "unavailable",
+            error="TARA-Chat could not produce a response",
+            duration_ms=max(0, int((time.monotonic() - start) * 1000)),
+        )
+    return _result(
+        request_id,
+        "success",
+        {"text": response.text, "provider": "omniroute", "remote_data_transfer": True},
+        duration_ms=max(0, int((time.monotonic() - start) * 1000)),
+    )
 
 
 def main() -> int:
     raw = sys.stdin.buffer.read(MAX_REQUEST_BYTES + 1)
     if len(raw) > MAX_REQUEST_BYTES:
-        sys.stdout.write(json.dumps(_result("unknown", "invalid_request", error="request exceeds the size limit")) + "\n")
+        sys.stdout.write(
+            json.dumps(_result("unknown", "invalid_request", error="request exceeds the size limit")) + "\n"
+        )
         return 0
     try:
         request = json.loads(raw.decode("utf-8"))
