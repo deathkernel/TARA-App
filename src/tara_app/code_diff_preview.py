@@ -12,6 +12,8 @@ _MAX_PATH_LEN = 512
 _MAX_LINE_LEN = 4_000
 _MAX_LINES_PER_SIDE = 2_000
 _MAX_OUTPUT_CHARS = 200_000
+_CONTENT_OLD_KEYS = ("old_content", "original", "before")
+_CONTENT_NEW_KEYS = ("new_content", "content", "after")
 
 
 class DiffPreviewError(ValueError):
@@ -21,14 +23,14 @@ class DiffPreviewError(ValueError):
 def format_proposed_changes_diff(proposed_changes: Sequence[Mapping[str, Any]]) -> str:
     """Return a unified-diff style preview string for structured proposals.
 
-    Accepted change objects (all fields optional except path when content is present):
+    Accepted change objects:
 
     - path: relative path string
     - action: "create" | "modify" | "delete" | "rename" (default "modify")
     - old_content / original / before: previous file text
     - new_content / content / after: proposed file text
-    - diff: preformatted unified diff (used when present and no content sides)
-    - from_path / to_path: for rename
+    - diff: preformatted unified diff (used only when no content sides are supplied)
+    - from_path / to_path: for rename (from_path required when action is rename)
 
     Empty input returns an empty string. Oversized or invalid input raises
     DiffPreviewError. Output is capped so a hostile proposal cannot blow the UI.
@@ -53,6 +55,10 @@ def format_proposed_changes_diff(proposed_changes: Sequence[Mapping[str, Any]]) 
     return "\n".join(blocks)
 
 
+def _has_content_side(change: Mapping[str, Any], keys: tuple[str, ...]) -> bool:
+    return any(key in change and change[key] is not None for key in keys)
+
+
 def _format_one(change: dict[str, Any], index: int) -> str:
     action = change.get("action", "modify")
     if action is None:
@@ -60,31 +66,41 @@ def _format_one(change: dict[str, Any], index: int) -> str:
     if not isinstance(action, str) or action not in {"create", "modify", "delete", "rename"}:
         raise DiffPreviewError(f"proposed_changes[{index}].action is invalid")
 
-    if isinstance(change.get("diff"), str) and change["diff"].strip():
-        diff_text = change["diff"]
-        if len(diff_text) > _MAX_OUTPUT_CHARS:
+    if "diff" in change and change["diff"] is not None and not isinstance(change["diff"], str):
+        raise DiffPreviewError(f"proposed_changes[{index}].diff must be a string")
+
+    has_old = _has_content_side(change, _CONTENT_OLD_KEYS)
+    has_new = _has_content_side(change, _CONTENT_NEW_KEYS)
+    preformatted = change.get("diff") if isinstance(change.get("diff"), str) else None
+
+    # Prefer structured content when either side is supplied (avoids stale diffs).
+    if preformatted is not None and preformatted.strip() and not has_old and not has_new:
+        if len(preformatted) > _MAX_OUTPUT_CHARS:
             raise DiffPreviewError(f"proposed_changes[{index}].diff is too large")
-        path = _path(change.get("path") or change.get("to_path") or f"change-{index}")
-        header = f"--- a/{path}\n+++ b/{path}\n"
-        return header + diff_text if not diff_text.lstrip().startswith("---") else diff_text
+        if preformatted.lstrip().startswith("---"):
+            return preformatted
+        old_hdr, new_hdr = _headers_for_action(change, action, index)
+        return f"{old_hdr}\n{new_hdr}\n{preformatted}"
 
     path = _path(change.get("path") or change.get("to_path") or f"change-{index}")
-    from_path = change.get("from_path")
     if action == "rename":
-        old_label = _path(from_path if isinstance(from_path, str) else path)
+        from_path = change.get("from_path")
+        if not isinstance(from_path, str):
+            raise DiffPreviewError(f"proposed_changes[{index}].from_path is required for rename")
+        old_label = _path(from_path)
         new_label = path
     elif action == "create":
-        old_label = "dev/null"
+        old_label = None  # /dev/null marker
         new_label = path
     elif action == "delete":
         old_label = path
-        new_label = "dev/null"
+        new_label = None
     else:
         old_label = path
         new_label = path
 
-    old_text = _side_text(change, ("old_content", "original", "before"), index, "old")
-    new_text = _side_text(change, ("new_content", "content", "after"), index, "new")
+    old_text = _side_text(change, _CONTENT_OLD_KEYS, index, "old")
+    new_text = _side_text(change, _CONTENT_NEW_KEYS, index, "new")
 
     if action == "delete":
         new_text = ""
@@ -94,15 +110,37 @@ def _format_one(change: dict[str, Any], index: int) -> str:
     old_lines = _lines(old_text)
     new_lines = _lines(new_text)
     body = _simple_unified(old_lines, new_lines)
-    return f"--- a/{old_label}\n+++ b/{new_label}\n{body}"
+    old_hdr = "--- /dev/null" if old_label is None else f"--- a/{old_label}"
+    new_hdr = "+++ /dev/null" if new_label is None else f"+++ b/{new_label}"
+    return f"{old_hdr}\n{new_hdr}\n{body}"
+
+
+def _headers_for_action(change: dict[str, Any], action: str, index: int) -> tuple[str, str]:
+    path = _path(change.get("path") or change.get("to_path") or f"change-{index}")
+    if action == "create":
+        return "--- /dev/null", f"+++ b/{path}"
+    if action == "delete":
+        return f"--- a/{path}", "+++ /dev/null"
+    if action == "rename":
+        from_path = change.get("from_path")
+        if not isinstance(from_path, str):
+            raise DiffPreviewError(f"proposed_changes[{index}].from_path is required for rename")
+        return f"--- a/{_path(from_path)}", f"+++ b/{path}"
+    return f"--- a/{path}", f"+++ b/{path}"
 
 
 def _path(value: Any) -> str:
-    if not isinstance(value, str) or not value.strip() or len(value) > _MAX_PATH_LEN:
+    if not isinstance(value, str) or not value or len(value) > _MAX_PATH_LEN:
         raise DiffPreviewError("change path must be a non-empty bounded string")
-    cleaned = value.replace("\\", "/").strip()
+    if value != value.strip():
+        raise DiffPreviewError("change path must not have leading or trailing whitespace")
+    if any(ord(char) < 32 or ord(char) == 127 for char in value):
+        raise DiffPreviewError("change path must not contain control characters")
+    cleaned = value.replace("\\", "/")
     if cleaned.startswith("/") or cleaned.startswith("../") or "/../" in f"/{cleaned}/":
         raise DiffPreviewError("change path must be a relative path without parent traversal")
+    if not cleaned.strip("."):
+        raise DiffPreviewError("change path is invalid")
     return cleaned
 
 
@@ -134,7 +172,9 @@ def _simple_unified(old_lines: list[str], new_lines: list[str]) -> str:
     """Minimal line-oriented unified hunk (not a full Myers diff)."""
     if old_lines == new_lines:
         return "@@ no changes @@\n"
-    out: list[str] = [f"@@ -1,{len(old_lines)} +1,{len(new_lines)} @@"]
+    old_start = 0 if not old_lines else 1
+    new_start = 0 if not new_lines else 1
+    out: list[str] = [f"@@ -{old_start},{len(old_lines)} +{new_start},{len(new_lines)} @@"]
     for line in old_lines:
         out.append(f"-{line}")
     for line in new_lines:
