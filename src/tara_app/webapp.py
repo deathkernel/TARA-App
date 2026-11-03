@@ -51,6 +51,22 @@ class _Handler(BaseHTTPRequestHandler):
             chat_adapter = self.server.app.registry.adapter("chat")
             gateway_health = chat_adapter.health() if chat_adapter is not None else None
             gateway_status = gateway_health.status if gateway_health is not None else "unavailable"
+            disabled_modules = getattr(self.server.app.registry, "disabled_modules", lambda: {})()
+            specialists = {}
+            for module_id in ("chat", "code", "vision", "creative", "models"):
+                adapter = self.server.app.registry.adapter(module_id)
+                if adapter is None:
+                    specialists[module_id] = {
+                        "status": "disabled",
+                        "reason": disabled_modules.get(module_id, "The specialist is not registered."),
+                    }
+                else:
+                    specialists[module_id] = {"status": "configured"}
+            if chat_adapter is not None and gateway_status != "healthy":
+                specialists["chat"] = {
+                    "status": "unavailable",
+                    "reason": "The Chat specialist is configured, but its authenticated OmniRoute model-catalogue check failed.",
+                }
             self._json(200, {
                 "status": "ok" if capabilities and gateway_status == "healthy" else "degraded",
                 "app": "TARA-App",
@@ -58,6 +74,7 @@ class _Handler(BaseHTTPRequestHandler):
                 "capability_count": len(capabilities),
                 "capabilities": list(capabilities),
                 "model_runtime": "omniroute",
+                "specialists": specialists,
                 "model_gateway": {
                     "provider": "omniroute",
                     "status": gateway_status,
