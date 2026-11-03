@@ -77,8 +77,10 @@ OmniRoute must have eligible connected providers/models for each task type. In p
 2. Confirm the API key is active in OmniRoute.
 3. Check `GET /v1/models` to confirm the gateway exposes connected models/routes.
 4. Test Chat, Code, Vision, Creative, and Model Hub independently.
-5. For Vision, ensure the selected route supports image input.
-6. A 401/403 indicates key or permission configuration; 404 may indicate a wrong API root; 429 indicates quota/rate limiting; 5xx or timeout may indicate provider/routing failure.
-7. If the gateway or key is unavailable, TARA should report the inference provider as unavailable. It must not fall back to direct Ollama or Gemini.
+5. Check TARA /api/health: model_gateway.status is healthy only after an authenticated GET /v1/models succeeds. Otherwise the app reports degraded.
+6. Open /api/models to read the live OmniRoute catalogue. It returns HTTP 503 and an unavailable status when the gateway cannot provide a valid catalogue; it no longer presents an empty, successful model list.
+7. For Vision, ensure the selected route supports image input. A successful gateway health check verifies authentication and catalogue reachability, not that every configured specialist route is eligible for its task.
+8. A 401/403 indicates key or permission configuration; 404 may indicate a wrong API root; 429 indicates quota/rate limiting; 5xx or timeout may indicate provider/routing failure.
+9. If the gateway or key is unavailable, TARA reports the inference provider as unavailable. It must not fall back to direct Ollama or Gemini.
 
 The Chat adapter currently uses non-streaming Chat Completions because TARA's conversation adapter expects a complete response string. Streaming UI support is a separate enhancement.
