@@ -2,10 +2,12 @@
 
 > **Purpose:** This is the handover document and working source of truth for anyone joining TARA-App—including a new developer, a reviewer, or the daily scheduled development task.
 >
-> **Last reviewed:** 2026-10-27  
+> **Last reviewed:** 2026-11-03  
 > **Repository:** [deathkernel/TARA-App](https://github.com/deathkernel/TARA-App)  
 > **Default branch:** `main`  
 > **Status rule:** “Implemented in code/docs” is not the same as “verified on a real machine.” Do not claim tests, runtime checks, UI QA, or integrations passed unless there is current evidence for the exact commit.
+>
+> **Feature status table:** See [REMAINING_FEATURES.md](REMAINING_FEATURES.md) for the numbered remaining-features list with accurate Implemented / Foundation / Pending verification / Pending / Blocked labels against current `main`.
 
 ## 1. Start here
 
@@ -44,6 +46,8 @@ Use these status labels carefully:
 - **Foundation/partial:** contracts or a first implementation slice exists, but real end-to-end integration is incomplete.
 - **Pending verification:** requires a current test run, UI/browser check, target-machine run, or external integration proof.
 - **Not enabled by design:** intentionally unavailable until security prerequisites are met.
+
+For the numbered remaining-features inventory (items 1–37), use [REMAINING_FEATURES.md](REMAINING_FEATURES.md).
 
 ### 2.1 Capabilities described in the main README
 
@@ -91,6 +95,8 @@ This is a concise history of significant milestones visible in the repository's 
 | [PR #26 — living project roadmap](https://github.com/deathkernel/TARA-App/pull/26) | Added newcomer-friendly history, dependency-ordered roadmap, and scheduled-task evidence rules | Merged as `4d4c225aeba422cd30dfc272ca67d32bba942129` |
 | [PR #27 — structured TARA answers](https://github.com/deathkernel/TARA-App/pull/27) | Added task-adaptive response guidance and focused answer-style tests; fixed a syntax error found by CI before merge | PR CI passed on head `dd2f87295c6be934f867e96b4976dc592c575447`; merged as `c8b484c977ca31ac4f8396bd20c090fe580299ea` |
 | [PR #34 — drop floating pet](https://github.com/deathkernel/TARA-App/pull/34) | Restored the normal browser UI as the default Windows launcher and documented that the floating pet is no longer a product goal | Merged as `1bf4fdff00d748acecbba4e50cda7483f82b9f4f`; all 5 GitHub Actions jobs passed on PR head `0eff1fa8b0e1d4c99f964ccdc08ad600eb153c82` |
+| [PR #50 — native command risk](https://github.com/deathkernel/TARA-App/pull/50) | Mutating native commands stay high-risk even with `-v` / `--version` flags | Merged 2026-11-03 |
+| [PR #51 — session lifecycle](https://github.com/deathkernel/TARA-App/pull/51) | Atomic chat turns + opt-in session retention | Merged; on `main` as of `c45f4c3` |
 
 Useful history links:
 
@@ -107,10 +113,11 @@ Useful history links:
 
 ## 4. What is still left
 
+See **[REMAINING_FEATURES.md](REMAINING_FEATURES.md)** for the full numbered table (items 1–37) with current status labels.
+
 ### Product direction decision — floating pet dropped
 
 The floating desktop pet is no longer a product goal. Do not spend future roadmap or scheduled development work on pet animations, pet chat panels, pet toolbars, or pet-specific overlay behavior. PR #32 was closed without merging. The existing pet implementation from PR #31 remains in the repository for now, but the default Windows launcher must open the regular browser UI. Removing the legacy optional pet code entirely is separate cleanup and should only be done in a dedicated reviewed change if requested.
-
 
 This roadmap is dependency-ordered. The daily development task should deliver a coherent, reviewable batch of multiple eligible items per run, avoid duplicate work, and update this document with evidence after meaningful progress.
 
@@ -132,8 +139,8 @@ This roadmap is dependency-ordered. The daily development task should deliver a 
 - [ ] Specify and implement the narrow TARA-Handler subprocess protocol with fixed arguments, `shell=False`, timeouts, bounded output and an explicit command allowlist.
 - [ ] Add request cancellation, timeouts, bounded execution and graceful shutdown for injected engines and provider calls.
 - [ ] Verify runtime lifecycle behavior: health checks, load/unload, missing model/provider, download failure, resource limits, concurrent requests and recovery.
-- [ ] Finish session persistence policy: define retention/deletion defaults, migration strategy, and app-level configuration wiring. Opt-in SQLite persistence and restart/close regression tests are implemented; persistence is not enabled by default.
-- [ ] Ensure approvals are visible, scoped to one operation, expire/reject reuse, and cannot be bypassed by unknown capability names or audit failures.
+- [x] Finish session persistence policy: define retention/deletion defaults, migration strategy, and app-level configuration wiring. **Code:** opt-in SQLite, atomic turns, retention (PR #51). Default remains memory-only; target-machine verification still open.
+- [x] Ensure approvals are visible, scoped to one operation, expire/reject reuse, and cannot be bypassed by unknown capability names or audit failures. **Code:** orchestrator pending-approval path; UI verification still open.
 
 ### P1 — Coding safety (blocking before execution is enabled)
 
@@ -184,32 +191,14 @@ The scheduled task should read this file **and** the current source/tests before
 For each daily run:
 
 1. Fetch latest `main`, recent commits, open PRs/issues and current CI/check results.
-2. Read this roadmap and relevant implementation/test/docs files. Pick a coherent batch of multiple high-value, dependency-eligible unchecked items or subtasks; keep the batch reviewable and avoid unrelated scope.
+2. Read this roadmap, [REMAINING_FEATURES.md](REMAINING_FEATURES.md), and relevant implementation/test/docs files. Pick a coherent batch of multiple high-value, dependency-eligible unchecked items or subtasks; keep the batch reviewable and avoid unrelated scope.
 3. Check for overlapping branches/PRs first. Do not create duplicate work.
-4. Implement production code plus regression tests where appropriate; update user docs/config only as needed.
-5. Run relevant tests, lint/typecheck/build and security checks available in the environment. Record exact commands and actual results.
-6. Review the entire diff for regressions, security, missing files and accidental secrets.
-7. Open a focused PR. Merge only if the required checks pass, the diff is clean, the change is genuinely verified and repository policy allows it. Otherwise leave the PR open and report the blocker.
-8. Update this file in the same change or a follow-up PR: mark an item complete only when evidence supports it; add a short dated progress entry; revise priorities if needed.
-9. Report the chosen item, files changed, PR/commit link, tests and CI evidence, merge status, remaining blockers, and the next eligible item.
-10. If access, credentials, CI, a test environment or permissions are missing, stop safely for that run and record the limitation. Never fabricate implementation, test results or merges. The next scheduled run should continue from the latest repository state.
-
-**Independence rule:** unrelated user work is not a reason to abandon this roadmap. Each scheduled run should inspect the latest repository state and deliver meaningful work in bulk when the platform and permissions permit. Preserve Windows, macOS and Linux support unless the user explicitly authorizes a platform to be removed. Do not attempt to bypass platform limits or repository protections.
-
-## 7. Progress log
-
-Append a dated entry after each meaningful, evidence-backed change. Keep entries short and link the relevant PR/commit.
-
-| Date | Item | Evidence / PR | Result | Next |
-|---|---|---|---|---|
-| 2026-10-28 | Dropped floating pet as a product direction; closed PR #32 and restored the normal browser UI as the Windows launcher default | [PR #32 closed](https://github.com/deathkernel/TARA-App/pull/32); launcher change in this PR | Pet UI is no longer on the roadmap; legacy optional code remains but is not launched by default | Continue with core app integration and verification |
-| 2026-10-28 | Confirmed single-repository development boundary and corrected native Handler CI matrix | [PR #35](https://github.com/deathkernel/TARA-App/pull/35) | Removed the stale macOS native Handler job to match the Windows/Linux CI scope recorded under PR #28; corrected Windows/Linux matrix passed on the updated PR head before merge. | Continue with core application feature completion in bulk |
-| 2026-10-28 | Added opt-in SQLite persistence for bounded sessions and messages | [Bulk core feature batch branch](https://github.com/deathkernel/TARA-App/tree/feat/bulk-core-feature-batch) | SessionStore still defaults to memory-only; explicitly configured SQLite restores sessions across restart and deletes persisted records on close. Regression tests added; CI verification pending. Retention defaults, migrations, and application config wiring remain open. | Extend lifecycle/cancellation and API integration with tests |
-| 2026-10-27 | Created initial project history and dependency-ordered roadmap | [Current main history](https://github.com/deathkernel/TARA-App/commits/main) | Baseline documentation drafted; runtime/test status still needs a fresh run | Establish current test/CI baseline |
-| 2026-10-27 | Scoped supported/tested platforms to Windows and Linux; removed macOS from the native Handler CI matrix | [PR #28](https://github.com/deathkernel/TARA-App/pull/28); [CI run 40522975440](https://github.com/deathkernel/TARA-App/actions/runs/40522975440) | On head `95061e20577706c836e5c24b6cdb85351d1cd4ad`, package install, AI tool registry validation, `python -m unittest discover -s tests -v` (173 tests passed), `python -m compileall -q src`, frontend `npm install --no-audit --no-fund` + `npm run build`, and native Handler CMake configure/build on Ubuntu and Windows all passed. No macOS job ran. Any later head commit must pass its own checks before merge. | Confirm checks on the updated roadmap commit, then merge if green |
+4. Implement production code plus regression tests where appropriate; update user docs/config only as needed for the batch.
+5. After merge-ready work, update status labels in REMAINING_FEATURES.md and checklist items here with evidence (commit SHA, CI run, or explicit “not verified on machine”).
 
 ## 8. Related documentation
 
+- [Remaining features status table](REMAINING_FEATURES.md)
 - [Main README / setup guide](../README.md)
 - [Architecture](ARCHITECTURE.md)
 - [Integration checklist](INTEGRATION_CHECKLIST.md)
