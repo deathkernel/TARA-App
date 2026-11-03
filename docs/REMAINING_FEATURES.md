@@ -25,18 +25,18 @@ This table replaces the informal “all pending” list. It does **not** claim t
 | 5 | P0 | UI | Desktop and mobile browser QA | Pending | Static UI is default; React behind `TARA_ENABLE_REACT_UI=1` |
 | 6 | P0 | Documentation | README and implementation reconciliation | Pending | This file is a first pass; README claims still need line-by-line audit |
 | 7 | P1 | Application | Connect application service to stable UI/API | Foundation / partial | Headless `application_service` exists; primary UI path still uses orchestrator + webapp |
-| 8 | P1 | TARA Chat | Actual Chat engine end-to-end integration | Foundation / partial | `tara_chat` stdio adapter + OmniRoute path present; live E2E pending OmniRoute |
-| 9 | P1 | TARA Code | Code adapter integration | Foundation / partial | Review-first `tara_code` + OmniRoute; **no execution** by design until sandbox |
-| 10 | P1 | TARA Handler | Secure subprocess protocol | Foundation / partial | `HandlerProcessAdapter` + native binary path; fixed args / shell=False pattern documented |
-| 11 | P1 | Runtime | Cancellation and graceful shutdown | Foundation / partial | Timeouts on stdio clients; full cooperative cancel across all providers incomplete |
-| 12 | P1 | Runtime | Health checks, load/unload and recovery | Foundation / partial | Adapter `health()` + OmniRoute health helpers; full lifecycle matrix not verified |
-| 13 | P1 | Memory | Session retention, deletion and configuration | Implemented (code) | PR #51: atomic turns, opt-in SQLite, `retention_seconds`, schema version fail-closed; default remains memory-only |
-| 14 | P1 | Security | Scoped approval, expiry and reuse protection | Implemented (code) | Orchestrator pending approvals are session-bound, single-use, time-limited |
-| 15 | P1 | Code Security | Real OS/container sandbox | Blocked | Explicit product rule: path checks alone are not a sandbox |
-| 16 | P1 | Code Security | Filesystem, network, CPU and RAM limits | Blocked | Depends on #15 |
-| 17 | P1 | Code Security | Malicious code and path traversal protection | Foundation / partial | Policy + workspace containment tests exist; not a substitute for #15 |
-| 18 | P1 | Code Workflow | Code diff preview | Foundation / partial | `tara_app.code_diff_preview.format_proposed_changes_diff` provides a data-only unified preview (added after `c45f4c3` in `10986e3`); dedicated diff UX not complete; no apply |
-| 19 | P1 | Code Workflow | Approved patch application | Blocked | Must not enable host writes without #15 + explicit approval UX |
+| 8 | P1 | Testing | Expand adapter and specialist contract tests | Foundation / partial | Growing suite under `tests/` |
+| 9 | P1 | Security | Approval UX polish and audit trail completeness | Foundation / partial | Gate exists; not every path proven |
+| 10 | P1 | Memory | Session retention policy machine verification | Foundation / partial | Code from PR #51 on main; opt-in retention |
+| 11 | P1 | Chat | Longer answers and style guidance verification | Foundation / partial | Token budget + system prompt updates merged; live OmniRoute proof still operator-owned |
+| 12 | P1 | Code | Diff preview for proposed changes | Foundation / partial | `code_diff_preview` module + tests on main; UI wiring partial |
+| 13 | P1 | Native | Command risk classification regression | Implemented (code) | PR #50 on main |
+| 14 | P1 | Sessions | Atomic chat-turn persistence | Implemented (code) | PR #51 on main |
+| 15 | P0 | Security | Real OS/container sandbox for code execution | Blocked | Path checks alone are not a sandbox |
+| 16 | P0 | Code | Apply patches only inside sandbox after approval | Blocked | Depends on #15 |
+| 17 | P1 | Action | Expand desktop automation allowlist carefully | Foundation / partial | Calculator/Notepad/Paint/browser |
+| 18 | P1 | GitHub | Issue creation allowlist + credentials flow | Foundation / partial | Gated; needs local config |
+| 19 | P0 | Security | No model-driven host shell | Blocked | Policy; do not relax |
 | 20 | P1 | Code Workflow | Sandboxed test execution | Blocked | Depends on #15 |
 | 21 | P1 | Audit | Complete action audit logging | Foundation / partial | `JsonlAuditLog` with redaction; not every UI path proven to emit full audit trail |
 | 22 | P2 | Frontend | React + TypeScript migration | In progress | `frontend/` exists; static UI remains default until parity verified |
@@ -55,6 +55,11 @@ This table replaces the informal “all pending” list. It does **not** claim t
 | 35 | P3 | Specialists | End-to-end workflow testing | Pending verification | |
 | 36 | P3 | OmniRoute | Provider, quota and model availability verification | Pending verification | Config and client code present; operator must verify live gateway |
 | 37 | P3 | Ecosystem | Optional AI/developer tool evaluation | Pending | Opt-in boundaries only |
+| 38 | P1 | MCP / Tools | MCP Python SDK client + scoped reference servers (filesystem/git/fetch) | Pending | See README “Planned integrations: Anthropic ecosystem & MCP”; approval gate required |
+| 39 | P1 | Agents | Structured multi-step tool loop patterns (claude-agent-sdk reference) | Pending | Proposals remain data-only; no host shell from model text |
+| 40 | P2 | Skills | Agent Skills pack loader (Study/Code/Planner templates) | Pending | Inspired by anthropics/skills format |
+| 41 | P2 | Ecosystem | Optional anthropic-sdk-python helpers via OmniRoute Claude path | Pending | Never bypass OmniRoute or allow_remote |
+| 42 | P3 | Computer use | Computer-use / toolset only inside real OS sandbox | Blocked | Depends on #15; host desktop control is a non-goal |
 
 ## Summary counts (this review)
 
@@ -64,11 +69,11 @@ This table replaces the informal “all pending” list. It does **not** claim t
 | Foundation / partial | 12 |
 | In progress | 1 (#22) |
 | Pending verification | 9 |
-| Pending | 9 |
-| Blocked | 4 (#15, #16, #19, #20) |
+| Pending | 13 |
+| Blocked | 5 (#15, #16, #19, #20, #42) |
 
 ## Related
 
 - [Project status and roadmap](PROJECT_STATUS_AND_ROADMAP.md)
 - [Security model](SECURITY.md)
-- [Main README](../README.md)
+- [Main README](../README.md) (includes Anthropic/MCP integration plan)

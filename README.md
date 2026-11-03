@@ -213,7 +213,7 @@ TARA-App includes an optional, read-only Study specialist for source-grounded no
 - Study answers derived from supplied material are marked source-grounded and include source-line hints for quiz/flashcard items. They are extracted from the source, not independently fact-checked.
 - Ask for a `7-day study plan for biology` to generate a bounded plan (1–30 days) without uploading a file.
 - PDF text extraction is optional: install `pip install -e '.[study]'` to add the free `pypdf` library. Scanned PDFs need OCR; OCR integration is a later batch.
-- Input limits: four study attachments, 200,000 combined source characters, 200 pages per PDF, 50 quiz/flashcard items. The app's existing 10 MB combined upload limit still applies.
+- Input limits: four study attachments, 200,000 combined source characters, 200 pages per PDF, 50 quiz/flashcard items. The app's existing 10 MB request upload limit still applies.
 
 The first release intentionally avoids pretending deterministic sentence extraction is a full AI tutor. More advanced subject explanations, real MCQ distractors, spaced repetition, OCR, semantic search, and study progress tracking are follow-up batches.
 
@@ -235,6 +235,48 @@ The first release intentionally avoids pretending deterministic sentence extract
 4. Check `GET /v1/models` through OmniRoute to inspect connected model IDs.
 
 Keep the key local and never commit it. If the gateway or key is unavailable, TARA fails closed and does not switch to Ollama or Gemini.
+
+## Planned integrations: Anthropic ecosystem & MCP
+
+TARA remains a **local app shell**. Language-model inference stays on OmniRoute. The following official Anthropic and Model Context Protocol repositories are reference sources for making specialists more capable **without** giving the model unrestricted host control.
+
+These are **not** vendored into TARA yet. Integration is planned in safety-first order. Patterns are adopted; full products (for example Claude Code on the host desktop) are not.
+
+### Priority order
+
+| Priority | Repository | Role in TARA |
+|----------|------------|--------------|
+| 1 | [modelcontextprotocol/python-sdk](https://github.com/modelcontextprotocol/python-sdk) | Official MCP Python client/server SDK. Basis for exposing TARA specialists as standard tools/resources behind the existing approval gate. |
+| 1 | [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers) | Reference MCP servers: scoped **filesystem**, **git**, **fetch**, **memory**, **time**. Patterns for allowlisted, bounded tools only. |
+| 2 | [anthropics/anthropic-sdk-python](https://github.com/anthropics/anthropic-sdk-python) | Official Claude API client, tool runner, and MCP helpers. Optional Claude path remains through OmniRoute (or explicit config); never bypass local policy. |
+| 2 | [anthropics/claude-agent-sdk-python](https://github.com/anthropics/claude-agent-sdk-python) | Agent loop, in-process MCP tools, and hooks. Reference for multi-step Code/Planner flows; proposals stay data-only until approved. |
+| 3 | [anthropics/skills](https://github.com/anthropics/skills) | Agent Skills pack format (instructions + scripts). Reusable Study/Code/Planner skill folders. |
+| 3 | [anthropics/claude-cookbooks](https://github.com/anthropics/claude-cookbooks) | Prompt, tool-use, and evaluation recipes. |
+| 3 | [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) | Plugin packaging patterns for optional TARA modules. |
+| 4 | [anthropics/claude-quickstarts](https://github.com/anthropics/claude-quickstarts) | Computer-use demo, computer toolset, agent loops. **Design reference only.** |
+| 4 | [anthropics/claude-code-action](https://github.com/anthropics/claude-code-action) | GitHub PR/issue agent patterns aligned with TARA Action + allowlist. |
+
+### What will be integrated (intent)
+
+1. **MCP tool layer** — TARA specialists and selected reference tools (scoped filesystem, git read, fetch) behind Security review and one-shot approval.
+2. **Agent tool loops** — structured multi-step planning for Code/Planner using agent-sdk patterns; still no host shell from model text.
+3. **Skills packs** — loadable skill folders for study notes, code review, and planning templates.
+4. **Computer use** — only after a real OS/container sandbox exists; never raw mouse/keyboard on the host.
+
+### Explicit non-goals
+
+- Do not vendor or auto-run **Claude Code** against the host desktop.
+- Do not enable **computer-use** on the real machine without a disposable VM/container sandbox and user approval.
+- Do not expose unrestricted filesystem or shell MCP tools.
+- Do not bypass OmniRoute, `allow_remote`, or the Security approval gate.
+
+### Related docs
+
+- [Project status and roadmap](docs/PROJECT_STATUS_AND_ROADMAP.md)
+- [Remaining features](docs/REMAINING_FEATURES.md)
+- Core design rules above (especially rules 4–8 and 11)
+
+Integration work lands in follow-up PRs, starting with MCP Python SDK wiring and scoped reference servers.
 
 ## React + TypeScript frontend (migration in progress)
 
