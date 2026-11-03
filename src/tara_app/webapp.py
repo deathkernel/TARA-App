@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
+from tara_app.contracts import ModuleRequest
 from tara_app.orchestrator import Orchestrator
 
 _WEB_ROOT = Path(__file__).with_name("web")
@@ -47,29 +48,62 @@ class _Handler(BaseHTTPRequestHandler):
                 self._json(403, {"status": "permission_denied", "error": "request origin is not allowed"})
                 return
             capabilities = tuple(self.server.app.registry.capability_ids())
-            catalog = self.server.app.model_catalog
+            chat_adapter = self.server.app.registry.adapter("chat")
+            gateway_health = chat_adapter.health() if chat_adapter is not None else None
+            gateway_status = gateway_health.status if gateway_health is not None else "unavailable"
             self._json(200, {
-                "status": "ok" if capabilities else "degraded",
+                "status": "ok" if capabilities and gateway_status == "healthy" else "degraded",
                 "app": "TARA-App",
                 "api_version": "1.0",
                 "capability_count": len(capabilities),
                 "capabilities": list(capabilities),
                 "model_runtime": "omniroute",
+                "model_gateway": {
+                    "provider": "omniroute",
+                    "status": gateway_status,
+                },
             })
             return
         if endpoint == "/api/models":
             if not self._local_origin():
                 self._json(403, {"status": "permission_denied", "error": "request origin is not allowed"})
                 return
-            catalog = self.server.app.model_catalog
-            payload = catalog.status() if catalog is not None else {
-                "status": "managed_externally",
+            adapter = self.server.app.registry.adapter("models")
+            if adapter is None:
+                self._json(503, {
+                    "status": "unavailable",
+                    "provider": "omniroute",
+                    "service_available": False,
+                    "models": [],
+                    "pull": {"status": "disabled", "message": "Model lifecycle is managed by OmniRoute."},
+                })
+                return
+            request = ModuleRequest(
+                request_id="tara-model-catalog",
+                session_id="tara-model-catalog",
+                module="models",
+                action="catalog",
+                inputs={},
+                timeout_seconds=min(adapter.timeout_seconds, 10),
+            )
+            result = adapter.execute(request)
+            if result.status != "success":
+                self._json(503, {
+                    "status": "unavailable",
+                    "provider": "omniroute",
+                    "service_available": False,
+                    "models": [],
+                    "error": "OmniRoute model catalogue is unavailable",
+                    "pull": {"status": "disabled", "message": "Model lifecycle is managed by OmniRoute."},
+                })
+                return
+            self._json(200, {
+                "status": "available",
                 "provider": "omniroute",
-                "service_available": False,
-                "models": [],
+                "service_available": True,
+                "models": list(result.data.get("models", [])),
                 "pull": {"status": "disabled", "message": "Model lifecycle is managed by OmniRoute."},
-            }
-            self._json(200, payload)
+            })
             return
         # Prefer the compiled React frontend when a build is present. The
         # original static UI remains a safe fallback for source-only installs.

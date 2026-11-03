@@ -13,6 +13,8 @@ from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 from typing import Any
 
+from tara_app.omniroute_health import check_gateway
+
 MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 MAX_COMPLETION_TOKENS = 4096
 
@@ -106,6 +108,10 @@ class OmniRouteProvider:
             model=os.getenv("TARA_OMNIROUTE_MODEL", "auto"),
             timeout=timeout,
         )
+
+    def health(self) -> bool:
+        """Check that the authenticated OmniRoute model catalogue is reachable."""
+        return check_gateway(self.base_url, self.api_key, timeout=min(self.timeout, 5.0))
 
     def complete(
         self,

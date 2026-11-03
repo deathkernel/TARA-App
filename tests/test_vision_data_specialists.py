@@ -20,7 +20,7 @@ class VisionSpecialistTests(unittest.TestCase):
             "TARA_VISION_API_BASE_URL": "http://127.0.0.1:20128/v1",
             "TARA_VISION_API_KEY": "test-key",
         }
-        with patch.dict(os.environ, env):
+        with patch.dict(os.environ, env), patch("tara_vision.__main__.check_gateway", return_value=True):
             result = handle_vision({
                 "schema_version": "1.0", "request_id": "vision-health",
                 "module": "vision", "action": "health", "inputs": {},

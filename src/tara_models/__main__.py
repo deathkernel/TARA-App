@@ -8,6 +8,8 @@ import sys
 import time
 from collections.abc import Mapping
 from typing import Any
+
+from tara_app.omniroute_health import check_gateway
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
@@ -159,7 +161,9 @@ def handle_request(request: Any) -> dict[str, Any]:
     try:
         base, key, default_model = _omniroute_config()
         if action == "health":
-            return result(request_id, "success", {"healthy": True, "provider": "omniroute", "gateway_configured": True})
+            if not check_gateway(base, key):
+                return result(request_id, "unavailable", error="OmniRoute gateway or authenticated model catalogue is unavailable")
+            return result(request_id, "success", {"healthy": True, "provider": "omniroute", "gateway_reachable": True})
         if action == "catalog":
             models = _catalog(base, key)
             route = {"id": default_model, "provider": "omniroute", "label": f"Default route ({default_model})", "availability": "Resolved by OmniRoute at request time."}
