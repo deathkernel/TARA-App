@@ -74,11 +74,11 @@ def _format_one(change: dict[str, Any], index: int) -> str:
         old_label = _path(from_path if isinstance(from_path, str) else path)
         new_label = path
     elif action == "create":
-        old_label = "/dev/null"
+        old_label = "dev/null"
         new_label = path
     elif action == "delete":
         old_label = path
-        new_label = "/dev/null"
+        new_label = "dev/null"
     else:
         old_label = path
         new_label = path
@@ -100,7 +100,6 @@ def _format_one(change: dict[str, Any], index: int) -> str:
 def _path(value: Any) -> str:
     if not isinstance(value, str) or not value.strip() or len(value) > _MAX_PATH_LEN:
         raise DiffPreviewError("change path must be a non-empty bounded string")
-    # Reject absolute and parent-traversal paths in preview labels only.
     cleaned = value.replace("\\", "/").strip()
     if cleaned.startswith("/") or cleaned.startswith("../") or "/../" in f"/{cleaned}/":
         raise DiffPreviewError("change path must be a relative path without parent traversal")
@@ -132,16 +131,10 @@ def _lines(text: str) -> list[str]:
 
 
 def _simple_unified(old_lines: list[str], new_lines: list[str]) -> str:
-    """Minimal line-oriented unified hunk (not a full Myers diff).
-
-    Sufficient for review UI when proposals carry full file sides. Prefer a
-    preformatted `diff` field when the engine already computed one.
-    """
+    """Minimal line-oriented unified hunk (not a full Myers diff)."""
     if old_lines == new_lines:
         return "@@ no changes @@\n"
     out: list[str] = [f"@@ -1,{len(old_lines)} +1,{len(new_lines)} @@"]
-    # Emit a single hunk: context-free old removals then new additions.
-    # This stays deterministic and avoids pulling in difflib for the first slice.
     for line in old_lines:
         out.append(f"-{line}")
     for line in new_lines:
