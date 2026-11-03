@@ -4,6 +4,7 @@ import json
 import sys
 import time
 from .service import MODULE_ID, _omniroute_config, execute
+from tara_app.omniroute_health import check_gateway
 MAX_REQUEST_BYTES = 1_000_000
 _ALLOWED = {"schema_version", "request_id", "session_id", "module", "action", "inputs", "workspace_root", "timeout_seconds", "approval_token"}
 def _reply(request_id, status, data, error, duration_ms):
@@ -27,10 +28,12 @@ def main():
         _reply(rid,"invalid_request",{},"action or inputs are invalid",0); return 0
     if action=="health":
         try:
-            _omniroute_config()
+            base_url, api_key, _ = _omniroute_config()
         except ValueError:
             _reply(rid,"unavailable",{},"OmniRoute is not configured",0); return 0
-        _reply(rid,"success",{"healthy":True,"provider":"omniroute"},None,0); return 0
+        if not check_gateway(base_url, api_key):
+            _reply(rid,"unavailable",{},"OmniRoute gateway or authenticated model catalogue is unavailable",0); return 0
+        _reply(rid,"success",{"healthy":True,"provider":"omniroute","gateway_reachable":True},None,0); return 0
     start=time.monotonic()
     try:
         status,data,error=execute(action,inputs,approval_token=request.get("approval_token"))
