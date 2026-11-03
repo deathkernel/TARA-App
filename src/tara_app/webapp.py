@@ -24,7 +24,6 @@ _MAX_REQUEST_BYTES = 1_000_000
 
 
 def _react_ui_enabled() -> bool:
-    """Keep the feature-complete static UI as default until React parity is verified."""
     return os.environ.get("TARA_ENABLE_REACT_UI", "").strip() == "1"
 
 
@@ -67,6 +66,10 @@ class _Handler(BaseHTTPRequestHandler):
                     "status": "unavailable",
                     "reason": "The Chat specialist is configured, but its authenticated OmniRoute model-catalogue check failed.",
                 }
+            if hasattr(self.server.app, "mcp_status"):
+                mcp_status = self.server.app.mcp_status()
+            else:
+                mcp_status = {"enable": False, "status": "disabled"}
             self._json(200, {
                 "status": "ok" if capabilities and gateway_status == "healthy" else "degraded",
                 "app": "TARA-App",
@@ -79,7 +82,22 @@ class _Handler(BaseHTTPRequestHandler):
                     "provider": "omniroute",
                     "status": gateway_status,
                 },
+                "mcp": mcp_status,
             })
+            return
+        if endpoint == "/api/mcp/tools":
+            if not self._local_origin():
+                self._json(403, {"status": "permission_denied", "error": "request origin is not allowed"})
+                return
+            try:
+                tools = self.server.app.list_mcp_tools()
+            except ValueError as exc:
+                self._json(409, {"status": "unavailable", "error": str(exc)})
+                return
+            except Exception:
+                self._json(503, {"status": "unavailable", "error": "MCP tools could not be listed"})
+                return
+            self._json(200, {"status": "ok", "tools": tools})
             return
         if endpoint == "/api/models":
             if not self._local_origin():
@@ -122,8 +140,6 @@ class _Handler(BaseHTTPRequestHandler):
                 "pull": {"status": "disabled", "message": "Model lifecycle is managed by OmniRoute."},
             })
             return
-        # Prefer the compiled React frontend when a build is present. The
-        # original static UI remains a safe fallback for source-only installs.
         react_root = (_WEB_ROOT / "react-dist").resolve()
         react_file: Path | None = None
         if _react_ui_enabled() and react_root.is_dir():
@@ -166,7 +182,7 @@ class _Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         endpoint = urlsplit(self.path).path
-        if endpoint not in {"/api/chat", "/api/approve", "/api/cancel", "/api/models/pull", "/api/models/unload", "/api/models/remove"}:
+        if endpoint not in {"/api/chat", "/api/approve", "/api/cancel", "/api/models/pull", "/api/models/unload", "/api/models/remove", "/api/mcp/approve", "/api/mcp/call"}:
             self._json(404, {"status": "unavailable", "error": "endpoint not found"})
             return
         if not self._local_origin():
@@ -187,6 +203,36 @@ class _Handler(BaseHTTPRequestHandler):
             payload = json.loads(self.rfile.read(length).decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError):
             self._json(400, {"status": "invalid_request", "error": "request must be UTF-8 JSON"})
+            return
+        if endpoint == "/api/mcp/approve":
+            if set(payload) - {"ttl_seconds"}:
+                self._json(400, {"status": "invalid_request", "error": "request fields are invalid"})
+                return
+            try:
+                token = self.server.app.issue_mcp_approval_token(ttl_seconds=float(payload.get("ttl_seconds", 300)))
+            except ValueError as exc:
+                self._json(409, {"status": "unavailable", "error": str(exc)})
+                return
+            self._json(200, {"status": "ok", "approval_token": token, "ttl_seconds": int(payload.get("ttl_seconds", 300))})
+            return
+        if endpoint == "/api/mcp/call":
+            if set(payload) - {"server", "tool", "arguments", "approval_token"} or not {"server", "tool", "approval_token"} <= set(payload):
+                self._json(400, {"status": "invalid_request", "error": "server, tool, and approval_token are required"})
+                return
+            try:
+                text = self.server.app.call_mcp_tool(
+                    payload["server"],
+                    payload["tool"],
+                    payload.get("arguments"),
+                    approval_token=payload["approval_token"],
+                )
+            except ValueError as exc:
+                self._json(409, {"status": "unavailable", "error": str(exc)})
+                return
+            except Exception:
+                self._json(503, {"status": "unavailable", "error": "MCP tool call failed"})
+                return
+            self._json(200, {"status": "ok", "result": text})
             return
         if endpoint == "/api/chat":
             fields = {"question", "session_id", "attachments", "history"}
@@ -265,7 +311,6 @@ class _Handler(BaseHTTPRequestHandler):
         self.wfile.write(encoded)
 
     def log_message(self, format: str, *args: object) -> None:
-        # Do not log prompts, attachment names, or provider responses.
         return
 
 
@@ -281,4 +326,3 @@ def serve(app: Orchestrator, *, port: int = 8765) -> None:
         print("\nTARA-App stopped")
     finally:
         server.server_close()
-
