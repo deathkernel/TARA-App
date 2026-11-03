@@ -16,7 +16,7 @@ class ModelHubTests(unittest.TestCase):
         }
 
     def test_health_reports_omniroute_as_the_only_provider(self):
-        with patch.dict(os.environ, self.env):
+        with patch.dict(os.environ, self.env), patch("tara_models.__main__.check_gateway", return_value=True):
             result = handle_request({
                 "schema_version": "1.0", "request_id": "h",
                 "module": "models", "action": "health", "inputs": {},
