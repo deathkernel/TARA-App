@@ -68,6 +68,7 @@ class McpToolGateway:
         session_factory: SessionFactory | None = None,
     ) -> None:
         self._config = config
+        self._using_default_factory = session_factory is None
         self._session_factory = session_factory or default_stdio_session_factory()
 
     @property
@@ -76,7 +77,7 @@ class McpToolGateway:
 
     def list_tools(self, server_name: str | None = None) -> list[McpToolInfo]:
         """List tools from one enabled server, or all enabled servers."""
-        require_mcp_ready(self._config)
+        self._ensure_ready()
         if not self._config.enable:
             raise McpClientError("MCP is disabled")
 
@@ -111,7 +112,7 @@ class McpToolGateway:
         ``approval_token`` must be a non-empty app-issued token. Model text is
         never treated as approval.
         """
-        require_mcp_ready(self._config)
+        self._ensure_ready()
         if not self._config.enable:
             raise McpClientError("MCP is disabled")
         if not isinstance(approval_token, str) or not approval_token.strip():
@@ -139,6 +140,14 @@ class McpToolGateway:
         if len(result) > _MAX_RESULT_CHARS:
             return result[:_MAX_RESULT_CHARS] + "\n…[truncated]"
         return result
+
+    def _ensure_ready(self) -> None:
+        # Injected factories (tests/fakes) do not need the optional mcp package.
+        if self._using_default_factory:
+            try:
+                require_mcp_ready(self._config)
+            except McpConfigError as exc:
+                raise McpClientError(str(exc)) from exc
 
     def _select_servers(self, server_name: str | None) -> list[McpServerSpec]:
         enabled = list(self._config.enabled_servers)
