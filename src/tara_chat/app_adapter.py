@@ -36,7 +36,9 @@ def handle_request(request: Any) -> dict[str, Any]:
             provider = provider_from_env()
         except (OSError, RuntimeError, ValueError):
             return _result(request_id, "unavailable", error="OmniRoute provider configuration is unavailable")
-        return _result(request_id, "success", {"healthy": True, "provider": "omniroute"})
+        if not provider.health():
+            return _result(request_id, "unavailable", error="OmniRoute gateway or authenticated model catalogue is unavailable")
+        return _result(request_id, "success", {"healthy": True, "provider": "omniroute", "gateway_reachable": True})
     if action != "respond":
         return _result(request_id, "permission_denied", error="unsupported TARA-Chat capability")
     question = inputs.get("question")
