@@ -115,10 +115,6 @@ def create_application(config_path: str | Path) -> Orchestrator:
             raise RuntimeConfigurationError(f"module is configured more than once: {module_id}")
         seen.add(module_id)
         if module_id in _REMOTE_MODULES and item.get("allow_remote") is not True:
-            registry.mark_disabled(
-                module_id,
-                "Remote processing is disabled. Set allow_remote = true in this module's [[modules]] entry only if you approve sending its content through OmniRoute.",
-            )
             continue
         env_names = item.get("environment", [])
         if not isinstance(env_names, list) or any(not isinstance(name, str) or not _ENV_NAME.fullmatch(name) for name in env_names):
@@ -156,13 +152,6 @@ def create_application(config_path: str | Path) -> Orchestrator:
                 **adapter_args,
             )
         registry.register(adapter)
-
-    for module_id in sorted(_REMOTE_MODULES - seen):
-        registry.mark_disabled(
-            module_id,
-            "The specialist is not configured in tara-app.toml. Add its [[modules]] entry from tara-app.example.toml.",
-        )
-
     # TARA no longer starts or calls Ollama for language-model inference.
     # Model selection and lifecycle belong to OmniRoute.
     return Orchestrator(registry, router, model_catalog=None)
