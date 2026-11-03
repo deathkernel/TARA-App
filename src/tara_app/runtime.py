@@ -13,6 +13,9 @@ from urllib.parse import urlsplit
 from tara_app.contracts import Capability
 from tara_app.handler_adapter import HandlerProcessAdapter
 from tara_app.module_client import StdioModuleAdapter
+from tara_app.mcp_app import attach_mcp
+from tara_app.mcp_client import McpToolGateway
+from tara_app.mcp_registry import McpConfigError, parse_mcp_config, require_mcp_ready
 from tara_app.orchestrator import Orchestrator
 from tara_app.registry import CapabilityRegistry
 from tara_app.router_client import StdioRouterClient
@@ -70,11 +73,7 @@ class RuntimeConfigurationError(ValueError):
 
 
 def create_application(config_path: str | Path) -> Orchestrator:
-    """Create the router and configured specialists from a TOML file.
-
-    The TOML file is trusted application configuration. Request data cannot
-    change process arguments, process environment, or working directories.
-    """
+    """Create the router and configured specialists from a TOML file."""
     config_file = Path(config_path).expanduser().resolve(strict=True)
     if not config_file.is_file():
         raise RuntimeConfigurationError("configuration path must be a file")
@@ -83,7 +82,7 @@ def create_application(config_path: str | Path) -> Orchestrator:
             config = tomllib.load(stream)
     except (OSError, tomllib.TOMLDecodeError) as exc:
         raise RuntimeConfigurationError("configuration file could not be read") from exc
-    if set(config) - {"router", "modules", "ollama", "omniroute"}:
+    if set(config) - {"router", "modules", "ollama", "omniroute", "mcp"}:
         raise RuntimeConfigurationError("configuration contains unsupported top-level settings")
 
     root = config_file.parent
@@ -165,7 +164,18 @@ def create_application(config_path: str | Path) -> Orchestrator:
 
     # TARA no longer starts or calls Ollama for language-model inference.
     # Model selection and lifecycle belong to OmniRoute.
-    return Orchestrator(registry, router, model_catalog=None)
+
+    mcp_raw = config.get("mcp")
+    try:
+        mcp_config = parse_mcp_config(mcp_raw if isinstance(mcp_raw, dict) else None)
+        require_mcp_ready(mcp_config)
+    except McpConfigError as exc:
+        raise RuntimeConfigurationError(str(exc)) from exc
+    mcp_gateway = McpToolGateway(mcp_config) if mcp_config.enable else None
+
+    app = Orchestrator(registry, router, model_catalog=None)
+    attach_mcp(app, mcp_gateway)
+    return app
 
 
 def _ollama_settings(value: Any) -> dict[str, dict[str, str]]:
@@ -309,4 +319,3 @@ def _integer(value: Any, label: str, minimum: int, maximum: int) -> int:
     if not isinstance(value, int) or isinstance(value, bool) or not minimum <= value <= maximum:
         raise RuntimeConfigurationError(f"{label} is outside the allowed range")
     return value
-
