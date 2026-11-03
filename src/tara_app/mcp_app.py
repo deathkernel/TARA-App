@@ -1,4 +1,4 @@
-"""MCP helpers mixed into the TARA Orchestrator."""
+"""MCP helpers for TARA-App (mixin + dynamic attach)."""
 from __future__ import annotations
 
 import secrets
@@ -23,7 +23,7 @@ class McpOrchestratorMixin:
         self._mcp_token_lock = RLock()
 
     def mcp_status(self) -> dict[str, Any]:
-        if self.mcp_gateway is None:
+        if getattr(self, "mcp_gateway", None) is None:
             return {
                 "enable": False,
                 "status": "disabled",
@@ -38,7 +38,7 @@ class McpOrchestratorMixin:
         return summary
 
     def issue_mcp_approval_token(self, *, ttl_seconds: float = 300.0) -> str:
-        if self.mcp_gateway is None or not self.mcp_gateway.config.enable:
+        if getattr(self, "mcp_gateway", None) is None or not self.mcp_gateway.config.enable:
             raise ValueError("MCP is disabled")
         if not isinstance(ttl_seconds, (int, float)) or not 30 <= float(ttl_seconds) <= 900:
             raise ValueError("ttl_seconds is invalid")
@@ -51,7 +51,7 @@ class McpOrchestratorMixin:
         return token
 
     def list_mcp_tools(self, server_name: str | None = None) -> list[dict[str, Any]]:
-        if self.mcp_gateway is None or not self.mcp_gateway.config.enable:
+        if getattr(self, "mcp_gateway", None) is None or not self.mcp_gateway.config.enable:
             raise ValueError("MCP is disabled")
         tools = self.mcp_gateway.list_tools(server_name)
         return [
@@ -72,7 +72,7 @@ class McpOrchestratorMixin:
         *,
         approval_token: str,
     ) -> str:
-        if self.mcp_gateway is None or not self.mcp_gateway.config.enable:
+        if getattr(self, "mcp_gateway", None) is None or not self.mcp_gateway.config.enable:
             raise ValueError("MCP is disabled")
         if not isinstance(approval_token, str) or not approval_token.strip():
             raise ValueError("approval_token is required")
@@ -86,3 +86,16 @@ class McpOrchestratorMixin:
         if expires is None or expires <= now:
             raise ValueError("approval_token is invalid or expired")
         return self.mcp_gateway.call_tool(server_name, tool_name, arguments, approval_token=token)
+
+
+def attach_mcp(app: Any, mcp_gateway: Any = None) -> None:
+    """Mount MCP methods on a stock Orchestrator without subclassing."""
+    helper = McpOrchestratorMixin()
+    helper._init_mcp_state(mcp_gateway)
+    app.mcp_gateway = helper.mcp_gateway
+    app._mcp_approval_tokens = helper._mcp_approval_tokens
+    app._mcp_token_lock = helper._mcp_token_lock
+    app.mcp_status = helper.mcp_status.__get__(app, type(app))
+    app.issue_mcp_approval_token = helper.issue_mcp_approval_token.__get__(app, type(app))
+    app.list_mcp_tools = helper.list_mcp_tools.__get__(app, type(app))
+    app.call_mcp_tool = helper.call_mcp_tool.__get__(app, type(app))
