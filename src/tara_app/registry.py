@@ -14,6 +14,17 @@ class CapabilityRegistry:
     def __init__(self) -> None:
         self._adapters: dict[str, ModuleAdapter] = {}
         self._capabilities: dict[str, Capability] = {}
+        self._disabled_modules: dict[str, str] = {}
+
+    def mark_disabled(self, module_id: str, reason: str) -> None:
+        """Record why a configured specialist was intentionally not registered."""
+        if not isinstance(module_id, str) or not module_id or not isinstance(reason, str) or not reason:
+            raise RegistryError("disabled module diagnostics must contain a module ID and reason")
+        self._disabled_modules[module_id] = reason
+
+    def disabled_modules(self) -> dict[str, str]:
+        """Return safe, non-secret diagnostics for specialists not registered."""
+        return dict(self._disabled_modules)
 
     def register(self, adapter: ModuleAdapter) -> None:
         module_id = adapter.module_id

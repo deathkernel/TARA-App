@@ -16,6 +16,29 @@
   const modelServiceStatus = document.querySelector("#model-service-status");
   const modelList = document.querySelector("#model-list");
   let modelPollTimer = null;
+
+  async function showSpecialistHealth() {
+    try {
+      const response = await fetch("/api/health", { cache: "no-store" });
+      if (!response.ok) return;
+      const health = await response.json();
+      const chat = health?.specialists?.chat;
+      if (!chat || !["disabled", "unavailable"].includes(chat.status)) return;
+      const warning = document.createElement("div");
+      warning.className = "runtime-warning";
+      warning.setAttribute("role", "alert");
+      warning.textContent = chat.status === "disabled"
+        ? "Chat specialist is disabled. In tara-app.toml, set allow_remote = true in the [[modules]] entry with id = \"chat\" only if you approve sending Chat prompts through OmniRoute, then restart TARA. TARA will not change this privacy setting automatically."
+        : "Chat is configured, but its authenticated OmniRoute model-catalogue check failed. Verify that OmniRoute is running at the configured local /v1 address and that TARA_OMNIROUTE_API_KEY is valid, then restart TARA.";
+      const shell = document.querySelector(".shell");
+      const modelPanel = document.querySelector("#model-panel");
+      if (shell && modelPanel) shell.insertBefore(warning, modelPanel);
+    } catch {
+      // Health diagnostics must never prevent the chat UI from loading.
+    }
+  }
+
+  void showSpecialistHealth();
   const audioUrls = [];
   let selectedFiles = [];
   const audioTypeFor = file => {
