@@ -12,13 +12,22 @@ sys.path.insert(0, str(ROOT / "src"))
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
+from tara_app.contracts import AdapterHealth
 from tara_app.webapp import _Server
 from tara_app.ollama_models import OllamaModelCatalog
+
+
+class _Adapter:
+    def health(self):
+        return AdapterHealth("healthy")
 
 
 class _Registry:
     def capability_ids(self):
         return ("chat.respond", "models.catalog")
+
+    def adapter(self, module_id):
+        return _Adapter() if module_id == "chat" else None
 
 
 class _App:
@@ -49,6 +58,7 @@ class HealthEndpointTests(unittest.TestCase):
         self.assertEqual(payload["capability_count"], 2)
         self.assertEqual(payload["capabilities"], ["chat.respond", "models.catalog"])
         self.assertEqual(payload["model_runtime"], "omniroute")
+        self.assertEqual(payload["model_gateway"]["status"], "healthy")
 
 
     def test_health_reports_empty_catalog_as_not_configured(self):
