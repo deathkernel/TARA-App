@@ -6,7 +6,7 @@
 >
 > Status meanings:
 > - **Implemented (code)** — present in repository; still needs target-machine verification where noted
-> - **Foundation / partial** — contracts or first slice exist; end-to-end incomplete
+> - **Foundation / partial** — contracts or a first implementation slice exists, but end-to-end incomplete
 > - **Pending verification** — code path exists but no current recorded machine/CI evidence for this commit
 > - **Pending** — not implemented or not finished
 > - **Blocked** — intentionally unavailable until a security prerequisite is met
@@ -18,8 +18,8 @@ This table replaces the informal “all pending” list. It does **not** claim t
 
 | # | Priority | Module / Area | Remaining feature / task | Status | Notes |
 | --- | -------- | ------------- | --------------------------------------------------- | -------------------- | ----- |
-| 1 | P0 | Testing | Complete Python test suite verification | Pending verification | Large `tests/` suite exists; re-run `python -m unittest discover -s tests -v` on current commit and record counts |
-| 2 | P0 | Frontend | Typecheck, build and regression testing | Pending verification | `frontend/` present; record `npm` typecheck/build on current commit |
+| 1 | P0 | Testing | Complete Python test suite verification | Pending verification | `PYTHONPATH=src python3 -m unittest discover -s tests -v` → **Ran 251 tests in 3.483s — OK** on `c45f4c3` (Linux sandbox, 2026-11-03); re-run on current commit and record counts |
+| 2 | P0 | Frontend | Typecheck, build and regression testing | Pending verification | `frontend/` present; npm install timed out in review environment — run locally: `npm install && npm run typecheck && npm run build` and record results for the current commit |
 | 3 | P0 | CI/CD | Latest commit CI verification | Pending verification | Do not infer from older PR heads; check Actions for current `main` SHA |
 | 4 | P0 | Application | Windows launch and Chat smoke test | Pending verification | Launchers exist; live chat needs running OmniRoute + valid `TARA_OMNIROUTE_API_KEY` |
 | 5 | P0 | UI | Desktop and mobile browser QA | Pending | Static UI is default; React behind `TARA_ENABLE_REACT_UI=1` |
@@ -35,7 +35,7 @@ This table replaces the informal “all pending” list. It does **not** claim t
 | 15 | P1 | Code Security | Real OS/container sandbox | Blocked | Explicit product rule: path checks alone are not a sandbox |
 | 16 | P1 | Code Security | Filesystem, network, CPU and RAM limits | Blocked | Depends on #15 |
 | 17 | P1 | Code Security | Malicious code and path traversal protection | Foundation / partial | Policy + workspace containment tests exist; not a substitute for #15 |
-| 18 | P1 | Code Workflow | Code diff preview | Pending | Proposals are data; dedicated diff UX not complete |
+| 18 | P1 | Code Workflow | Code diff preview | Foundation / partial | `tara_app.code_diff_preview.format_proposed_changes_diff` provides a data-only unified preview (added after `c45f4c3` in `10986e3`); dedicated diff UX not complete; no apply |
 | 19 | P1 | Code Workflow | Approved patch application | Blocked | Must not enable host writes without #15 + explicit approval UX |
 | 20 | P1 | Code Workflow | Sandboxed test execution | Blocked | Depends on #15 |
 | 21 | P1 | Audit | Complete action audit logging | Foundation / partial | `JsonlAuditLog` with redaction; not every UI path proven to emit full audit trail |
@@ -63,8 +63,8 @@ This table replaces the informal “all pending” list. It does **not** claim t
 | Implemented (code) | 2 (#13, #14) |
 | Foundation / partial | 12 |
 | In progress | 1 (#22) |
-| Pending verification | 11 |
-| Pending | 7 |
+| Pending verification | 9 |
+| Pending | 9 |
 | Blocked | 4 (#15, #16, #19, #20) |
 
 ## Related
