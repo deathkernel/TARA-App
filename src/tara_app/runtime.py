@@ -13,6 +13,7 @@ from urllib.parse import urlsplit
 from tara_app.contracts import Capability
 from tara_app.handler_adapter import HandlerProcessAdapter
 from tara_app.module_client import StdioModuleAdapter
+from tara_app.mcp_app import attach_mcp
 from tara_app.mcp_client import McpToolGateway
 from tara_app.mcp_registry import McpConfigError, parse_mcp_config, require_mcp_ready
 from tara_app.orchestrator import Orchestrator
@@ -161,9 +162,6 @@ def create_application(config_path: str | Path) -> Orchestrator:
             "The specialist is not configured in tara-app.toml. Add its [[modules]] entry from tara-app.example.toml.",
         )
 
-    # TARA no longer starts or calls Ollama for language-model inference.
-    # Model selection and lifecycle belong to OmniRoute.
-
     mcp_raw = config.get("mcp")
     try:
         mcp_config = parse_mcp_config(mcp_raw if isinstance(mcp_raw, dict) else None)
@@ -173,10 +171,7 @@ def create_application(config_path: str | Path) -> Orchestrator:
     mcp_gateway = McpToolGateway(mcp_config) if mcp_config.enable else None
 
     app = Orchestrator(registry, router, model_catalog=None)
-    if hasattr(app, "_init_mcp_state"):
-        app._init_mcp_state(mcp_gateway)
-    elif mcp_gateway is not None:
-        app.mcp_gateway = mcp_gateway
+    attach_mcp(app, mcp_gateway)
     return app
 
 
@@ -230,7 +225,6 @@ def _ollama_settings(value: Any) -> dict[str, dict[str, str]]:
 
 
 def _omniroute_settings(value: Any) -> dict[str, dict[str, str]]:
-    """Validate the local OmniRoute gateway and build per-specialist settings."""
     config = {} if value is None else _table(value, "omniroute")
     if set(config) - {"base_url", "model", "models"}:
         raise RuntimeConfigurationError("omniroute contains unsupported settings")
