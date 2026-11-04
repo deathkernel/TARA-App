@@ -148,7 +148,7 @@ Adapters should expose health, capabilities, and a structured execute operation.
 
 Use a versioned request with `schema_version`, `request_id`, `session_id`, `module`, `action`, structured `inputs`, `workspace_root` when applicable, `timeout_seconds`, and `approval_token` when a mutating operation requires approval.
 
-A result should include `schema_version`, `request_id`, `ok`, `status`, structured `data`, redacted `error`, duration, and audit references. Validate payload size, field types, allowable actions, workspace boundaries, and timeout limits before dispatch. The serialized adapter-request payload limit is 50,000,000 bytes (about 50 MB) to accommodate larger attachment-bearing requests while retaining a hard resource bound; encoded attachment data may consume extra space.
+A result should include `schema_version`, `request_id`, `ok`, `status`, structured `data`, redacted `error`, duration, and audit references. Validate payload size, field types, allowable actions, workspace boundaries, and timeout limits before dispatch. The serialized adapter-request payload limit is 1,000,000 bytes (about 1 MB), matching the app HTTP handler and Chat adapter; encoded attachment data may consume additional space.
 
 ## Initial milestones
 
@@ -298,3 +298,17 @@ When `src/tara_app/web/react-dist/` exists, the local server serves the compiled
 ## OmniRoute-only AI inference
 
 Chat, Code, Vision, Creative, and Model Hub all use the locally hosted OmniRoute gateway for language-model inference. OmniRoute chooses the underlying model/provider; TARA retains its own capability routing, conversation context, local memory, security policy, and desktop tool execution. See [OmniRoute integration setup](docs/OMNIROUTE_INTEGRATION.md) for Windows configuration. The API key is supplied through the app process environment and must never be committed to the repository or placed in frontend configuration.
+
+## Local repository audit
+
+TARA-App exposes a read-only repository audit through its local Chat capability. In the app, ask **"Audit this repository"** or **"Check this project"**. The deterministic Router selects `chat.audit_repository`; the Chat adapter scans its configured working directory (the example configuration uses the repository root). The operation does not initialize an LLM, execute shell commands, accept file attachments, modify files, or upload repository content.
+
+The interactive TARA-Chat CLI also supports an explicit local command. From the repository folder, start `python -m tara_chat` and enter `/audit`. This read-only command does not require an OmniRoute API key or initialize a model; ordinary chat replies still require a configured OmniRoute gateway.
+
+```text
+/audit
+/audit src
+/audit "sample project"
+```
+
+The CLI's optional folder must be a relative path inside the current working directory; absolute paths and paths that escape the working directory are rejected. The audit reports required monorepo files, Python syntax errors, multiple pytest workflows (the current check also includes targeted test commands), and warnings for process-randomized `hash()` usage. Generated/cache/dependency directories are pruned before traversal. It is a quick static check, not a replacement for unit tests, linting, CodeQL, dependency scanning, or human security review.

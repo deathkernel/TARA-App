@@ -200,12 +200,13 @@ class Orchestrator:
                     "TARA-App could not prepare the selected local model. Check the Models panel for download status.",
                 )
 
-        try:
-            health = adapter.health()
-        except Exception:
-            return self._outcome(operation_id, "unavailable", decision, "adapter_health_failed", "Specialist health check failed")
-        if not isinstance(health, AdapterHealth) or health.status != "healthy":
-            return self._outcome(operation_id, "unavailable", decision, "adapter_unavailable", "Selected specialist is unavailable")
+        if not (decision.module == "chat" and decision.action == "audit_repository"):
+            try:
+                health = adapter.health()
+            except Exception:
+                return self._outcome(operation_id, "unavailable", decision, "adapter_health_failed", "Specialist health check failed")
+            if not isinstance(health, AdapterHealth) or health.status != "healthy":
+                return self._outcome(operation_id, "unavailable", decision, "adapter_unavailable", "Selected specialist is unavailable")
 
         module_attachments = self._specialist_attachments(
             decision.module, decision.action, safe_attachments
