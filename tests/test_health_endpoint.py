@@ -40,6 +40,33 @@ class _App:
     registry = _Registry()
     model_catalog = None
 
+    def health_status(self):
+        capabilities = tuple(self.registry.capability_ids())
+        chat_adapter = self.registry.adapter("chat")
+        gateway_health = chat_adapter.health() if chat_adapter is not None else None
+        gateway_status = gateway_health.status if gateway_health is not None else "unavailable"
+        disabled_modules = self.registry.disabled_modules()
+        specialists = {}
+        for module_id in ("chat", "code", "vision", "creative", "models"):
+            adapter = self.registry.adapter(module_id)
+            if adapter is None:
+                specialists[module_id] = {
+                    "status": "disabled",
+                    "reason": disabled_modules.get(module_id, "The specialist is not registered."),
+                }
+            else:
+                specialists[module_id] = {"status": "configured"}
+        return {
+            "status": "ok" if capabilities and gateway_status == "healthy" else "degraded",
+            "app": "TARA-App",
+            "api_version": "1.0",
+            "capability_count": len(capabilities),
+            "capabilities": list(capabilities),
+            "model_runtime": "omniroute",
+            "specialists": specialists,
+            "model_gateway": {"provider": "omniroute", "status": gateway_status},
+        }
+
 
 class HealthEndpointTests(unittest.TestCase):
     def setUp(self):
