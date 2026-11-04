@@ -48,7 +48,6 @@ class _Handler(BaseHTTPRequestHandler):
                 return
             self._json(200, self.server.app.health_status())
             return
-        if endpoint in {"/api/mcp/status", "/api/mcp/tools"}:            return
         if endpoint in {"/api/mcp/status", "/api/mcp/tools"}:
             if not self._local_origin():
                 self._json(403, {"status": "permission_denied", "error": "request origin is not allowed"})
@@ -82,7 +81,6 @@ class _Handler(BaseHTTPRequestHandler):
             status_code = 200 if payload.get("status") == "available" else 503
             self._json(status_code, payload)
             return
-        # Prefer the compiled React frontend            return
         # Prefer the compiled React frontend when a build is present. The
         # original static UI remains a safe fallback for source-only installs.
         react_root = (_WEB_ROOT / "react-dist").resolve()
@@ -213,7 +211,6 @@ class _Handler(BaseHTTPRequestHandler):
             response_key = "pull" if action == "pull" else "model"
             self._json(status_code, {"status": result_status, response_key: result})
             return
-        if endpoint == "/api/chat":            return
         if endpoint == "/api/chat":
             if "history" in payload:
                 try:
