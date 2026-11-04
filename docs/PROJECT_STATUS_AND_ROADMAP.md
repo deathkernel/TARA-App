@@ -2,7 +2,7 @@
 
 > **Purpose:** This is the handover document and working source of truth for anyone joining TARA-App—including a new developer, a reviewer, or the daily scheduled development task.
 >
-> **Last reviewed:** 2026-11-03  
+> **Last reviewed:** 2026-11-04  
 > **Repository:** [deathkernel/TARA-App](https://github.com/deathkernel/TARA-App)  
 > **Default branch:** `main`  
 > **Status rule:** “Implemented in code/docs” is not the same as “verified on a real machine.” Do not claim tests, runtime checks, UI QA, or integrations passed unless there is current evidence for the exact commit.
@@ -123,9 +123,9 @@ This roadmap is dependency-ordered. The daily development task should deliver a 
 
 ### P0 — Establish a trustworthy baseline
 
-- [ ] Run the current Python test suite on the current commit; record the exact command, environment, pass/fail counts and failures.
-- [ ] Run frontend install/typecheck/build where lockfile and package scripts support it; record exact results.
-- [ ] Inspect current GitHub Actions/CI status for the exact commit. Do not infer CI success from historical commits.
+- [x] Run the current Python test suite on the current commit; record the exact command, environment, pass/fail counts and failures. **Evidence:** `python -m unittest discover -s tests -v` — 264 tests passed in 2.646s on Python 3.11, GitHub Actions, commit `5aa76ecffdfdcb779084d75c41d8a2b628226cb1` (run #1333). Local target-machine run remains pending.
+- [x] Run frontend install/typecheck/build where lockfile and package scripts support it; record exact results. **Evidence:** `npm install --no-audit --no-fund` and `npm run build` (`tsc -b && vite build`) passed on commit `5aa76ec` in run #1333. Browser QA remains pending.
+- [x] Inspect current GitHub Actions/CI status for the exact commit. **Evidence:** main run [#1333](https://github.com/deathkernel/TARA-App/actions/runs/41629104372) passed all four jobs on `5aa76ecffdfdcb779084d75c41d8a2b628226cb1` (Python tests, Windows native Handler, Ubuntu native Handler, frontend build).
 - [ ] Do a local launch smoke test: app starts, health/status is truthful, a chat request completes, and failures are surfaced accurately.
 - [ ] Perform browser QA on the actual UI at desktop and narrow/mobile widths; compare the ChatGPT-inspired layout without claiming pixel parity in advance.
 - [ ] Reconcile README claims with architecture/adapter docs so “implemented,” “partial,” and “pending verification” are consistent.
