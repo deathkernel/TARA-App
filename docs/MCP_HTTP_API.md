@@ -2,6 +2,10 @@
 
 MCP is disabled unless `[mcp].enable = true` and at least one server is explicitly configured. The local HTTP API is loopback-only and reuses the app's origin, JSON content-type, and 1 MB request-size checks.
 
+Browser-facing `POST` mutation requests must include an `Origin` header that exactly matches the loopback host and port serving TARA. Missing, malformed, or cross-origin values are rejected with HTTP 403. Read-only `GET` routes retain compatibility with clients that omit `Origin`.
+
+This is browser CSRF protection, **not authentication of local processes**. A separate process running as the same Windows user can forge HTTP headers and reach loopback. Do not treat this check as a security boundary against same-user malware; a future native IPC boundary with OS-enforced access control is needed for that threat model.
+
 ## Available endpoints
 
 - `GET /api/mcp/status` — safe registry summary; never includes credentials.
