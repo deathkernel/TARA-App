@@ -76,13 +76,6 @@ class _McpApprovalGrant:
         self._lock = Lock()
 
 
-def _create_mcp_approval_grant(approval_token: str) -> _McpApprovalGrant:
-    """Create a gateway grant after the orchestrator validates its one-shot token."""
-    if not isinstance(approval_token, str) or not approval_token.strip():
-        raise ValueError("approval token is invalid")
-    return _McpApprovalGrant(_APPROVAL_GRANT_SEAL)
-
-
 def _consume_mcp_approval_grant(grant: object) -> bool:
     if not isinstance(grant, _McpApprovalGrant) or grant._seal is not _APPROVAL_GRANT_SEAL:
         return False
