@@ -64,11 +64,14 @@ class McpOrchestratorMixin:
             raise ValueError("tool_name is invalid")
         if not isinstance(session_id, str) or not session_id.strip() or len(session_id) > 128:
             raise ValueError("session_id is invalid")
-        if not isinstance(ttl_seconds, (int, float)) or not math.isfinite(float(ttl_seconds)) or not 30 <= float(ttl_seconds) <= 900:
+        if isinstance(ttl_seconds, bool) or not isinstance(ttl_seconds, (int, float)) or not math.isfinite(float(ttl_seconds)) or not 30 <= float(ttl_seconds) <= 900:
             raise ValueError("ttl_seconds is invalid")
         server, tool = server_name.strip(), tool_name.strip()
-        if not any(item.name == server for item in self.mcp_gateway.config.enabled_servers):
+        specs = [item for item in self.mcp_gateway.config.enabled_servers if item.name == server]
+        if not specs:
             raise ValueError("MCP server is not enabled")
+        if specs[0].read_only and tool not in specs[0].read_only_tools:
+            raise ValueError("MCP tool is not in the server read-only allowlist")
         digest = self._mcp_arguments_digest(arguments)
         token = secrets.token_urlsafe(24)
         expires = time.time() + float(ttl_seconds)

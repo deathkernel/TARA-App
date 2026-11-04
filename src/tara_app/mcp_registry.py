@@ -50,6 +50,7 @@ class McpServerSpec:
     timeout_seconds: float
     enabled: bool
     read_only: bool
+    read_only_tools: tuple[str, ...] = ()
 
     def argv(self) -> list[str]:
         return list(self.command)
@@ -165,10 +166,24 @@ def _parse_server(item: Mapping[str, Any], index: int) -> McpServerSpec:
 
     enabled = item.get("enabled", True)
     read_only = item.get("read_only", True)
+    read_only_tools = item.get("read_only_tools", [])
     if not isinstance(enabled, bool):
         raise McpConfigError(f"mcp.servers[{index}].enabled must be a boolean")
     if not isinstance(read_only, bool):
         raise McpConfigError(f"mcp.servers[{index}].read_only must be a boolean")
+    if not isinstance(read_only_tools, Sequence) or isinstance(read_only_tools, (str, bytes)):
+        raise McpConfigError(f"mcp.servers[{index}].read_only_tools must be a list of tool names")
+    if len(read_only_tools) > 128 or any(
+        not isinstance(tool, str) or not tool.strip() or len(tool) > 128
+        or any(ord(char) < 33 or ord(char) == 127 for char in tool)
+        for tool in read_only_tools
+    ):
+        raise McpConfigError(f"mcp.servers[{index}].read_only_tools contains an invalid tool name")
+    cleaned_read_only_tools = tuple(tool.strip() for tool in read_only_tools)
+    if len(set(cleaned_read_only_tools)) != len(cleaned_read_only_tools):
+        raise McpConfigError(f"mcp.servers[{index}].read_only_tools contains duplicates")
+    if not read_only and cleaned_read_only_tools:
+        raise McpConfigError(f"mcp.servers[{index}].read_only_tools requires read_only = true")
 
     return McpServerSpec(
         name=cleaned_name,
@@ -177,6 +192,7 @@ def _parse_server(item: Mapping[str, Any], index: int) -> McpServerSpec:
         timeout_seconds=timeout_f,
         enabled=enabled,
         read_only=read_only,
+        read_only_tools=cleaned_read_only_tools,
     )
 
 
@@ -214,6 +230,7 @@ def describe_registry(config: McpRegistryConfig) -> dict[str, Any]:
                 "name": server.name,
                 "enabled": server.enabled,
                 "read_only": server.read_only,
+                "read_only_tools": list(server.read_only_tools),
                 "command0": server.command[0] if server.command else "",
                 "arg_count": len(server.command),
                 "timeout_seconds": server.timeout_seconds,

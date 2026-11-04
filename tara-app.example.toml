@@ -22,7 +22,8 @@ timeout_seconds = 10
 # Install: python -m pip install -e ".[mcp]"
 # Only explicitly listed stdio servers are allowed. Commands are fixed argv
 # lists (no shell). Do not enable filesystem/git write tools without a review.
-# Live tool calling is not wired into Chat yet; this config is validated only.
+# Tool calls require a one-shot app approval. For read-only servers, explicitly list
+# the tool names you have reviewed as non-mutating; all other tools are blocked.
 # ---------------------------------------------------------------------------
 [mcp]
 enable = false
@@ -33,6 +34,7 @@ enable = false
 # command = ["uvx", "mcp-server-time"]
 # enabled = true
 # read_only = true
+# read_only_tools = ["get_current_time"]
 # timeout_seconds = 30
 
 [[modules]]
