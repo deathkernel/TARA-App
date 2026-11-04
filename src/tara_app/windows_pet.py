@@ -148,15 +148,19 @@ def _create_local_server(app: Any, port: int) -> tuple[Any, int]:
         raise RuntimeError("TARA could not bind its local chat server. Check local network permissions and try again.") from exc
     return server, server.server_port
 
+def _pet_window_geometry(*, expanded: bool, pet_center_x: int, top_y: int) -> str:
+    """Keep the pet centered while switching between compact and chat layouts."""
+    width, height = (430, 470) if expanded else (180, 204)
+    return f"{width}x{height}+{pet_center_x - width // 2}+{top_y}"
+
+
 def run_floating_pet(app: Any, *, port: int = 8765) -> None:
-    """Run the local TARA server in a background thread and the pet in the UI thread."""
+    """Run a compact floating pet with an inline toolbar and expandable chat."""
     if sys.platform != "win32":
         raise RuntimeError("The floating pet is supported on Windows only.")
     try:
         import tkinter as tk
-        from tkinter import ttk
     except ImportError:
-        # Keep the existing web UI usable on Python builds without Tcl/Tk.
         from tara_app.webapp import serve
         print("Windows floating pet needs Python with Tcl/Tk; opening TARA's local web interface instead.", file=sys.stderr)
         serve(app, port=port)
@@ -173,60 +177,72 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
         return
 
     root.title("TARA Floating Pet")
-    root.geometry("132x150+120+120")
+    root.geometry("180x204+120+120")
     root.overrideredirect(True)
     root.attributes("-topmost", True)
     background = "#111116"
+    panel_background = "#17171f"
+    root.configure(bg=background)
     try:
-        root.configure(bg=background)
         root.attributes("-transparentcolor", background)
     except tk.TclError:
-        root.configure(bg=background)
+        pass
 
-    canvas = tk.Canvas(root, width=132, height=150, bg=background, highlightthickness=0, bd=0, cursor="hand2")
-    canvas.pack(fill="both", expand=True)
+    canvas = tk.Canvas(root, width=180, height=158, bg=background, highlightthickness=0, bd=0, cursor="hand2")
+    canvas.pack(fill="x")
     session_id = f"windows-pet-{threading.get_ident()}"
     history: list[dict[str, str]] = []
     shutdown_event = threading.Event()
     chat_workers: set[threading.Thread] = set()
-    chat_window: Any = None
-    transcript: Any = None
-    entry: Any = None
-    send_button: Any = None
     busy = False
+    expanded = False
+    mini_mode = False
+    pet_state = "ready"
     animation_tick = 0
     drag = {"x": 0, "y": 0, "root_x": 0, "root_y": 0, "moved": False}
 
-    def draw_pet() -> None:
-        nonlocal animation_tick
-        canvas.delete("all")
-        bob = math.sin(animation_tick * 0.65) * 2.5
-        canvas.create_oval(31, 105 + bob, 101, 121 + bob, fill="#050509", outline="")
-        canvas.create_oval(27, 32 + bob, 105, 108 + bob, fill="#6b48b7", outline="#c6a5ff", width=2)
-        canvas.create_oval(34, 38 + bob, 98, 100 + bob, fill="#9b78ed", outline="")
-        canvas.create_oval(43, 43 + bob, 73, 70 + bob, fill="#c9b5ff", outline="")
-        canvas.create_oval(49, 46 + bob, 61, 58 + bob, fill="#e7deff", outline="")
-        if animation_tick % 9 == 0:
-            canvas.create_line(47, 70 + bob, 57, 70 + bob, fill="#241b3d", width=3, capstyle="round")
-            canvas.create_line(75, 70 + bob, 85, 70 + bob, fill="#241b3d", width=3, capstyle="round")
-        else:
-            canvas.create_oval(47, 63 + bob, 58, 76 + bob, fill="#211637", outline="")
-            canvas.create_oval(74, 63 + bob, 85, 76 + bob, fill="#211637", outline="")
-            canvas.create_oval(50, 65 + bob, 53, 68 + bob, fill="#ffffff", outline="")
-            canvas.create_oval(77, 65 + bob, 80, 68 + bob, fill="#ffffff", outline="")
-        canvas.create_oval(37, 76 + bob, 47, 82 + bob, fill="#e8a9e7", outline="")
-        canvas.create_oval(85, 76 + bob, 95, 82 + bob, fill="#e8a9e7", outline="")
-        canvas.create_arc(59, 75 + bob, 74, 87 + bob, start=205, extent=130, style="arc", outline="#2a1742", width=2)
-        canvas.create_text(66, 132 + bob, text="TARA", fill="#e6d8ff", font=("Segoe UI", 10, "bold"))
-        canvas.create_text(66, 145, text="click to chat", fill="#c5b4e7", font=("Segoe UI", 7))
-        animation_tick += 1
-        root.after(650, draw_pet)
+    toolbar = tk.Frame(root, bg="#202027", padx=7, pady=5, highlightthickness=1, highlightbackground="#303039")
+    toolbar.pack(fill="x", padx=8, pady=(0, 5))
+    icon_button_style = {
+        "bg": "#202027", "fg": "#f1eef8", "activebackground": "#383443",
+        "activeforeground": "#ffffff", "relief": "flat", "borderwidth": 0,
+        "font": ("Segoe UI Symbol", 12), "padx": 11, "pady": 2, "cursor": "hand2",
+    }
 
-    def append_transcript(speaker: str, text: str) -> None:
-        if transcript is None:
-            return
+    chat_area = tk.Frame(root, bg=panel_background, padx=10, pady=9)
+    transcript = tk.Text(
+        chat_area, wrap="word", state="disabled", bg=panel_background,
+        fg="#f0edf7", insertbackground="#f0edf7", relief="flat",
+        padx=8, pady=8, font=("Segoe UI", 10), height=10,
+        selectbackground="#59427a", borderwidth=0,
+    )
+    transcript.pack(side="top", fill="both", expand=True)
+    transcript.tag_configure("user", foreground="#d9c5ff", justify="right", spacing1=8, spacing3=3)
+    transcript.tag_configure("tara", foreground="#f0edf7", justify="left", spacing1=8, spacing3=3)
+    transcript.tag_configure("notice", foreground="#f2c98a", justify="left", spacing1=8, spacing3=3)
+    transcript.tag_configure("label", foreground="#b8a3dc", font=("Segoe UI", 8, "bold"), spacing1=5)
+
+    composer = tk.Frame(chat_area, bg="#292830", padx=8, pady=7, highlightthickness=1, highlightbackground="#3a3843")
+    composer.pack(side="bottom", fill="x", pady=(8, 0))
+    entry = tk.Entry(
+        composer, bg="#292830", fg="#f7f3ff", insertbackground="#f7f3ff",
+        relief="flat", font=("Segoe UI", 10), borderwidth=0,
+    )
+    entry.pack(side="left", fill="x", expand=True, ipady=8, padx=(4, 8))
+    entry.configure(disabledbackground="#292830", disabledforeground="#9e95ad")
+    send_button = tk.Button(
+        composer, text="↑", bg="#3985f6", fg="#ffffff",
+        activebackground="#5a9bff", activeforeground="#ffffff",
+        relief="flat", padx=10, pady=2, borderwidth=0,
+        font=("Segoe UI", 13, "bold"), cursor="hand2",
+    )
+    send_button.pack(side="right")
+
+    def append_transcript(speaker: str, message: str) -> None:
         transcript.configure(state="normal")
-        transcript.insert("end", f"{speaker}\n{text}\n\n")
+        tag = "user" if speaker == "You" else "notice" if speaker == "Notice" else "tara"
+        transcript.insert("end", f"{speaker}\n", ("label",))
+        transcript.insert("end", f"{message}\n\n", (tag,))
         content = transcript.get("1.0", "end-1c")
         bounded = trim_transcript_text(content)
         if bounded != content:
@@ -235,54 +251,75 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
         transcript.see("end")
         transcript.configure(state="disabled")
 
+    def set_pet_state(state: str) -> None:
+        nonlocal pet_state
+        pet_state = state
+        colors = {"ready": "#39d98a", "thinking": "#f4b942", "needs_input": "#f4b942", "blocked": "#ff5c68", "success": "#39d98a"}
+        labels = {"ready": "Ready", "thinking": "Working", "needs_input": "Needs input", "blocked": "Blocked", "success": "Task completed"}
+        status_button.configure(fg=colors.get(state, "#39d98a"), text="🔔")
+        status_button.configure(command=lambda: show_status())
+        root.title(f"TARA Floating Pet — {labels.get(state, state.title())}")
+
+    def show_status() -> None:
+        labels = {"ready": "Ready", "thinking": "Working on your request…", "needs_input": "Needs your input", "blocked": "Blocked — check the chat for details", "success": "Task completed successfully"}
+        if not expanded:
+            open_chat()
+        append_transcript("Notice", labels.get(pet_state, "Ready"))
+
+    def toggle_mini_mode() -> None:
+        nonlocal mini_mode, expanded
+        mini_mode = not mini_mode
+        if mini_mode:
+            chat_area.pack_forget()
+            toolbar.pack_forget()
+            expanded = False
+            canvas.configure(width=54, height=54)
+            root.geometry(f"54x54+{root.winfo_x()}+{root.winfo_y()}")
+        else:
+            canvas.configure(width=180, height=158)
+            toolbar.pack(fill="x", padx=8, pady=(0, 5))
+            root.geometry(f"180x204+{root.winfo_x()}+{root.winfo_y()}")
+        root.lift()
+
+    def collapse_chat() -> None:
+        nonlocal expanded
+        if not expanded:
+            return
+        pet_center_x = root.winfo_x() + 215
+        top_y = root.winfo_y()
+        chat_area.pack_forget()
+        expanded = False
+        canvas.configure(width=180)
+        root.geometry(_pet_window_geometry(expanded=False, pet_center_x=pet_center_x, top_y=top_y))
+
     def open_chat() -> None:
-        nonlocal chat_window, transcript, entry, send_button
-        if chat_window is not None and chat_window.winfo_exists():
-            chat_window.deiconify()
-            chat_window.lift()
+        nonlocal expanded
+        nonlocal mini_mode
+        if mini_mode:
+            mini_mode = False
+            canvas.configure(width=180, height=158)
+            toolbar.pack(fill="x", padx=8, pady=(0, 5))
+            root.geometry(f"180x204+{root.winfo_x()}+{root.winfo_y()}")
+        if expanded:
             entry.focus_set()
             return
-        chat_window = tk.Toplevel(root)
-        chat_window.title("Chat with TARA")
-        chat_window.geometry("390x520+260+180")
-        chat_window.minsize(320, 380)
-        chat_window.configure(bg="#17171f")
-        chat_window.attributes("-topmost", True)
-        chat_window.protocol("WM_DELETE_WINDOW", chat_window.withdraw)
-
-        header = tk.Frame(chat_window, bg="#211b2d", padx=14, pady=12)
-        header.pack(fill="x")
-        tk.Label(header, text="✦  TARA", bg="#211b2d", fg="#e5d6ff", font=("Segoe UI", 12, "bold")).pack(side="left")
-        tk.Label(header, text="Local assistant", bg="#211b2d", fg="#b8afc9", font=("Segoe UI", 9)).pack(side="right")
-
-        body = tk.Frame(chat_window, bg="#17171f", padx=12, pady=12)
-        body.pack(fill="both", expand=True)
-        scroll = ttk.Scrollbar(body)
-        scroll.pack(side="right", fill="y")
-        transcript = tk.Text(
-            body, wrap="word", state="disabled", yscrollcommand=scroll.set,
-            bg="#17171f", fg="#f0edf7", insertbackground="#f0edf7",
-            relief="flat", padx=8, pady=8, font=("Segoe UI", 10),
-        )
-        transcript.pack(side="left", fill="both", expand=True)
-        scroll.configure(command=transcript.yview)
-        append_transcript("TARA", "Hey! Click the pet any time to chat. I'll only send a request when you submit a message.")
-
-        composer = tk.Frame(chat_window, bg="#17171f", padx=12, pady=10)
-        composer.pack(fill="x")
-        entry = tk.Entry(composer, bg="#24232c", fg="#f7f3ff", insertbackground="#f7f3ff", relief="flat", font=("Segoe UI", 10))
-        entry.pack(side="left", fill="x", expand=True, ipady=9, padx=(0, 8))
-        entry.bind("<Return>", lambda _event: send_message())
-        send_button = tk.Button(
-            composer, text="Send", command=send_message, bg="#b99af7", fg="#20172e",
-            activebackground="#cdb8ff", relief="flat", padx=12, pady=7,
-        )
-        send_button.pack(side="right")
+        pet_center_x = root.winfo_x() + 90
+        top_y = root.winfo_y()
+        expanded = True
+        canvas.configure(width=430)
+        chat_area.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+        root.geometry(_pet_window_geometry(expanded=True, pet_center_x=pet_center_x, top_y=top_y))
+        root.lift()
         entry.focus_set()
+
+    def show_voice_notice() -> None:
+        if not expanded:
+            open_chat()
+        append_transcript("Notice", "Voice input is not available yet. Type your message below.")
 
     def send_message() -> None:
         nonlocal busy, history
-        if busy or entry is None or not entry.winfo_exists():
+        if busy:
             return
         question = entry.get().strip()
         if not question:
@@ -295,11 +332,12 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
         entry.delete(0, "end")
         append_transcript("You", question)
         busy = True
-        if send_button is not None:
-            send_button.configure(state="disabled", text="…")
+        set_pet_state("thinking")
+        send_button.configure(state="disabled", text="…")
+        entry.configure(state="disabled")
 
         def worker() -> None:
-            nonlocal busy, history
+            nonlocal history
             try:
                 answer = _post_chat(server_url, payload)
                 history = payload["history"] + [
@@ -315,12 +353,14 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
                 if shutdown_event.is_set():
                     return
                 busy = False
-                if send_button is not None and send_button.winfo_exists():
-                    send_button.configure(state="normal", text="Send")
-                if outcome[0]:
-                    append_transcript("TARA", outcome[1])
-                else:
-                    append_transcript("Notice", outcome[1])
+                if send_button.winfo_exists():
+                    send_button.configure(state="normal", text="↑")
+                if entry.winfo_exists():
+                    entry.configure(state="normal")
+                    entry.focus_set()
+                append_transcript("TARA" if outcome[0] else "Notice", outcome[1])
+                set_pet_state("success" if outcome[0] else "blocked")
+                root.after(2400, lambda: set_pet_state("ready") if pet_state == "success" else None)
 
             try:
                 if not shutdown_event.is_set():
@@ -333,6 +373,72 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
         worker_thread = threading.Thread(target=worker, name="tara-pet-chat", daemon=True)
         chat_workers.add(worker_thread)
         worker_thread.start()
+
+    send_button.configure(command=send_message)
+    entry.bind("<Return>", lambda _event: send_message())
+
+    compose_button = tk.Button(toolbar, text="✎", command=open_chat, **icon_button_style)
+    compose_button.pack(side="left")
+    tk.Frame(toolbar, bg="#3a3843", width=1, height=23).pack(side="left", padx=3)
+    voice_button = tk.Button(toolbar, text="♬", command=show_voice_notice, **icon_button_style)
+    voice_button.pack(side="left")
+    tk.Frame(toolbar, bg="#3a3843", width=1, height=23).pack(side="left", padx=3)
+
+    def show_menu(event: Any | None = None) -> None:
+        x = event.x_root if event is not None else root.winfo_x() + root.winfo_width() - 20
+        y = event.y_root if event is not None else root.winfo_y() + 185
+        menu.tk_popup(x, y)
+        menu.grab_release()
+
+    dropdown_button = tk.Button(toolbar, text="⌄", command=show_menu, **icon_button_style)
+    dropdown_button.pack(side="left")
+    status_button = tk.Button(toolbar, text="●", command=lambda: show_status(), **icon_button_style)
+    status_button.pack(side="left", padx=(5, 0))
+
+    def draw_pet() -> None:
+        nonlocal animation_tick
+        try:
+            canvas.delete("all")
+            if mini_mode:
+                canvas.create_oval(7, 7, 47, 47, fill="#6b48b7", outline="#c6a5ff", width=2)
+                canvas.create_text(27, 27, text="T", fill="#ffffff", font=("Segoe UI", 16, "bold"))
+                bell_color = {"ready": "#39d98a", "thinking": "#f4b942", "blocked": "#ff5c68", "success": "#39d98a"}.get(pet_state, "#39d98a")
+                if pet_state == "thinking" and animation_tick % 2:
+                    bell_color = "#ffe4a3"
+                canvas.create_oval(39, 4, 51, 16, fill=bell_color, outline="")
+                animation_tick += 1
+                root.after(250 if pet_state == "thinking" else 650, draw_pet)
+                return
+            center_x = max(90, canvas.winfo_width() // 2)
+            bob = math.sin(animation_tick * (1.15 if pet_state == "thinking" else 0.65)) * (4 if pet_state == "thinking" else 2.5)
+            canvas.create_oval(center_x - 35, 105 + bob, center_x + 35, 121 + bob, fill="#050509", outline="")
+            canvas.create_oval(center_x - 39, 32 + bob, center_x + 39, 108 + bob, fill="#6b48b7", outline="#c6a5ff", width=2)
+            canvas.create_oval(center_x - 32, 38 + bob, center_x + 32, 100 + bob, fill="#9b78ed", outline="")
+            canvas.create_oval(center_x - 23, 43 + bob, center_x + 7, 70 + bob, fill="#c9b5ff", outline="")
+            canvas.create_oval(center_x - 17, 46 + bob, center_x - 5, 58 + bob, fill="#e7deff", outline="")
+            if pet_state == "thinking":
+                canvas.create_arc(center_x - 24, 52 + bob, center_x + 24, 89 + bob, start=25, extent=290, style="arc", outline="#f4b942", width=3)
+                canvas.create_text(center_x, 70 + bob, text="···", fill="#fff0c2", font=("Segoe UI", 16, "bold"))
+            elif pet_state == "success":
+                canvas.create_text(center_x, 56 + bob, text="✦", fill="#ffe27a", font=("Segoe UI", 17, "bold"))
+                canvas.create_oval(center_x - 19, 63 + bob, center_x - 8, 76 + bob, fill="#211637", outline="")
+                canvas.create_oval(center_x + 8, 63 + bob, center_x + 19, 76 + bob, fill="#211637", outline="")
+            elif animation_tick % 9 == 0:
+                canvas.create_line(center_x - 19, 70 + bob, center_x - 9, 70 + bob, fill="#241b3d", width=3, capstyle="round")
+                canvas.create_line(center_x + 9, 70 + bob, center_x + 19, 70 + bob, fill="#241b3d", width=3, capstyle="round")
+            else:
+                canvas.create_oval(center_x - 19, 63 + bob, center_x - 8, 76 + bob, fill="#211637", outline="")
+                canvas.create_oval(center_x + 8, 63 + bob, center_x + 19, 76 + bob, fill="#211637", outline="")
+                canvas.create_oval(center_x - 16, 65 + bob, center_x - 13, 68 + bob, fill="#ffffff", outline="")
+                canvas.create_oval(center_x + 11, 65 + bob, center_x + 14, 68 + bob, fill="#ffffff", outline="")
+            canvas.create_oval(center_x - 29, 76 + bob, center_x - 19, 82 + bob, fill="#e8a9e7", outline="")
+            canvas.create_oval(center_x + 19, 76 + bob, center_x + 29, 82 + bob, fill="#e8a9e7", outline="")
+            canvas.create_arc(center_x - 7, 75 + bob, center_x + 8, 87 + bob, start=205, extent=130, style="arc", outline="#2a1742", width=2)
+            canvas.create_text(center_x, 132 + bob, text="TARA", fill="#e6d8ff", font=("Segoe UI", 10, "bold"))
+            animation_tick += 1
+            root.after(650, draw_pet)
+        except tk.TclError:
+            return
 
     def on_press(event: Any) -> None:
         drag.update(x=event.x_root, y=event.y_root, root_x=root.winfo_x(), root_y=root.winfo_y(), moved=False)
@@ -348,24 +454,75 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
             open_chat()
 
     menu = tk.Menu(root, tearoff=0)
-    menu.add_command(label="Chat with TARA", command=open_chat)
+    menu.add_command(label="Open chat", command=open_chat)
+    menu.add_command(label="Hide chat", command=collapse_chat)
+    menu.add_command(label="Toggle mini mode", command=toggle_mini_mode)
     menu.add_separator()
     menu.add_command(label="Exit TARA", command=root.destroy)
-
-    def show_menu(event: Any) -> None:
-        try:
-            menu.tk_popup(event.x_root, event.y_root)
-        finally:
-            menu.grab_release()
 
     canvas.bind("<ButtonPress-1>", on_press)
     canvas.bind("<B1-Motion>", on_drag)
     canvas.bind("<ButtonRelease-1>", on_release)
     canvas.bind("<Button-3>", show_menu)
-    root.bind("<Escape>", lambda _event: root.destroy())
+    root.bind("<Escape>", lambda _event: collapse_chat() if expanded else None)
+
+    def global_hotkey_worker() -> None:
+        # Windows-only polling keeps both shortcuts available when another app has focus.
+        try:
+            import ctypes
+            user32 = ctypes.windll.user32
+        except (ImportError, AttributeError):
+            return
+        was_chat_down = False
+        was_mini_down = False
+        while not shutdown_event.wait(0.06):
+            try:
+                ctrl_down = bool(user32.GetAsyncKeyState(0x11) & 0x8000)
+                shift_down = bool(user32.GetAsyncKeyState(0x10) & 0x8000)
+                space_down = bool(user32.GetAsyncKeyState(0x20) & 0x8000)
+                m_down = bool(user32.GetAsyncKeyState(0x4D) & 0x8000)
+                chat_down = ctrl_down and space_down
+                mini_down = ctrl_down and shift_down and m_down
+                if chat_down and not was_chat_down:
+                    try:
+                        root.after(0, open_chat)
+                    except tk.TclError:
+                        return
+                if mini_down and not was_mini_down:
+                    try:
+                        root.after(0, toggle_mini_mode)
+                    except tk.TclError:
+                        return
+                was_chat_down = chat_down
+                was_mini_down = mini_down
+            except (OSError, AttributeError):
+                return
+
+    hotkey_thread = threading.Thread(target=global_hotkey_worker, name="tara-global-hotkey", daemon=True)
+    hotkey_thread.start()
+
+    def dismiss_chat_on_focus_loss(_event: Any) -> None:
+        if not expanded:
+            return
+        def check_focus() -> None:
+            if not expanded or shutdown_event.is_set():
+                return
+            try:
+                focused = root.focus_get()
+                if focused is None:
+                    collapse_chat()
+            except tk.TclError:
+                pass
+        try:
+            root.after(180, check_focus)
+        except tk.TclError:
+            pass
+
+    root.bind("<FocusOut>", dismiss_chat_on_focus_loss, add="+")
     root.bind("<Control-q>", lambda _event: root.destroy())
     root.protocol("WM_DELETE_WINDOW", root.destroy)
 
+    append_transcript("TARA", "Hey! I'm here. What can I help with?")
     try:
         server, actual_port = _create_local_server(app, port)
     except (OSError, RuntimeError):
@@ -390,6 +547,7 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
         finally:
             server.server_close()
             server_thread.join(timeout=3)
+            hotkey_thread.join(timeout=0.2)
             for worker_thread in tuple(chat_workers):
                 if worker_thread is not threading.current_thread():
                     worker_thread.join(timeout=0.2)
