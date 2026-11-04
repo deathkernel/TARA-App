@@ -4,9 +4,10 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Mapping
 
-from tara_app.mcp_client import McpClientError, McpToolGateway, McpToolInfo
+from tara_app.mcp_client import McpClientError, McpToolGateway, McpToolInfo, _extract_tool_page, _tool_result_text
 from tara_app.mcp_registry import McpServerSpec, parse_mcp_config
 from tara_app.mcp_toml import load_mcp_config_from_toml
 
@@ -52,6 +53,17 @@ def _enabled_config() -> Any:
 
 
 class McpClientTests(unittest.TestCase):
+    def test_tool_page_exposes_pagination_cursor(self) -> None:
+        result = SimpleNamespace(tools=[SimpleNamespace(name="ping", description="ping", inputSchema={"type": "object"})], nextCursor="next-page")
+        tools, cursor = _extract_tool_page(result, "time")
+        self.assertEqual([tool.name for tool in tools], ["ping"])
+        self.assertEqual(cursor, "next-page")
+
+    def test_tool_error_is_not_returned_as_success_text(self) -> None:
+        result = SimpleNamespace(isError=True, content=[SimpleNamespace(text="denied")])
+        with self.assertRaises(McpClientError):
+            _tool_result_text(result)
+
     def test_list_tools_uses_factory(self) -> None:
         sessions: list[_FakeSession] = []
 
@@ -98,6 +110,13 @@ class McpClientTests(unittest.TestCase):
     def test_load_toml_missing_file_defaults_off(self) -> None:
         config = load_mcp_config_from_toml(Path("/nonexistent/tara-app.toml"))
         self.assertFalse(config.enable)
+
+    def test_load_toml_rejects_non_table_mcp_value(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "tara-app.toml"
+            path.write_text("mcp = true\\n", encoding="utf-8")
+            with self.assertRaises(Exception):
+                load_mcp_config_from_toml(path)
 
     def test_load_toml_parses_mcp_section(self) -> None:
         content = """

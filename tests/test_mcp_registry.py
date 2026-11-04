@@ -59,6 +59,16 @@ class McpRegistryTests(unittest.TestCase):
         self.assertEqual(server.timeout_seconds, 15.0)
         self.assertTrue(server.read_only)
 
+    def test_rejects_non_boolean_flags(self) -> None:
+        invalid_values = (
+            {"enable": "false", "servers": []},
+            {"enable": True, "servers": [{"name": "time", "command": ["uvx"], "enabled": "false"}]},
+            {"enable": True, "servers": [{"name": "time", "command": ["uvx"], "read_only": 0}]},
+        )
+        for raw in invalid_values:
+            with self.subTest(raw=raw), self.assertRaises(McpConfigError):
+                parse_mcp_config(raw)
+
     def test_rejects_shell_string_command(self) -> None:
         with self.assertRaises(McpConfigError):
             parse_mcp_config(

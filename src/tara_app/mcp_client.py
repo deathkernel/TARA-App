@@ -58,6 +58,36 @@ class McpSession(Protocol):
 SessionFactory = Callable[[McpServerSpec], McpSession]
 
 
+def _extract_tool_page(result: Any, server_name: str) -> tuple[list[McpToolInfo], str | None]:
+    """Validate one SDK page and return its tools and continuation cursor."""
+    if bool(getattr(result, "isError", False) or getattr(result, "is_error", False)):
+        raise McpClientError("MCP server returned an error while listing tools")
+    tools: list[McpToolInfo] = []
+    for tool in getattr(result, "tools", []) or []:
+        schema = getattr(tool, "inputSchema", None) or getattr(tool, "input_schema", None) or {}
+        if not isinstance(schema, dict):
+            schema = {}
+        tools.append(McpToolInfo(server=server_name, name=str(getattr(tool, "name", "") or ""),
+            description=str(getattr(tool, "description", "") or ""), input_schema=schema))
+    cursor = getattr(result, "nextCursor", None)
+    if cursor is None:
+        cursor = getattr(result, "next_cursor", None)
+    if cursor is not None and (not isinstance(cursor, str) or not cursor):
+        raise McpClientError("MCP server returned an invalid pagination cursor")
+    return tools, cursor
+
+
+def _tool_result_text(result: Any) -> str:
+    """Convert a successful CallToolResult to text without masking tool errors."""
+    if bool(getattr(result, "isError", False) or getattr(result, "is_error", False)):
+        raise McpClientError("MCP server reported tool execution failure")
+    parts: list[str] = []
+    for block in getattr(result, "content", []) or []:
+        text = getattr(block, "text", None)
+        parts.append(text if isinstance(text, str) else str(block))
+    return "\n".join(parts) if parts else ""
+
+
 class McpToolGateway:
     """Dispatch list/call operations to allowlisted MCP servers only."""
 
@@ -203,22 +233,21 @@ class _StdioMcpSession:
         async with stdio_client(params) as (read, write):
             async with ClientSession(read, write) as session:
                 await asyncio.wait_for(session.initialize(), timeout=self._spec.timeout_seconds)
-                result = await asyncio.wait_for(
-                    session.list_tools(), timeout=self._spec.timeout_seconds
-                )
                 tools: list[McpToolInfo] = []
-                for tool in getattr(result, "tools", []) or []:
-                    schema = getattr(tool, "inputSchema", None) or getattr(tool, "input_schema", None) or {}
-                    if not isinstance(schema, dict):
-                        schema = {}
-                    tools.append(
-                        McpToolInfo(
-                            server=self._spec.name,
-                            name=str(getattr(tool, "name", "") or ""),
-                            description=str(getattr(tool, "description", "") or ""),
-                            input_schema=schema,
-                        )
+                cursor: str | None = None
+                seen_cursors: set[str] = set()
+                while len(tools) < _MAX_TOOLS_RETURNED:
+                    result = await asyncio.wait_for(
+                        session.list_tools(cursor=cursor), timeout=self._spec.timeout_seconds
                     )
+                    page_tools, next_cursor = _extract_tool_page(result, self._spec.name)
+                    tools.extend(page_tools[:_MAX_TOOLS_RETURNED - len(tools)])
+                    if next_cursor is None:
+                        break
+                    if next_cursor in seen_cursors:
+                        raise McpClientError("MCP server repeated a pagination cursor")
+                    seen_cursors.add(next_cursor)
+                    cursor = next_cursor
                 return tools
 
     async def _call_tool_async(self, name: str, arguments: Mapping[str, Any]) -> str:
@@ -237,14 +266,7 @@ class _StdioMcpSession:
                     session.call_tool(name, arguments=dict(arguments)),
                     timeout=self._spec.timeout_seconds,
                 )
-                parts: list[str] = []
-                for block in getattr(result, "content", []) or []:
-                    text = getattr(block, "text", None)
-                    if isinstance(text, str):
-                        parts.append(text)
-                    else:
-                        parts.append(str(block))
-                return "\n".join(parts) if parts else ""
+                return _tool_result_text(result)
 
 
 __all__ = [
