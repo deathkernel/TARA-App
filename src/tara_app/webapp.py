@@ -194,8 +194,8 @@ class _Handler(BaseHTTPRequestHandler):
         if endpoint not in {"/api/chat", "/api/approve", "/api/cancel", "/api/models/pull", "/api/models/unload", "/api/models/remove"}:
             self._json(404, {"status": "unavailable", "error": "endpoint not found"})
             return
-        if not self._local_origin():
-            self._json(403, {"status": "permission_denied", "error": "request origin is not allowed"})
+        if not self._local_origin(require_origin=True):
+            self._json(403, {"status": "permission_denied", "error": "a valid same-origin request is required"})
             return
         if self.headers.get_content_type() != "application/json":
             self._json(415, {"status": "invalid_request", "error": "request must use application/json"})
@@ -269,13 +269,13 @@ class _Handler(BaseHTTPRequestHandler):
             outcome = self.server.app.cancel_approval(payload.get("approval_id"), session_id=payload.get("session_id"))
         self._json(200, outcome.to_payload())
 
-    def _local_origin(self) -> bool:
+    def _local_origin(self, *, require_origin: bool = False) -> bool:
         host = self.headers.get("Host", "")
         if host not in {f"127.0.0.1:{self.server.server_port}", f"localhost:{self.server.server_port}"}:
             return False
         origin = self.headers.get("Origin")
         if origin is None:
-            return True
+            return not require_origin
         parsed = urlsplit(origin)
         return parsed.scheme == "http" and parsed.netloc == host and parsed.path in {"", "/"} and not parsed.query and not parsed.fragment
 
