@@ -166,6 +166,7 @@ def _parse_server(item: Mapping[str, Any], index: int) -> McpServerSpec:
 
     enabled = item.get("enabled", True)
     read_only = item.get("read_only", True)
+    read_only_tools = item.get("read_only_tools", [])
     if not isinstance(enabled, bool):
         raise McpConfigError(f"mcp.servers[{index}].enabled must be a boolean")
     if not isinstance(read_only, bool):
