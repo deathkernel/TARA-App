@@ -1,5 +1,6 @@
 """Tests for the headless application service facade."""
 import sqlite3
+from contextlib import contextmanager
 import sys
 import tempfile
 from datetime import datetime, timedelta, timezone
@@ -14,6 +15,16 @@ from tara_app.audit import JsonlAuditLog
 from tara_app.contracts import ModelInfo
 from tara_app.model_catalogue import ModelCatalogue
 from tara_app.sessions import SessionError, SessionStore
+
+@contextmanager
+def _sqlite_connection(database):
+    connection = sqlite3.connect(database)
+    try:
+        with connection:
+            yield connection
+    finally:
+        connection.close()
+
 
 
 class FakeRuntime:
@@ -182,7 +193,7 @@ class ApplicationServiceTests(unittest.TestCase):
         )
         session = first.create_session()
         first.sessions.append_message(session.session_id, "user", "old conversation")
-        with sqlite3.connect(database) as db:
+        with _sqlite_connection(database) as db:
             old = (datetime.now(timezone.utc) - timedelta(days=14)).isoformat()
             db.execute("UPDATE sessions SET updated_at = ? WHERE session_id = ?", (old, session.session_id))
 
