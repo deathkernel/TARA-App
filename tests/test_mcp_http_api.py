@@ -1,4 +1,4 @@
-"""Loopback HTTP tests for MCP status, discovery, approval and calls."""
+"""Loopback HTTP tests for MCP status and read-only discovery."""
 from __future__ import annotations
 
 import json
