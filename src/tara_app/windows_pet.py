@@ -160,7 +160,6 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
         raise RuntimeError("The floating pet is supported on Windows only.")
     try:
         import tkinter as tk
-        from tkinter import ttk
     except ImportError:
         from tara_app.webapp import serve
         print("Windows floating pet needs Python with Tcl/Tk; opening TARA's local web interface instead.", file=sys.stderr)
@@ -385,8 +384,10 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
     voice_button.pack(side="left")
     tk.Frame(toolbar, bg="#3a3843", width=1, height=23).pack(side="left", padx=3)
 
-    def show_menu() -> None:
-        menu.tk_popup(root.winfo_x() + root.winfo_width() - 20, root.winfo_y() + 185)
+    def show_menu(event: Any | None = None) -> None:
+        x = event.x_root if event is not None else root.winfo_x() + root.winfo_width() - 20
+        y = event.y_root if event is not None else root.winfo_y() + 185
+        menu.tk_popup(x, y)
         menu.grab_release()
 
     dropdown_button = tk.Button(toolbar, text="⌄", command=show_menu, **icon_button_style)
@@ -462,29 +463,38 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
     canvas.bind("<ButtonPress-1>", on_press)
     canvas.bind("<B1-Motion>", on_drag)
     canvas.bind("<ButtonRelease-1>", on_release)
+    canvas.bind("<Button-3>", show_menu)
     root.bind("<Escape>", lambda _event: collapse_chat() if expanded else None)
-    root.bind("<Control-space>", lambda _event: open_chat())
-    root.bind("<Control-Shift-m>", lambda _event: toggle_mini_mode())
 
     def global_hotkey_worker() -> None:
-        # Windows-only polling keeps Ctrl+Space available even when another app has focus.
+        # Windows-only polling keeps both shortcuts available when another app has focus.
         try:
             import ctypes
             user32 = ctypes.windll.user32
         except (ImportError, AttributeError):
             return
-        was_down = False
+        was_chat_down = False
+        was_mini_down = False
         while not shutdown_event.wait(0.06):
             try:
                 ctrl_down = bool(user32.GetAsyncKeyState(0x11) & 0x8000)
+                shift_down = bool(user32.GetAsyncKeyState(0x10) & 0x8000)
                 space_down = bool(user32.GetAsyncKeyState(0x20) & 0x8000)
-                is_down = ctrl_down and space_down
-                if is_down and not was_down:
+                m_down = bool(user32.GetAsyncKeyState(0x4D) & 0x8000)
+                chat_down = ctrl_down and space_down
+                mini_down = ctrl_down and shift_down and m_down
+                if chat_down and not was_chat_down:
                     try:
                         root.after(0, open_chat)
                     except tk.TclError:
                         return
-                was_down = is_down
+                if mini_down and not was_mini_down:
+                    try:
+                        root.after(0, toggle_mini_mode)
+                    except tk.TclError:
+                        return
+                was_chat_down = chat_down
+                was_mini_down = mini_down
             except (OSError, AttributeError):
                 return
 
