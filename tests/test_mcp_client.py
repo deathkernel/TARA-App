@@ -8,7 +8,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Mapping
 
-from tara_app.mcp_client import McpClientError, McpToolGateway, McpToolInfo, _MAX_TOOL_PAGES, _collect_tool_pages, _extract_tool_page, _tool_result_text
+from tara_app.mcp_client import McpClientError, McpToolGateway, McpToolInfo, _MAX_TOOL_PAGES, _collect_tool_pages, _create_mcp_approval_grant, _extract_tool_page, _tool_result_text
 from tara_app.mcp_registry import McpConfigError, McpServerSpec, parse_mcp_config
 from tara_app.mcp_toml import load_mcp_config_from_toml
 
@@ -123,12 +123,17 @@ class McpClientTests(unittest.TestCase):
     def test_call_tool_requires_approval(self) -> None:
         gateway = McpToolGateway(_enabled_config(), session_factory=lambda spec: _FakeSession(spec))
         with self.assertRaises(McpClientError):
-            gateway.call_tool("time", "ping", {}, approval_token="")
+            gateway.call_tool("time", "ping", {}, approval_grant="")
+
+    def test_gateway_rejects_raw_approval_tokens(self) -> None:
+        gateway = McpToolGateway(_enabled_config(), session_factory=lambda spec: _FakeSession(spec))
+        with self.assertRaisesRegex(McpClientError, "validated app approval grant"):
+            gateway.call_tool("time", "ping", {}, approval_grant="approve-1")
 
     def test_read_only_server_blocks_unlisted_tools(self) -> None:
         gateway = McpToolGateway(_enabled_config(), session_factory=lambda spec: _FakeSession(spec))
         with self.assertRaisesRegex(McpClientError, "read-only allowlist"):
-            gateway.call_tool("time", "delete_file", {}, approval_token="approve-1")
+            gateway.call_tool("time", "delete_file", {}, approval_grant=_create_mcp_approval_grant("approve-1"))
 
     def test_call_tool_with_approval(self) -> None:
         session_box: list[_FakeSession] = []
@@ -139,14 +144,14 @@ class McpClientTests(unittest.TestCase):
             return session
 
         gateway = McpToolGateway(_enabled_config(), session_factory=factory)
-        result = gateway.call_tool("time", "ping", {"x": 1}, approval_token="approve-1")
+        result = gateway.call_tool("time", "ping", {"x": 1}, approval_grant=_create_mcp_approval_grant("approve-1"))
         self.assertEqual(result, "ok:ping")
         self.assertEqual(session_box[0].calls[0][0], "ping")
 
     def test_unknown_server_rejected(self) -> None:
         gateway = McpToolGateway(_enabled_config(), session_factory=lambda spec: _FakeSession(spec))
         with self.assertRaises(McpClientError):
-            gateway.call_tool("nope", "ping", {}, approval_token="approve-1")
+            gateway.call_tool("nope", "ping", {}, approval_grant=_create_mcp_approval_grant("approve-1"))
 
     def test_load_toml_missing_file_defaults_off(self) -> None:
         config = load_mcp_config_from_toml(Path("/nonexistent/tara-app.toml"))
