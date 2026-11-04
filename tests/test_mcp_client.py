@@ -170,6 +170,7 @@ command = ["uvx", "mcp-server-time"]
 enabled = true
 read_only = true
 timeout_seconds = 12
+read_only_tools = ["get_time"]
 """
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "tara-app.toml"
