@@ -18,6 +18,7 @@ from uuid import uuid4
 from tara_app.adapters import RouterClient
 from tara_app.contracts import AdapterHealth, Capability, ModuleRequest, ModuleResult, RouteDecision
 from tara_app.ollama_models import OllamaModelCatalog
+from tara_app.mcp_app import McpOrchestratorMixin
 from tara_app.registry import CapabilityRegistry
 
 _AUDIO_MEDIA_TYPES = frozenset({
@@ -79,7 +80,7 @@ class PendingApproval:
     description: str
 
 
-class Orchestrator:
+class Orchestrator(McpOrchestratorMixin):
     """Uses Router proposals and registered module adapters; it never auto-approves."""
 
     def __init__(
@@ -88,6 +89,7 @@ class Orchestrator:
         router: RouterClient,
         *,
         model_catalog: OllamaModelCatalog | None = None,
+        mcp_gateway: Any = None,
     ) -> None:
         self.registry = registry
         self.router = router
@@ -96,6 +98,7 @@ class Orchestrator:
         self._history_lock = RLock()
         self._pending_approvals: OrderedDict[str, PendingApproval] = OrderedDict()
         self._approval_lock = RLock()
+        self._init_mcp_state(mcp_gateway)
 
     def replace_conversation_history(self, session_id: str, history: Sequence[Mapping[str, str]]) -> None:
         """Replace one session's bounded conversation context from the local UI."""
@@ -200,12 +203,13 @@ class Orchestrator:
                     "TARA-App could not prepare the selected local model. Check the Models panel for download status.",
                 )
 
-        try:
-            health = adapter.health()
-        except Exception:
-            return self._outcome(operation_id, "unavailable", decision, "adapter_health_failed", "Specialist health check failed")
-        if not isinstance(health, AdapterHealth) or health.status != "healthy":
-            return self._outcome(operation_id, "unavailable", decision, "adapter_unavailable", "Selected specialist is unavailable")
+        if not (decision.module == "chat" and decision.action == "audit_repository"):
+            try:
+                health = adapter.health()
+            except Exception:
+                return self._outcome(operation_id, "unavailable", decision, "adapter_health_failed", "Specialist health check failed")
+            if not isinstance(health, AdapterHealth) or health.status != "healthy":
+                return self._outcome(operation_id, "unavailable", decision, "adapter_unavailable", "Selected specialist is unavailable")
 
         module_attachments = self._specialist_attachments(
             decision.module, decision.action, safe_attachments

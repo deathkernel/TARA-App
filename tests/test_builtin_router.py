@@ -8,7 +8,7 @@ from tara_app.builtin_router import BuiltinRouter
 class BuiltinRouterTests(unittest.TestCase):
     def setUp(self) -> None:
         self.router = BuiltinRouter()
-        self.capabilities = ["chat.respond", "code.plan", "research.answer", "security.assess"]
+        self.capabilities = ["chat.respond", "chat.audit_repository", "code.plan", "research.answer", "security.assess"]
 
     def route(self, question: str, attachments=()):
         return self.router.route({
@@ -18,6 +18,44 @@ class BuiltinRouterTests(unittest.TestCase):
             "available_capabilities": self.capabilities,
             "attachments": list(attachments),
         })
+
+    def test_explicit_repository_audit_uses_local_chat_auditor(self):
+        decision = self.route("Audit this repository")
+        self.assertEqual((decision.status, decision.module, decision.action), ("routed", "chat", "audit_repository"))
+        self.assertEqual(decision.reason_code, "repository_audit")
+
+    def test_standalone_run_repository_audit_is_read_only(self):
+        decision = self.route("Run a repository audit")
+        self.assertEqual((decision.module, decision.action), ("chat", "audit_repository"))
+        self.assertFalse(decision.requires_approval)
+
+    def test_run_the_repository_audit_with_the_article_is_read_only(self):
+        decision = self.route("Run the repository audit")
+        self.assertEqual((decision.module, decision.action), ("chat", "audit_repository"))
+        self.assertFalse(decision.requires_approval)
+
+    def test_repository_audit_keeps_attachments_local_for_rejection(self):
+        self.capabilities.append("vision.analyze")
+        decision = self.route("Audit this repository", [{"name": "photo.png", "media_type": "image/png"}])
+        self.assertEqual((decision.module, decision.action), ("chat", "audit_repository"))
+
+    def test_ordinary_project_checks_are_not_repository_audits(self):
+        for question in ("Check my project plan", "Check the project requirements"):
+            with self.subTest(question=question):
+                decision = self.route(question)
+                self.assertNotEqual((decision.module, decision.action), ("chat", "audit_repository"))
+
+    def test_repository_audit_does_not_override_side_effect_gate(self):
+        decision = self.route("Audit this repository and run all tests")
+        self.assertEqual((decision.module, decision.action), ("security", "assess"))
+        self.assertTrue(decision.requires_approval)
+
+    def test_repository_audit_fails_closed_when_capability_is_disabled(self):
+        self.capabilities.remove("chat.audit_repository")
+        decision = self.route("Check this project")
+        self.assertEqual(decision.status, "unavailable")
+        self.assertEqual(decision.intended_module, "chat")
+        self.assertEqual(decision.intended_action, "audit_repository")
 
     def test_general_question_uses_chat(self):
         decision = self.route("Hello, explain this simply")

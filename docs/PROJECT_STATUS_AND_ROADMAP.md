@@ -47,7 +47,7 @@ Use these status labels carefully:
 - **Pending verification:** requires a current test run, UI/browser check, target-machine run, or external integration proof.
 - **Not enabled by design:** intentionally unavailable until security prerequisites are met.
 
-For the numbered remaining-features inventory (items 1–37), use [REMAINING_FEATURES.md](REMAINING_FEATURES.md).
+For the numbered remaining-features inventory (items 1–42), use [REMAINING_FEATURES.md](REMAINING_FEATURES.md).
 
 ### 2.1 Capabilities described in the main README
 
@@ -97,6 +97,10 @@ This is a concise history of significant milestones visible in the repository's 
 | [PR #34 — drop floating pet](https://github.com/deathkernel/TARA-App/pull/34) | Restored the normal browser UI as the default Windows launcher and documented that the floating pet is no longer a product goal | Merged as `1bf4fdff00d748acecbba4e50cda7483f82b9f4f`; all 5 GitHub Actions jobs passed on PR head `0eff1fa8b0e1d4c99f964ccdc08ad600eb153c82` |
 | [PR #50 — native command risk](https://github.com/deathkernel/TARA-App/pull/50) | Mutating native commands stay high-risk even with `-v` / `--version` flags | Merged 2026-11-03 |
 | [PR #51 — session lifecycle](https://github.com/deathkernel/TARA-App/pull/51) | Atomic chat turns + opt-in session retention | Merged; on `main` as of `c45f4c3` |
+| [PR #52 — local repository audit](https://github.com/deathkernel/TARA-App/pull/52) | Added a read-only local repository audit to Chat and CLI; hardened path handling, scan failures, routing and output bounds | Merged as `10c90ab`; all four CI jobs passed on rebased head `d847623` (run #41792860679). Target-machine and browser smoke tests remain pending. |
+| [PR #60 — MCP foundation](https://github.com/deathkernel/TARA-App/pull/60) | Added an opt-in MCP registry, allowlisted stdio gateway, bounded tool discovery, error-aware results and operation-bound one-shot approvals | Merged as `4e8bdd8`; all four CI jobs passed on head `d218d0b` (run #41793747500): 320 Python tests, frontend build, Windows and Ubuntu Native Handler. MCP remains disabled by default and is not yet wired into Chat UI/tool-loop. |
+
+PR #40 was closed as superseded by #52; PR #48 was closed because its changes are already present on `main`. PRs #41–#43 were deferred until the active-runtime integration in issue #62; their branch commits are preserved for a later port.
 
 Useful history links:
 
@@ -113,7 +117,7 @@ Useful history links:
 
 ## 4. What is still left
 
-See **[REMAINING_FEATURES.md](REMAINING_FEATURES.md)** for the full numbered table (items 1–37) with current status labels.
+See **[REMAINING_FEATURES.md](REMAINING_FEATURES.md)** for the full numbered table (items 1–42) with current status labels.
 
 ### Product direction decision — floating pet dropped
 
@@ -123,9 +127,9 @@ This roadmap is dependency-ordered. The daily development task should deliver a 
 
 ### P0 — Establish a trustworthy baseline
 
-- [x] Run the current Python test suite on the current commit; record the exact command, environment, pass/fail counts and failures. **Evidence:** `python -m unittest discover -s tests -v` — 264 tests passed in 2.646s on Python 3.11, GitHub Actions, commit `5aa76ecffdfdcb779084d75c41d8a2b628226cb1` (run #1333). Local target-machine run remains pending.
-- [x] Run frontend install/typecheck/build where lockfile and package scripts support it; record exact results. **Evidence:** `npm install --no-audit --no-fund` and `npm run build` (`tsc -b && vite build`) passed on commit `5aa76ec` in run #1333. Browser QA remains pending.
-- [x] Inspect current GitHub Actions/CI status for the exact commit. **Evidence:** main run [#1333](https://github.com/deathkernel/TARA-App/actions/runs/41629104372) passed all four jobs on `5aa76ecffdfdcb779084d75c41d8a2b628226cb1` (Python tests, Windows native Handler, Ubuntu native Handler, frontend build).
+- [x] Run the Python test suite and record the exact command, environment, pass/fail counts and failures. **Evidence:** `python -m unittest discover -s tests -v` — 320 tests passed in 2.880s on Python 3.11.17 in run [#41793747500](https://github.com/deathkernel/TARA-App/actions/runs/41793747500), head `d218d0b`; its source tree is identical to current `main` merge commit `4e8bdd8`. Local target-machine run remains pending.
+- [x] Run frontend install/typecheck/build where lockfile and package scripts support it; record exact results. **Evidence:** frontend build passed in run [#41793747500](https://github.com/deathkernel/TARA-App/actions/runs/41793747500) on head `d218d0b`, whose source tree matches current `main` commit `4e8bdd8`. Browser QA remains pending.
+- [x] Inspect current GitHub Actions/CI status for the current source tree. **Evidence:** run [#41793747500](https://github.com/deathkernel/TARA-App/actions/runs/41793747500) passed all four jobs on PR head `d218d0b`; its tree is identical to current `main` merge commit `4e8bdd8` (Python tests, Windows native Handler, Ubuntu native Handler, frontend build).
 - [ ] Do a local launch smoke test: app starts, health/status is truthful, a chat request completes, and failures are surfaced accurately.
 - [ ] Perform browser QA on the actual UI at desktop and narrow/mobile widths; compare the ChatGPT-inspired layout without claiming pixel parity in advance.
 - [ ] Reconcile README claims with architecture/adapter docs so “implemented,” “partial,” and “pending verification” are consistent.

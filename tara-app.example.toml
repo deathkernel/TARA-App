@@ -17,6 +17,24 @@ command = ["{python}", "-m", "tara_router"]
 working_directory = "."
 timeout_seconds = 10
 
+# ---------------------------------------------------------------------------
+# Optional MCP (Model Context Protocol) — disabled by default.
+# Install: python -m pip install -e ".[mcp]"
+# Only explicitly listed stdio servers are allowed. Commands are fixed argv
+# lists (no shell). Do not enable filesystem/git write tools without a review.
+# Live tool calling is not wired into Chat yet; this config is validated only.
+# ---------------------------------------------------------------------------
+[mcp]
+enable = false
+
+# Example (still inactive until enable = true):
+# [[mcp.servers]]
+# name = "time"
+# command = ["uvx", "mcp-server-time"]
+# enabled = true
+# read_only = true
+# timeout_seconds = 30
+
 [[modules]]
 id = "chat"
 allow_remote = true # Sends prompts, recent history, and relevant memory snippets through OmniRoute.
