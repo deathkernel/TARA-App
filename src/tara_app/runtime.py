@@ -168,9 +168,8 @@ def create_application(config_path: str | Path) -> Orchestrator:
     # TARA no longer starts or calls Ollama for language-model inference.
     # Model selection and lifecycle belong to OmniRoute.
 
-    mcp_raw = config.get("mcp")
     try:
-        mcp_config = parse_mcp_config(mcp_raw if isinstance(mcp_raw, dict) else None)
+        mcp_config = parse_mcp_config(config.get("mcp"))
         require_mcp_ready(mcp_config)
     except McpConfigError as exc:
         raise RuntimeConfigurationError(str(exc)) from exc

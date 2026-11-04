@@ -42,7 +42,7 @@ def load_mcp_config_from_toml(path: Path | str, *, require_ready: bool = False) 
         raise McpConfigError(f"invalid TOML in {path}") from exc
 
     mcp_raw = data.get("mcp")
-    config = parse_mcp_config(mcp_raw if isinstance(mcp_raw, dict) else None)
+    config = parse_mcp_config(mcp_raw)
     if require_ready:
         require_mcp_ready(config)
     return config

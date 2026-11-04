@@ -94,7 +94,9 @@ def parse_mcp_config(raw: Mapping[str, Any] | None) -> McpRegistryConfig:
     if not isinstance(raw, Mapping):
         raise McpConfigError("mcp config must be a table")
 
-    enable = bool(raw.get("enable", False))
+    enable = raw.get("enable", False)
+    if not isinstance(enable, bool):
+        raise McpConfigError("mcp.enable must be a boolean")
     servers_raw = raw.get("servers", [])
     if servers_raw is None:
         servers_raw = []
@@ -161,8 +163,12 @@ def _parse_server(item: Mapping[str, Any], index: int) -> McpServerSpec:
             f"mcp.servers[{index}].timeout_seconds must be between {_MIN_TIMEOUT} and {_MAX_TIMEOUT}"
         )
 
-    enabled = bool(item.get("enabled", True))
-    read_only = bool(item.get("read_only", True))
+    enabled = item.get("enabled", True)
+    read_only = item.get("read_only", True)
+    if not isinstance(enabled, bool):
+        raise McpConfigError(f"mcp.servers[{index}].enabled must be a boolean")
+    if not isinstance(read_only, bool):
+        raise McpConfigError(f"mcp.servers[{index}].read_only must be a boolean")
 
     return McpServerSpec(
         name=cleaned_name,
