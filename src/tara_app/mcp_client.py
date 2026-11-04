@@ -28,6 +28,7 @@ from tara_app.mcp_registry import (
 _MAX_TOOL_NAME = 128
 _MAX_RESULT_CHARS = 200_000
 _MAX_TOOLS_RETURNED = 128
+_MAX_TOOL_PAGES = 16
 
 
 class McpClientError(RuntimeError):
@@ -86,6 +87,31 @@ def _tool_result_text(result: Any) -> str:
         text = getattr(block, "text", None)
         parts.append(text if isinstance(text, str) else str(block))
     return "\n".join(parts) if parts else ""
+
+
+async def _collect_tool_pages(
+    list_page: Callable[[str | None], Any],
+    *,
+    timeout_seconds: float,
+    server_name: str,
+) -> list[McpToolInfo]:
+    """Collect a bounded number of paginated tool-list responses."""
+    tools: list[McpToolInfo] = []
+    cursor: str | None = None
+    seen_cursors: set[str] = set()
+    for _ in range(_MAX_TOOL_PAGES):
+        result = await asyncio.wait_for(list_page(cursor), timeout=timeout_seconds)
+        page_tools, next_cursor = _extract_tool_page(result, server_name)
+        tools.extend(page_tools[:_MAX_TOOLS_RETURNED - len(tools)])
+        if next_cursor is None or len(tools) >= _MAX_TOOLS_RETURNED:
+            break
+        if next_cursor in seen_cursors:
+            raise McpClientError("MCP server repeated a pagination cursor")
+        seen_cursors.add(next_cursor)
+        cursor = next_cursor
+    else:
+        raise McpClientError("MCP server exceeded the pagination page limit")
+    return tools
 
 
 class McpToolGateway:
@@ -233,22 +259,11 @@ class _StdioMcpSession:
         async with stdio_client(params) as (read, write):
             async with ClientSession(read, write) as session:
                 await asyncio.wait_for(session.initialize(), timeout=self._spec.timeout_seconds)
-                tools: list[McpToolInfo] = []
-                cursor: str | None = None
-                seen_cursors: set[str] = set()
-                while len(tools) < _MAX_TOOLS_RETURNED:
-                    result = await asyncio.wait_for(
-                        session.list_tools(cursor=cursor), timeout=self._spec.timeout_seconds
-                    )
-                    page_tools, next_cursor = _extract_tool_page(result, self._spec.name)
-                    tools.extend(page_tools[:_MAX_TOOLS_RETURNED - len(tools)])
-                    if next_cursor is None:
-                        break
-                    if next_cursor in seen_cursors:
-                        raise McpClientError("MCP server repeated a pagination cursor")
-                    seen_cursors.add(next_cursor)
-                    cursor = next_cursor
-                return tools
+                return await _collect_tool_pages(
+                    lambda cursor: session.list_tools(cursor=cursor),
+                    timeout_seconds=self._spec.timeout_seconds,
+                    server_name=self._spec.name,
+                )
 
     async def _call_tool_async(self, name: str, arguments: Mapping[str, Any]) -> str:
         from mcp import ClientSession, StdioServerParameters

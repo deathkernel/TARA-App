@@ -1,14 +1,15 @@
 """Tests for the MCP tool gateway (no live MCP process)."""
 from __future__ import annotations
 
+import asyncio
 import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Mapping
 
-from tara_app.mcp_client import McpClientError, McpToolGateway, McpToolInfo, _extract_tool_page, _tool_result_text
-from tara_app.mcp_registry import McpServerSpec, parse_mcp_config
+from tara_app.mcp_client import McpClientError, McpToolGateway, McpToolInfo, _MAX_TOOL_PAGES, _collect_tool_pages, _extract_tool_page, _tool_result_text
+from tara_app.mcp_registry import McpConfigError, McpServerSpec, parse_mcp_config
 from tara_app.mcp_toml import load_mcp_config_from_toml
 
 
@@ -58,6 +59,40 @@ class McpClientTests(unittest.TestCase):
         tools, cursor = _extract_tool_page(result, "time")
         self.assertEqual([tool.name for tool in tools], ["ping"])
         self.assertEqual(cursor, "next-page")
+
+    def test_tool_page_collection_stops_at_the_page_limit(self) -> None:
+        calls = []
+
+        async def empty_page(cursor):
+            calls.append(cursor)
+            return SimpleNamespace(tools=[], nextCursor=f"cursor-{len(calls)}")
+
+        with self.assertRaisesRegex(McpClientError, "pagination page limit"):
+            asyncio.run(_collect_tool_pages(
+                empty_page, timeout_seconds=1, server_name="time"
+            ))
+        self.assertEqual(len(calls), _MAX_TOOL_PAGES)
+
+    def test_tool_pages_are_collected_until_the_end_cursor(self) -> None:
+        calls = []
+
+        async def list_page(cursor):
+            calls.append(cursor)
+            if cursor is None:
+                return SimpleNamespace(
+                    tools=[SimpleNamespace(name="first", description="", inputSchema={})],
+                    nextCursor="next",
+                )
+            return SimpleNamespace(
+                tools=[SimpleNamespace(name="second", description="", inputSchema={})],
+                nextCursor=None,
+            )
+
+        tools = asyncio.run(_collect_tool_pages(
+            list_page, timeout_seconds=1, server_name="time"
+        ))
+        self.assertEqual([tool.name for tool in tools], ["first", "second"])
+        self.assertEqual(calls, [None, "next"])
 
     def test_tool_error_is_not_returned_as_success_text(self) -> None:
         result = SimpleNamespace(isError=True, content=[SimpleNamespace(text="denied")])
@@ -115,7 +150,7 @@ class McpClientTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "tara-app.toml"
             path.write_text("mcp = true\\n", encoding="utf-8")
-            with self.assertRaises(Exception):
+            with self.assertRaises(McpConfigError):
                 load_mcp_config_from_toml(path)
 
     def test_load_toml_parses_mcp_section(self) -> None:
