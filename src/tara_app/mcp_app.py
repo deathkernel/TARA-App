@@ -10,6 +10,7 @@ from collections import OrderedDict
 from threading import RLock
 from typing import Any, Mapping
 
+from tara_app.mcp_client import _create_mcp_approval_grant
 from tara_app.mcp_registry import describe_registry, mcp_package_available
 
 
@@ -121,4 +122,5 @@ class McpOrchestratorMixin:
             if entry[1:] != (session_id, server, tool, digest):
                 raise ValueError("approval_token does not match this session and tool call")
             self._mcp_approval_tokens.pop(token, None)
-        return self.mcp_gateway.call_tool(server, tool, arguments, approval_token=token)
+        grant = _create_mcp_approval_grant(token)
+        return self.mcp_gateway.call_tool(server, tool, arguments, approval_grant=grant)
