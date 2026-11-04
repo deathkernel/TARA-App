@@ -144,9 +144,12 @@ class McpClientTests(unittest.TestCase):
             return session
 
         gateway = McpToolGateway(_enabled_config(), session_factory=factory)
-        result = gateway.call_tool("time", "ping", {"x": 1}, approval_grant=_create_mcp_approval_grant("approve-1"))
+        grant = _create_mcp_approval_grant("approve-1")
+        result = gateway.call_tool("time", "ping", {"x": 1}, approval_grant=grant)
         self.assertEqual(result, "ok:ping")
         self.assertEqual(session_box[0].calls[0][0], "ping")
+        with self.assertRaisesRegex(McpClientError, "validated app approval grant"):
+            gateway.call_tool("time", "ping", {"x": 1}, approval_grant=grant)
 
     def test_unknown_server_rejected(self) -> None:
         gateway = McpToolGateway(_enabled_config(), session_factory=lambda spec: _FakeSession(spec))
