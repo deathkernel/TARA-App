@@ -14,6 +14,8 @@ Session content remains in process memory by default. `SessionStore(database_pat
 - `TaraCodeAdapter` accepts an injected planning/review callable. It returns proposed changes as data only and has no filesystem write or subprocess capability.
 - Both implement the versioned `SpecialistAdapter` contract. The host must register and explicitly enable them before dispatch.
 
+The stdio TARA-Chat app adapter also exposes a separate `chat.audit_repository` read-only capability. The local Router selects it only for explicit repository-audit intent. It scans the Chat module's configured working directory, does not initialize an LLM, rejects attachments, and returns bounded findings to the app UI. The interactive CLI exposes the same auditor through `/audit [relative-folder]`, with path containment checks.
+
 ## Remaining integration work
 
 1. Bind the actual TARA-CHAT engine behind the injected chat callable.
