@@ -148,7 +148,7 @@ class McpClientTests(unittest.TestCase):
             return session
 
         gateway = McpToolGateway(_enabled_config(), session_factory=factory)
-        grant = _create_mcp_approval_grant("approve-1")
+        grant = _McpApprovalGrant(_APPROVAL_GRANT_SEAL)
         result = gateway.call_tool("time", "ping", {"x": 1}, approval_grant=grant)
         self.assertEqual(result, "ok:ping")
         self.assertEqual(session_box[0].calls[0][0], "ping")
@@ -158,7 +158,7 @@ class McpClientTests(unittest.TestCase):
     def test_unknown_server_rejected(self) -> None:
         gateway = McpToolGateway(_enabled_config(), session_factory=lambda spec: _FakeSession(spec))
         with self.assertRaises(McpClientError):
-            gateway.call_tool("nope", "ping", {}, approval_grant=_create_mcp_approval_grant("approve-1"))
+            gateway.call_tool("nope", "ping", {}, approval_grant=_McpApprovalGrant(_APPROVAL_GRANT_SEAL))
 
     def test_load_toml_missing_file_defaults_off(self) -> None:
         config = load_mcp_config_from_toml(Path("/nonexistent/tara-app.toml"))
