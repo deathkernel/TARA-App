@@ -47,6 +47,7 @@ def _enabled_config() -> Any:
                     "command": ["uvx", "mcp-server-time"],
                     "enabled": True,
                     "read_only": True,
+                    "read_only_tools": ["ping"],
                 }
             ],
         }
@@ -123,6 +124,11 @@ class McpClientTests(unittest.TestCase):
         gateway = McpToolGateway(_enabled_config(), session_factory=lambda spec: _FakeSession(spec))
         with self.assertRaises(McpClientError):
             gateway.call_tool("time", "ping", {}, approval_token="")
+
+    def test_read_only_server_blocks_unlisted_tools(self) -> None:
+        gateway = McpToolGateway(_enabled_config(), session_factory=lambda spec: _FakeSession(spec))
+        with self.assertRaisesRegex(McpClientError, "read-only allowlist"):
+            gateway.call_tool("time", "delete_file", {}, approval_token="approve-1")
 
     def test_call_tool_with_approval(self) -> None:
         session_box: list[_FakeSession] = []
