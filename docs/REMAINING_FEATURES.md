@@ -1,8 +1,8 @@
 # TARA — Remaining Features Status
 
 > **Source of truth for status labels:** inspect current `main` code and CI evidence.
-> **Last reviewed:** 2026-11-03  
-> **Against commit:** `c45f4c3` (includes merged PR #51 session lifecycle; PR #50 native risk fix also on main)
+> **Last reviewed:** 2026-11-04  
+> **Against commit:** `5aa76ecffdfdcb779084d75c41d8a2b628226cb1` (current `main` at verification time)
 >
 > Status meanings:
 > - **Implemented (code)** — present in repository; still needs target-machine verification where noted
@@ -10,7 +10,8 @@
 > - **Pending verification** — code path exists but no current recorded machine/CI evidence for this commit
 > - **Pending** — not implemented or not finished
 > - **Blocked** — intentionally unavailable until a security prerequisite is met
-> - **In progress** — active work; not merge-complete
+> - **Verified (CI)** — exact commit completed the relevant GitHub Actions checks; this does not imply local-machine or browser verification
+- **In progress** — active work; not merge-complete
 
 This table replaces the informal “all pending” list. It does **not** claim target-machine smoke tests, browser QA, or live OmniRoute checks unless evidence is recorded here.
 
@@ -18,9 +19,9 @@ This table replaces the informal “all pending” list. It does **not** claim t
 
 | # | Priority | Module / Area | Remaining feature / task | Status | Notes |
 | --- | -------- | ------------- | --------------------------------------------------- | -------------------- | ----- |
-| 1 | P0 | Testing | Complete Python test suite verification | Pending verification | `PYTHONPATH=src python3 -m unittest discover -s tests -v` → **Ran 251 tests in 3.483s — OK** on `c45f4c3` (Linux sandbox, 2026-11-03); re-run on current commit and record counts |
-| 2 | P0 | Frontend | Typecheck, build and regression testing | Pending verification | `frontend/` present; npm install timed out in review environment — run locally: `npm install && npm run typecheck && npm run build` and record results for the current commit |
-| 3 | P0 | CI/CD | Latest commit CI verification | Pending verification | Do not infer from older PR heads; check Actions for current `main` SHA |
+| 1 | P0 | Testing | Complete Python test suite verification | Verified (CI) | `python -m unittest discover -s tests -v` → **264 tests in 2.646s — OK** on `5aa76ec` (GitHub Actions, Python 3.11, 2026-11-03); local target-machine run remains unverified |
+| 2 | P0 | Frontend | Typecheck, build and regression testing | Verified (CI) | On `5aa76ec`, `npm install --no-audit --no-fund` succeeded and `npm run build` (`tsc -b && vite build`) passed; browser QA and UI parity remain unverified |
+| 3 | P0 | CI/CD | Latest commit CI verification | Verified (CI) | Main CI run [#1333](https://github.com/deathkernel/TARA-App/actions/runs/41629104372) passed on exact `main` SHA `5aa76ec`: Python tests, Ubuntu + Windows native Handler, and React frontend build |
 | 4 | P0 | Application | Windows launch and Chat smoke test | Pending verification | Launchers exist; live chat needs running OmniRoute + valid `TARA_OMNIROUTE_API_KEY` |
 | 5 | P0 | UI | Desktop and mobile browser QA | Pending | Static UI is default; React behind `TARA_ENABLE_REACT_UI=1` |
 | 6 | P0 | Documentation | README and implementation reconciliation | Pending | This file is a first pass; README claims still need line-by-line audit |
@@ -61,14 +62,15 @@ This table replaces the informal “all pending” list. It does **not** claim t
 | 41 | P2 | Ecosystem | Optional anthropic-sdk-python helpers via OmniRoute Claude path | Pending | Never bypass OmniRoute or allow_remote |
 | 42 | P3 | Computer use | Computer-use / toolset only inside real OS sandbox | Blocked | Depends on #15; host desktop control is a non-goal |
 
-## Summary counts (this review)
+## Summary counts (2026-11-04 review)
 
 | Status | Count |
 | --- | --- |
 | Implemented (code) | 2 (#13, #14) |
+| Verified (CI) | 3 (#1, #2, #3) |
 | Foundation / partial | 12 |
 | In progress | 1 (#22) |
-| Pending verification | 9 |
+| Pending verification | 6 |
 | Pending | 13 |
 | Blocked | 5 (#15, #16, #19, #20, #42) |
 
