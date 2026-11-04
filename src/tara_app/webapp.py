@@ -10,8 +10,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
-from tara_app.contracts import ModuleRequest
-from tara_app.orchestrator import Orchestrator
+from tara_app.application.facade import ApplicationFacade
 
 _WEB_ROOT = Path(__file__).with_name("web")
 _ASSETS = {
@@ -32,7 +31,7 @@ class _Server(ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = True
 
-    def __init__(self, address: tuple[str, int], app: Orchestrator) -> None:
+    def __init__(self, address: tuple[str, int], app: ApplicationFacade) -> None:
         self.app = app
         super().__init__(address, _Handler)
 
@@ -47,40 +46,9 @@ class _Handler(BaseHTTPRequestHandler):
             if not self._local_origin():
                 self._json(403, {"status": "permission_denied", "error": "request origin is not allowed"})
                 return
-            capabilities = tuple(self.server.app.registry.capability_ids())
-            chat_adapter = self.server.app.registry.adapter("chat")
-            gateway_health = chat_adapter.health() if chat_adapter is not None else None
-            gateway_status = gateway_health.status if gateway_health is not None else "unavailable"
-            disabled_modules = getattr(self.server.app.registry, "disabled_modules", lambda: {})()
-            specialists = {}
-            for module_id in ("chat", "code", "vision", "creative", "models"):
-                adapter = self.server.app.registry.adapter(module_id)
-                if adapter is None:
-                    specialists[module_id] = {
-                        "status": "disabled",
-                        "reason": disabled_modules.get(module_id, "The specialist is not registered."),
-                    }
-                else:
-                    specialists[module_id] = {"status": "configured"}
-            if chat_adapter is not None and gateway_status != "healthy":
-                specialists["chat"] = {
-                    "status": "unavailable",
-                    "reason": "The Chat specialist is configured, but its authenticated OmniRoute model-catalogue check failed.",
-                }
-            self._json(200, {
-                "status": "ok" if capabilities and gateway_status == "healthy" else "degraded",
-                "app": "TARA-App",
-                "api_version": "1.0",
-                "capability_count": len(capabilities),
-                "capabilities": list(capabilities),
-                "model_runtime": "omniroute",
-                "specialists": specialists,
-                "model_gateway": {
-                    "provider": "omniroute",
-                    "status": gateway_status,
-                },
-            })
+            self._json(200, self.server.app.health_status())
             return
+        if endpoint in {"/api/mcp/status", "/api/mcp/tools"}:            return
         if endpoint in {"/api/mcp/status", "/api/mcp/tools"}:
             if not self._local_origin():
                 self._json(403, {"status": "permission_denied", "error": "request origin is not allowed"})
@@ -110,43 +78,11 @@ class _Handler(BaseHTTPRequestHandler):
             if not self._local_origin():
                 self._json(403, {"status": "permission_denied", "error": "request origin is not allowed"})
                 return
-            adapter = self.server.app.registry.adapter("models")
-            if adapter is None:
-                self._json(503, {
-                    "status": "unavailable",
-                    "provider": "omniroute",
-                    "service_available": False,
-                    "models": [],
-                    "pull": {"status": "disabled", "message": "Model lifecycle is managed by OmniRoute."},
-                })
-                return
-            request = ModuleRequest(
-                request_id="tara-model-catalog",
-                session_id="tara-model-catalog",
-                module="models",
-                action="catalog",
-                inputs={},
-                timeout_seconds=min(adapter.timeout_seconds, 10),
-            )
-            result = adapter.execute(request)
-            if result.status != "success":
-                self._json(503, {
-                    "status": "unavailable",
-                    "provider": "omniroute",
-                    "service_available": False,
-                    "models": [],
-                    "error": "OmniRoute model catalogue is unavailable",
-                    "pull": {"status": "disabled", "message": "Model lifecycle is managed by OmniRoute."},
-                })
-                return
-            self._json(200, {
-                "status": "available",
-                "provider": "omniroute",
-                "service_available": True,
-                "models": list(result.data.get("models", [])),
-                "pull": {"status": "disabled", "message": "Model lifecycle is managed by OmniRoute."},
-            })
+            payload = self.server.app.model_catalogue()
+            status_code = 200 if payload.get("status") == "available" else 503
+            self._json(status_code, payload)
             return
+        # Prefer the compiled React frontend            return
         # Prefer the compiled React frontend when a build is present. The
         # original static UI remains a safe fallback for source-only installs.
         react_root = (_WEB_ROOT / "react-dist").resolve()
@@ -256,28 +192,28 @@ class _Handler(BaseHTTPRequestHandler):
             if set(payload) != {"specialist"}:
                 self._json(400, {"status": "invalid_request", "error": "specialist is required"})
                 return
-            catalog = self.server.app.model_catalog
-            if catalog is None:
-                self._json(409, {"status": "unavailable", "error": "model lifecycle is managed by OmniRoute"})
-                return
+            action = {
+                "/api/models/pull": "pull",
+                "/api/models/unload": "unload",
+                "/api/models/remove": "remove",
+            }[endpoint]
             try:
-                if endpoint == "/api/models/pull":
-                    result = catalog.start_pull(payload["specialist"])
-                elif endpoint == "/api/models/unload":
-                    result = catalog.unload_model(payload["specialist"])
-                else:
-                    result = catalog.remove_model(payload["specialist"])
+                result = self.server.app.model_lifecycle_action(action, payload["specialist"])
             except ValueError:
-                self._json(400, {"status": "invalid_request", "error": "specialist is not a configured local model"})
+                self._json(400, {"status": "invalid_request", "error": "specialist is not configured"})
                 return
             except RuntimeError:
-                self._json(409, {"status": "unavailable", "error": "local model action could not be completed"})
+                self._json(409, {"status": "unavailable", "error": "model lifecycle action could not be completed"})
                 return
-            status_code = 202 if endpoint == "/api/models/pull" else 200
-            result_status = "accepted" if endpoint == "/api/models/pull" else result["status"]
-            response_key = "pull" if endpoint == "/api/models/pull" else "model"
+            if result is None:
+                self._json(409, {"status": "unavailable", "error": "model lifecycle is managed by OmniRoute"})
+                return
+            status_code = 202 if action == "pull" else 200
+            result_status = "accepted" if action == "pull" else result["status"]
+            response_key = "pull" if action == "pull" else "model"
             self._json(status_code, {"status": result_status, response_key: result})
             return
+        if endpoint == "/api/chat":            return
         if endpoint == "/api/chat":
             if "history" in payload:
                 try:
@@ -324,7 +260,7 @@ class _Handler(BaseHTTPRequestHandler):
         return
 
 
-def serve(app: Orchestrator, *, port: int = 8765) -> None:
+def serve(app: ApplicationFacade, *, port: int = 8765) -> None:
     """Serve the local UI on loopback only until interrupted."""
     if not 1024 <= port <= 65535:
         raise ValueError("port must be between 1024 and 65535")
