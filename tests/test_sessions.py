@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from tara_app.sessions import SessionError, SessionStore  # noqa: E402
 
+
 @contextmanager
 def _sqlite_connection(database):
     connection = sqlite3.connect(database)
@@ -21,7 +22,6 @@ def _sqlite_connection(database):
             yield connection
     finally:
         connection.close()
-
 
 
 class SessionStoreTests(unittest.TestCase):
