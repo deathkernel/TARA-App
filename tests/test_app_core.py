@@ -296,6 +296,32 @@ class AppCoreTests(unittest.TestCase):
         self.assertEqual(outcome.status, "unavailable")
         self.assertEqual(outcome.route.reason_code, "capability_unavailable")
 
+    def test_repository_audit_dispatches_to_read_only_chat_capability(self) -> None:
+        chat = FakeAdapter(
+            "chat",
+            (
+                Capability("chat", "respond", "Conversation response", True),
+                Capability("chat", "audit_repository", "Read-only repository audit", True),
+            ),
+            ModuleResult("success", {"text": "Repository audit: HEALTHY"}),
+        )
+        registry = CapabilityRegistry()
+        registry.register(chat)
+        chat.health_state = AdapterHealth("unavailable")
+        decision = RouteDecision(
+            "req-audit", "routed", "chat", "audit_repository",
+            "repository_audit", "Explicit repository audit request",
+        )
+
+        result = Orchestrator(registry, FakeRouter(decision)).handle_question(
+            "Audit this repository", request_id="req-audit"
+        )
+
+        self.assertEqual(result.status, "success")
+        self.assertEqual(chat.calls[0].action, "audit_repository")
+        self.assertEqual(chat.calls[0].inputs["attachments"], [])
+
+
 
 if __name__ == "__main__":
     unittest.main()
