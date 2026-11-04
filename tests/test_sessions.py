@@ -1,6 +1,7 @@
 """Tests for bounded, isolated in-memory sessions."""
 import sys
 import sqlite3
+from contextlib import contextmanager
 import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
@@ -11,6 +12,16 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from tara_app.sessions import SessionError, SessionStore  # noqa: E402
+
+@contextmanager
+def _sqlite_connection(database):
+    connection = sqlite3.connect(database)
+    try:
+        with connection:
+            yield connection
+    finally:
+        connection.close()
+
 
 
 class SessionStoreTests(unittest.TestCase):
@@ -122,7 +133,7 @@ class SessionStoreTests(unittest.TestCase):
             database = Path(temp) / "sessions.sqlite3"
             store = SessionStore(database_path=database)
             session = store.create()
-            with sqlite3.connect(database) as db:
+            with _sqlite_connection(database) as db:
                 old = (datetime.now(timezone.utc) - timedelta(days=365)).isoformat()
                 db.execute("UPDATE sessions SET updated_at = ? WHERE session_id = ?", (old, session.session_id))
 
@@ -136,7 +147,7 @@ class SessionStoreTests(unittest.TestCase):
             expired = store.create()
             active = store.create()
             store.append_message(expired.session_id, "user", "expired content")
-            with sqlite3.connect(database) as db:
+            with _sqlite_connection(database) as db:
                 old = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
                 db.execute("UPDATE sessions SET updated_at = ? WHERE session_id = ?", (old, expired.session_id))
 
@@ -144,7 +155,7 @@ class SessionStoreTests(unittest.TestCase):
             with self.assertRaises(SessionError):
                 restarted.get(expired.session_id)
             self.assertEqual(restarted.get(active.session_id).session_id, active.session_id)
-            with sqlite3.connect(database) as db:
+            with _sqlite_connection(database) as db:
                 self.assertEqual(
                     db.execute("SELECT COUNT(*) FROM session_messages WHERE session_id = ?", (expired.session_id,)).fetchone()[0],
                     0,
@@ -178,7 +189,7 @@ class SessionStoreTests(unittest.TestCase):
     def test_future_database_schema_fails_closed(self):
         with tempfile.TemporaryDirectory() as temp:
             database = Path(temp) / "sessions.sqlite3"
-            with sqlite3.connect(database) as db:
+            with _sqlite_connection(database) as db:
                 db.execute("PRAGMA user_version = 99")
             with self.assertRaisesRegex(SessionError, "schema is newer"):
                 SessionStore(database_path=database)
@@ -191,7 +202,7 @@ class SessionStoreTests(unittest.TestCase):
             expired = store.create()
             store.append_message(expired.session_id, "user", "expired content")
             old = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()
-            with sqlite3.connect(database) as db:
+            with _sqlite_connection(database) as db:
                 db.execute("UPDATE sessions SET updated_at = ? WHERE session_id = ?", (old, expired.session_id))
 
             removed = store.prune_expired_sessions()
@@ -199,7 +210,7 @@ class SessionStoreTests(unittest.TestCase):
             self.assertEqual(removed, 1)
             with self.assertRaises(SessionError):
                 store.get(expired.session_id)
-            with sqlite3.connect(database) as db:
+            with _sqlite_connection(database) as db:
                 self.assertEqual(
                     db.execute("SELECT COUNT(*) FROM session_messages WHERE session_id = ?", (expired.session_id,)).fetchone()[0],
                     0,
@@ -210,12 +221,12 @@ class SessionStoreTests(unittest.TestCase):
             database = Path(temp) / "sessions.sqlite3"
             store = SessionStore(database_path=database)
             session = store.create()
-            with sqlite3.connect(database) as db:
+            with _sqlite_connection(database) as db:
                 db.execute("UPDATE sessions SET updated_at = ? WHERE session_id = ?", ("not-a-timestamp", session.session_id))
 
             with self.assertRaisesRegex(SessionError, "timestamp is invalid"):
                 SessionStore(database_path=database, retention_seconds=3600)
-            with sqlite3.connect(database) as db:
+            with _sqlite_connection(database) as db:
                 self.assertEqual(
                     db.execute("SELECT COUNT(*) FROM sessions WHERE session_id = ?", (session.session_id,)).fetchone()[0],
                     1,
