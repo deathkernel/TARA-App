@@ -16,6 +16,7 @@ from tara_app.contracts import ModelInfo
 from tara_app.model_catalogue import ModelCatalogue
 from tara_app.sessions import SessionError, SessionStore
 
+
 @contextmanager
 def _sqlite_connection(database):
     connection = sqlite3.connect(database)
@@ -24,7 +25,6 @@ def _sqlite_connection(database):
             yield connection
     finally:
         connection.close()
-
 
 
 class FakeRuntime:
