@@ -303,7 +303,7 @@ Chat, Code, Vision, Creative, and Model Hub all use the locally hosted OmniRoute
 
 TARA-App exposes a read-only repository audit through its local Chat capability. In the app, ask **"Audit this repository"** or **"Check this project"**. The deterministic Router selects `chat.audit_repository`; the Chat adapter scans its configured working directory (the example configuration uses the repository root). The operation does not initialize an LLM, execute shell commands, accept file attachments, modify files, or upload repository content.
 
-The interactive TARA-Chat CLI also supports an explicit command. From the repository folder, start `python -m tara_chat` after configuring the local OmniRoute gateway and setting `TARA_OMNIROUTE_API_KEY` in that terminal, then enter:
+The interactive TARA-Chat CLI also supports an explicit local command. From the repository folder, start `python -m tara_chat` and enter `/audit`. This read-only command does not require an OmniRoute API key or initialize a model; ordinary chat replies still require a configured OmniRoute gateway.
 
 ```text
 /audit

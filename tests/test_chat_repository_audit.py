@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from tara_chat.__main__ import _run_repository_audit_command, chat_loop
+from tara_chat.__main__ import _run_repository_audit_command, chat_loop, main
 from tara_chat.repository_audit import AuditIssue, AuditReport
 
 
@@ -59,6 +59,13 @@ class RepositoryAuditCommandTests(unittest.TestCase):
 
             self.assertIn("Repository audit: HEALTHY", result)
             auditor.assert_called_once_with(target.resolve())
+
+    def test_cli_starts_for_local_audit_without_omniroute(self):
+        with patch("tara_chat.__main__.provider_from_env", return_value=None), patch(
+            "tara_chat.__main__.LongTermMemory"
+        ), patch("tara_chat.__main__.chat_loop") as chat:
+            self.assertEqual(main(), 0)
+        self.assertIsNone(chat.call_args.args[0].llm_provider)
 
     def test_chat_loop_handles_audit_without_calling_the_model(self):
         class NoModelBrain:

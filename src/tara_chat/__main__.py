@@ -202,25 +202,28 @@ def chat_loop(brain, *, input_fn=input, output_fn=print) -> None:
 def main() -> int:
     os.environ.setdefault("TARA_LLM_BACKEND", "omniroute")
     try:
-        provider = provider_from_env()
-        if provider is None:
-            print("TARA chat needs OmniRoute. Set TARA_OMNIROUTE_API_KEY and TARA_LLM_BACKEND=omniroute.")
-            return 2
+        try:
+            provider = provider_from_env()
+        except (ValueError, RuntimeError, OSError):
+            provider = None
         memory_path = os.getenv("TARA_MEMORY_PATH", "data/tara_memory.json").strip()
         if not memory_path:
             raise ValueError("TARA_MEMORY_PATH must not be empty")
         brain = TARABrain(llm_provider=provider, memory=LongTermMemory(memory_path))
-    except (ValueError, RuntimeError, OSError) as exc:
+    except (ValueError, OSError) as exc:
         print(f"TARA could not start: {exc}")
         return 2
-    print(
-        "TARA resource profile: "
-        f"{getattr(provider, 'power_mode', 'custom')} "
-        f"(context={getattr(provider, 'num_ctx', 'default')}, "
-        f"CPU threads={getattr(provider, 'num_thread', 'auto')}, "
-        f"batch={getattr(provider, 'num_batch', 'default')}, "
-        f"max response tokens={getattr(provider, 'default_max_tokens', 128)})"
-    )
+    if provider is None:
+        print("OmniRoute is not configured; local /audit commands remain available, but chat replies are disabled.")
+    else:
+        print(
+            "TARA resource profile: "
+            f"{getattr(provider, 'power_mode', 'custom')} "
+            f"(context={getattr(provider, 'num_ctx', 'default')}, "
+            f"CPU threads={getattr(provider, 'num_thread', 'auto')}, "
+            f"batch={getattr(provider, 'num_batch', 'default')}, "
+            f"max response tokens={getattr(provider, 'default_max_tokens', 128)})"
+        )
     chat_loop(brain)
     return 0
 
