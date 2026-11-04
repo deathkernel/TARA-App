@@ -91,7 +91,7 @@ class RepositoryAuditor:
 
         pytest_workflows = []
         for path in workflow_files:
-            relative = str(path.relative_to(self.root))
+            relative = path.relative_to(self.root).as_posix()
             try:
                 content = self._read_repository_text(path)
             except (OSError, UnicodeDecodeError, ValueError):
@@ -103,7 +103,7 @@ class RepositoryAuditor:
             if "python -m pytest" in content:
                 pytest_workflows.append(path)
         if len(pytest_workflows) > 1:
-            names = ", ".join(str(path.relative_to(self.root)) for path in pytest_workflows)
+            names = ", ".join(path.relative_to(self.root).as_posix() for path in pytest_workflows)
             issues.append(AuditIssue(
                 "DUPLICATE_PYTEST_WORKFLOWS",
                 ".github/workflows",
@@ -205,7 +205,7 @@ class RepositoryAuditor:
             relative = "."
             if filename:
                 try:
-                    relative = str(Path(filename).resolve(strict=False).relative_to(self.root))
+                    relative = Path(filename).resolve(strict=False).relative_to(self.root).as_posix()
                 except (OSError, RuntimeError, ValueError):
                     relative = "."
             issues.append(AuditIssue(
@@ -227,7 +227,7 @@ class RepositoryAuditor:
                     yield path
 
     def _audit_python(self, path: Path, issues: list[AuditIssue]) -> None:
-        relative = str(path.relative_to(self.root))
+        relative = path.relative_to(self.root).as_posix()
         try:
             source = self._read_repository_text(path)
         except (OSError, UnicodeDecodeError, ValueError):

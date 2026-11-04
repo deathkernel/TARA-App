@@ -122,15 +122,16 @@ class TaraCodeOmniRouteTests(unittest.TestCase):
         self.assertNotIn("secret diagnostic", result["error"])
 
     def test_omniroute_config_is_loopback_only_and_keeps_secrets_out(self) -> None:
-        settings = _omniroute_settings({
-            "base_url": "http://127.0.0.1:20128/v1",
-            "models": {"code": "auto/coding"},
-        })["code"]
-        self.assertEqual(settings["TARA_CODE_API_BASE_URL"], "http://127.0.0.1:20128/v1")
-        self.assertEqual(settings["TARA_CODE_MODEL"], "auto/coding")
-        self.assertEqual(settings["TARA_CODE_API_KEY"], "")
-        with self.assertRaises(RuntimeConfigurationError):
-            _omniroute_settings({"base_url": "https://api.example.com/v1"})
+        with patch.dict(os.environ, {}, clear=True):
+            settings = _omniroute_settings({
+                "base_url": "http://127.0.0.1:20128/v1",
+                "models": {"code": "auto/coding"},
+            })["code"]
+            self.assertEqual(settings["TARA_CODE_API_BASE_URL"], "http://127.0.0.1:20128/v1")
+            self.assertEqual(settings["TARA_CODE_MODEL"], "auto/coding")
+            self.assertEqual(settings["TARA_CODE_API_KEY"], "")
+            with self.assertRaises(RuntimeConfigurationError):
+                _omniroute_settings({"base_url": "https://api.example.com/v1"})
 
     def test_old_ollama_code_setting_is_ignored_and_new_defaults_apply(self) -> None:
         legacy = _ollama_settings({"models": {"code": "legacy-coder-model"}})
