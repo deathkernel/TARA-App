@@ -62,7 +62,11 @@ class McpHttpApiTests(unittest.TestCase):
         request = Request(
             self.base_url + path,
             data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json", **(headers or {})},
+            headers={
+                "Content-Type": "application/json",
+                "Origin": self.base_url,
+                **(headers or {}),
+            },
             method="POST",
         )
         with urlopen(request, timeout=2) as response:
@@ -100,6 +104,40 @@ class McpHttpApiTests(unittest.TestCase):
         request = Request(
             self.base_url + "/api/mcp/status",
             headers={"Origin": "http://evil.example"},
+        )
+        with self.assertRaises(HTTPError) as caught:
+            urlopen(request, timeout=2)
+        self.assertEqual(caught.exception.code, 403)
+
+    def test_mutation_endpoints_require_a_same_origin_header(self):
+        endpoints = (
+            "/api/chat",
+            "/api/approve",
+            "/api/cancel",
+            "/api/models/pull",
+            "/api/models/unload",
+            "/api/models/remove",
+        )
+        for endpoint in endpoints:
+            request = Request(
+                self.base_url + endpoint,
+                data=b"{}",
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with self.subTest(endpoint=endpoint), self.assertRaises(HTTPError) as caught:
+                urlopen(request, timeout=2)
+            self.assertEqual(caught.exception.code, 403)
+
+    def test_mutation_endpoints_reject_a_cross_origin_header(self):
+        request = Request(
+            self.base_url + "/api/chat",
+            data=b"{}",
+            headers={
+                "Content-Type": "application/json",
+                "Origin": "http://evil.example",
+            },
+            method="POST",
         )
         with self.assertRaises(HTTPError) as caught:
             urlopen(request, timeout=2)
