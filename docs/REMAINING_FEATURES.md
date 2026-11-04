@@ -11,7 +11,7 @@
 > - **Pending** — not implemented or not finished
 > - **Blocked** — intentionally unavailable until a security prerequisite is met
 > - **Verified (CI)** — exact commit completed the relevant GitHub Actions checks; this does not imply local-machine or browser verification
- > **In progress** — active work; not merge-complete
+> - **In progress** — active work; not merge-complete
 
 This table replaces the informal “all pending” list. It does **not** claim target-machine smoke tests, browser QA, or live OmniRoute checks unless evidence is recorded here.
 
