@@ -64,7 +64,7 @@ class McpOrchestratorMixin:
             raise ValueError("tool_name is invalid")
         if not isinstance(session_id, str) or not session_id.strip() or len(session_id) > 128:
             raise ValueError("session_id is invalid")
-        if not isinstance(ttl_seconds, (int, float)) or not math.isfinite(float(ttl_seconds)) or not 30 <= float(ttl_seconds) <= 900:
+        if isinstance(ttl_seconds, bool) or not isinstance(ttl_seconds, (int, float)) or not math.isfinite(float(ttl_seconds)) or not 30 <= float(ttl_seconds) <= 900:
             raise ValueError("ttl_seconds is invalid")
         server, tool = server_name.strip(), tool_name.strip()
         if not any(item.name == server for item in self.mcp_gateway.config.enabled_servers):
