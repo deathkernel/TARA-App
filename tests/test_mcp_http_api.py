@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import threading
 import unittest
+from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -68,10 +69,13 @@ class McpHttpApiTests(unittest.TestCase):
             return response.status, json.loads(response.read().decode("utf-8"))
 
     def test_status_and_tools_endpoints(self):
-        with urlopen(self.base_url + "/api/mcp/status", timeout=2) as response:
-            status = json.loads(response.read().decode("utf-8"))
-        with urlopen(self.base_url + "/api/mcp/tools?server=time", timeout=2) as response:
-            tools = json.loads(response.read().decode("utf-8"))
+        # The gateway is a test double; simulate the optional MCP package being
+        # installed so this test covers HTTP behavior rather than host setup.
+        with patch("tara_app.mcp_app.mcp_package_available", return_value=True):
+            with urlopen(self.base_url + "/api/mcp/status", timeout=2) as response:
+                status = json.loads(response.read().decode("utf-8"))
+            with urlopen(self.base_url + "/api/mcp/tools?server=time", timeout=2) as response:
+                tools = json.loads(response.read().decode("utf-8"))
         self.assertEqual(status["status"], "enabled")
         self.assertEqual(status["enabled_server_count"], 1)
         self.assertEqual(tools["tools"][0]["name"], "get_current_time")
