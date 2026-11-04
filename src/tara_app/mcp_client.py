@@ -184,6 +184,8 @@ class McpToolGateway:
         if len(specs) != 1:
             raise McpClientError("server is not enabled")
         spec = specs[0]
+        if spec.read_only and tool_name.strip() not in spec.read_only_tools:
+            raise McpClientError("tool is not in this server read-only allowlist")
 
         session = self._session_factory(spec)
         try:
