@@ -8,7 +8,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Mapping
 
-from tara_app.mcp_client import McpClientError, McpToolGateway, McpToolInfo, _MAX_TOOL_PAGES, _collect_tool_pages, _create_mcp_approval_grant, _extract_tool_page, _tool_result_text
+from tara_app.mcp_client import McpClientError, McpToolGateway, McpToolInfo, _MAX_TOOL_PAGES, _collect_tool_pages, _APPROVAL_GRANT_SEAL, _McpApprovalGrant, _extract_tool_page, _tool_result_text
 from tara_app.mcp_registry import McpConfigError, McpServerSpec, parse_mcp_config
 from tara_app.mcp_toml import load_mcp_config_from_toml
 
@@ -130,10 +130,14 @@ class McpClientTests(unittest.TestCase):
         with self.assertRaisesRegex(McpClientError, "validated app approval grant"):
             gateway.call_tool("time", "ping", {}, approval_grant="approve-1")
 
+    def test_approval_grant_rejects_untrusted_constructor_seal(self) -> None:
+        with self.assertRaisesRegex(ValueError, "only be created by the app"):
+            _McpApprovalGrant(object())
+
     def test_read_only_server_blocks_unlisted_tools(self) -> None:
         gateway = McpToolGateway(_enabled_config(), session_factory=lambda spec: _FakeSession(spec))
         with self.assertRaisesRegex(McpClientError, "read-only allowlist"):
-            gateway.call_tool("time", "delete_file", {}, approval_grant=_create_mcp_approval_grant("approve-1"))
+            gateway.call_tool("time", "delete_file", {}, approval_grant=_McpApprovalGrant(_APPROVAL_GRANT_SEAL))
 
     def test_call_tool_with_approval(self) -> None:
         session_box: list[_FakeSession] = []
