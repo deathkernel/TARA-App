@@ -6,7 +6,7 @@ from tara_app.mcp_registry import parse_mcp_config
 
 class _Gateway:
     def __init__(self):
-        self.config = parse_mcp_config({"enable": True, "servers": [{"name": "time", "command": ["uvx", "mcp-server-time"]}]})
+        self.config = parse_mcp_config({"enable": True, "servers": [{"name": "time", "command": ["uvx", "mcp-server-time"], "read_only_tools": ["get_time"]}]})
         self.calls = []
     def call_tool(self, server, tool, arguments, *, approval_token):
         self.calls.append((server, tool, dict(arguments or {}), approval_token))
