@@ -149,7 +149,7 @@ class McpClientTests(unittest.TestCase):
     def test_load_toml_rejects_non_table_mcp_value(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "tara-app.toml"
-            path.write_text("mcp = true\\n", encoding="utf-8")
+            path.write_text("mcp = true\n", encoding="utf-8")
             with self.assertRaises(McpConfigError):
                 load_mcp_config_from_toml(path)
 
