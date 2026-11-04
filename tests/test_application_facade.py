@@ -1,0 +1,110 @@
+from __future__ import annotations
+
+import unittest
+
+from tara_app.application.facade import ApplicationFacade
+from tara_app.contracts import AdapterHealth, Capability, ModuleResult
+from tara_app.registry import CapabilityRegistry
+
+
+class FakeAdapter:
+    module_id = "models"
+    capabilities = (Capability("models", "catalog", "Model catalogue", True),)
+    timeout_seconds = 8
+
+    def __init__(self, result: ModuleResult):
+        self.result = result
+
+    def health(self):
+        return AdapterHealth("healthy")
+
+    def execute(self, request):
+        self.request = request
+        return self.result
+
+
+class FakeCoordinator:
+    def __init__(self, registry=None):
+        self.registry = registry or CapabilityRegistry()
+        self.model_catalog = None
+        self.history = None
+
+    def replace_conversation_history(self, session_id, history):
+        self.history = (session_id, history)
+
+    def handle_question(self, question, **kwargs):
+        return (question, kwargs)
+
+    def approve(self, approval_id, *, session_id):
+        return (approval_id, session_id)
+
+    def cancel_approval(self, approval_id, *, session_id):
+        return (approval_id, session_id, "cancelled")
+
+    def mcp_status(self):
+        return {"status": "disabled"}
+
+    def list_mcp_tools(self, server_name=None):
+        return []
+
+    def issue_mcp_approval_token(self, server, tool, arguments, *, session_id):
+        return "approval-token"
+
+    def call_mcp_tool(self, server, tool, arguments, *, approval_token, session_id):
+        return "tool-result"
+
+
+class ApplicationFacadeTests(unittest.TestCase):
+    def test_health_status_exposes_diagnostics_without_registry_access(self):
+        coordinator = FakeCoordinator()
+        app = ApplicationFacade(coordinator)
+
+        payload = app.health_status()
+
+        self.assertEqual(payload["app"], "TARA-App")
+        self.assertEqual(payload["status"], "degraded")
+        self.assertEqual(payload["capabilities"], [])
+        self.assertEqual(payload["model_runtime"], "omniroute")
+
+    def test_model_catalogue_uses_registered_operation(self):
+        registry = CapabilityRegistry()
+        adapter = FakeAdapter(ModuleResult("success", {"models": [{"id": "auto"}]}))
+        registry.register(adapter)
+        app = ApplicationFacade(FakeCoordinator(registry))
+
+        payload = app.model_catalogue()
+
+        self.assertEqual(payload["status"], "available")
+        self.assertEqual(payload["models"], [{"id": "auto"}])
+        self.assertEqual(adapter.request.module, "models")
+        self.assertEqual(adapter.request.action, "catalog")
+        self.assertEqual(adapter.request.timeout_seconds, 8)
+
+    def test_model_lifecycle_stays_disabled_when_gateway_owns_lifecycle(self):
+        app = ApplicationFacade(FakeCoordinator())
+
+        self.assertIsNone(app.model_lifecycle_action("pull", "chat"))
+
+    def test_interface_calls_are_forwarded_through_facade(self):
+        coordinator = FakeCoordinator()
+        app = ApplicationFacade(coordinator)
+
+        app.replace_conversation_history("session-1", [{"role": "user", "content": "hello"}])
+        self.assertEqual(coordinator.history[0], "session-1")
+        self.assertEqual(app.handle_question("hello", session_id="session-1")[0], "hello")
+        self.assertEqual(app.approve("approval-1", session_id="session-1"), ("approval-1", "session-1"))
+        self.assertEqual(app.cancel_approval("approval-1", session_id="session-1")[2], "cancelled")
+        self.assertEqual(app.mcp_status(), {"status": "disabled"})
+        self.assertEqual(app.list_mcp_tools(), [])
+        self.assertEqual(
+            app.issue_mcp_approval_token("time", "now", {}, session_id="session-1"),
+            "approval-token",
+        )
+        self.assertEqual(
+            app.call_mcp_tool("time", "now", {}, approval_token="approval-token", session_id="session-1"),
+            "tool-result",
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()
