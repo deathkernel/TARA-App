@@ -1,10 +1,10 @@
 name: TARA-App Core CI
 
-# Keep only the newest CI run for a branch. Push and pull_request events
-# share the same group so they do not occupy duplicate runner slots.
+# Pull-request runs are authoritative for proposed branch changes. Do not let
+# the paired push event cancel the pull-request run; PR updates cancel older PR runs.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 on:
   push:
