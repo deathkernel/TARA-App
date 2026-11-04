@@ -252,55 +252,6 @@ class Orchestrator:
             return self._outcome(operation_id, "failed", decision, "adapter_execution_failed", "Specialist execution failed")
         if not isinstance(result, ModuleResult):
             return self._outcome(operation_id, "failed", decision, "invalid_adapter_response", "Specialist returned an invalid result")
-        except Exception:
-            return self._outcome(operation_id, "unavailable", decision, "adapter_health_failed", "Specialist health check failed")
-        if not isinstance(health, AdapterHealth) or health.status != "healthy":
-            return self._outcome(operation_id, "unavailable", decision, "adapter_unavailable", "Selected specialist is unavailable")
-
-        module_attachments = self._specialist_attachments(
-            decision.module, decision.action, safe_attachments
-        )
-        inputs: dict[str, Any] = {"question": question, "attachments": module_attachments}
-        try:
-            self._add_specialist_attachment_inputs(
-                inputs, decision.module, decision.action, module_attachments
-            )
-        except ValueError:
-            return self._outcome(operation_id, "invalid_request", decision, "invalid_attachment_content", "attachment content is invalid for the selected specialist")
-        if decision.module == "chat" and decision.action == "respond":
-            with self._history_lock:
-                inputs["history"] = [dict(turn) for turn in self._conversation_history.get(session_id, [])]
-        if decision.intended_module:
-            inputs["intended_module"] = decision.intended_module
-        if decision.intended_action:
-            inputs["intended_action"] = decision.intended_action
-        if decision.module == "voice" and decision.action == "speak":
-            inputs["text"] = question
-        if decision.module == "memory" and decision.action == "search":
-            query = re.sub(
-                r"^\s*(?:what do you remember(?: about)?|do you remember|search (?:my )?memory(?: for)?|memory(?: search)?(?: for)?|meri memory(?: me)?|yaad hai)\s*",
-                "",
-                question,
-                flags=re.IGNORECASE,
-            ).strip(" ?.,")
-            inputs["query"] = query or question.strip()
-        if decision.policy_tags:
-            inputs["policy_tags"] = list(decision.policy_tags)
-        module_request = ModuleRequest(
-            request_id=operation_id,
-            session_id=session_id,
-            module=decision.module,
-            action=decision.action,
-            inputs=inputs,
-            timeout_seconds=getattr(adapter, "timeout_seconds", 30),
-            workspace_root=workspace_root,
-        )
-        try:
-            result = adapter.execute(module_request)
-        except Exception:
-            return self._outcome(operation_id, "failed", decision, "adapter_execution_failed", "Specialist execution failed")
-        if not isinstance(result, ModuleResult):
-            return self._outcome(operation_id, "failed", decision, "invalid_adapter_response", "Specialist returned an invalid result")
 
         if decision.module == "chat" and decision.action == "respond" and result.status == "success":
             response_text = result.data.get("text") if isinstance(result.data, Mapping) else None
