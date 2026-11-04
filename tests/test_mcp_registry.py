@@ -59,6 +59,24 @@ class McpRegistryTests(unittest.TestCase):
         self.assertEqual(server.timeout_seconds, 15.0)
         self.assertTrue(server.read_only)
 
+    def test_read_only_tool_allowlist_is_validated(self) -> None:
+        config = parse_mcp_config({
+            "enable": True,
+            "servers": [{
+                "name": "time", "command": ["uvx", "mcp-server-time"],
+                "read_only": True, "read_only_tools": ["get_current_time"],
+            }],
+        })
+        self.assertEqual(config.enabled_servers[0].read_only_tools, ("get_current_time",))
+        with self.assertRaises(McpConfigError):
+            parse_mcp_config({
+                "enable": True,
+                "servers": [{
+                    "name": "time", "command": ["uvx"], "read_only": False,
+                    "read_only_tools": ["get_current_time"],
+                }],
+            })
+
     def test_rejects_non_boolean_flags(self) -> None:
         invalid_values = (
             {"enable": "false", "servers": []},
