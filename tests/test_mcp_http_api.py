@@ -80,22 +80,21 @@ class McpHttpApiTests(unittest.TestCase):
         self.assertEqual(status["enabled_server_count"], 1)
         self.assertEqual(tools["tools"][0]["name"], "get_current_time")
 
-    def test_approval_and_call_are_one_shot(self):
+    def test_mcp_mutation_endpoints_are_not_exposed_without_approval_ui(self):
         payload = {
             "server": "time",
             "tool": "get_current_time",
             "arguments": {"timezone": "Asia/Kolkata"},
             "session_id": "session-1",
         }
-        _, approved = self._post("/api/mcp/approve", payload)
-        self.assertEqual(approved["status"], "approved")
-        call_payload = {**payload, "approval_token": approved["approval_token"]}
-        _, called = self._post("/api/mcp/call", call_payload)
-        self.assertEqual(called["status"], "success")
-        self.assertEqual(len(self.server.app.mcp_gateway.calls), 1)
-        with self.assertRaises(HTTPError) as caught:
-            self._post("/api/mcp/call", call_payload)
-        self.assertEqual(caught.exception.code, 400)
+        for endpoint, request_payload in (
+            ("/api/mcp/approve", payload),
+            ("/api/mcp/call", {**payload, "approval_token": "not-a-token"}),
+        ):
+            with self.subTest(endpoint=endpoint), self.assertRaises(HTTPError) as caught:
+                self._post(endpoint, request_payload)
+            self.assertEqual(caught.exception.code, 404)
+        self.assertEqual(self.server.app.mcp_gateway.calls, [])
 
     def test_mcp_endpoints_reject_untrusted_origin(self):
         request = Request(
@@ -109,18 +108,6 @@ class McpHttpApiTests(unittest.TestCase):
     def test_tools_reject_duplicate_query_parameters(self):
         with self.assertRaises(HTTPError) as caught:
             urlopen(self.base_url + "/api/mcp/tools?server=time&server=git", timeout=2)
-        self.assertEqual(caught.exception.code, 400)
-
-    def test_approval_rejects_extra_fields(self):
-        payload = {
-            "server": "time",
-            "tool": "get_current_time",
-            "arguments": {},
-            "session_id": "session-1",
-            "unexpected": True,
-        }
-        with self.assertRaises(HTTPError) as caught:
-            self._post("/api/mcp/approve", payload)
         self.assertEqual(caught.exception.code, 400)
 
 
