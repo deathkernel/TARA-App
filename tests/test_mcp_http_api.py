@@ -36,7 +36,7 @@ class _Gateway:
         )]
 
     def call_tool(self, server, tool, arguments, *, approval_grant):
-        self.calls.append((server, tool, dict(arguments), approval_token))
+        self.calls.append((server, tool, dict(arguments), approval_grant))
         return "2026-11-04T12:00:00+05:30"
 
 
