@@ -191,7 +191,7 @@ class _Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         endpoint = urlsplit(self.path).path
-        if endpoint not in {"/api/chat", "/api/approve", "/api/cancel", "/api/models/pull", "/api/models/unload", "/api/models/remove", "/api/mcp/approve", "/api/mcp/call"}:
+        if endpoint not in {"/api/chat", "/api/approve", "/api/cancel", "/api/models/pull", "/api/models/unload", "/api/models/remove"}:
             self._json(404, {"status": "unavailable", "error": "endpoint not found"})
             return
         if not self._local_origin():
@@ -215,42 +215,12 @@ class _Handler(BaseHTTPRequestHandler):
             return
         if endpoint == "/api/chat":
             fields = {"question", "session_id", "attachments", "history"}
-        elif endpoint == "/api/mcp/approve":
-            fields = {"server", "tool", "arguments", "session_id"}
-        elif endpoint == "/api/mcp/call":
-            fields = {"server", "tool", "arguments", "session_id", "approval_token"}
         elif endpoint in {"/api/models/pull", "/api/models/unload", "/api/models/remove"}:
             fields = {"specialist"}
         else:
             fields = {"approval_id", "session_id"}
         if not isinstance(payload, dict) or set(payload) - fields:
             self._json(400, {"status": "invalid_request", "error": "request fields are invalid"})
-            return
-        if endpoint in {"/api/mcp/approve", "/api/mcp/call"}:
-            required = {"server", "tool", "arguments", "session_id"}
-            if endpoint == "/api/mcp/call":
-                required.add("approval_token")
-            if set(payload) != required or not isinstance(payload.get("arguments"), dict):
-                self._json(400, {"status": "invalid_request", "error": "MCP request fields are invalid"})
-                return
-            try:
-                if endpoint == "/api/mcp/approve":
-                    token = self.server.app.issue_mcp_approval_token(
-                        payload["server"], payload["tool"], payload["arguments"],
-                        session_id=payload["session_id"],
-                    )
-                    self._json(200, {"status": "approved", "approval_token": token})
-                else:
-                    result = self.server.app.call_mcp_tool(
-                        payload["server"], payload["tool"], payload["arguments"],
-                        approval_token=payload["approval_token"],
-                        session_id=payload["session_id"],
-                    )
-                    self._json(200, {"status": "success", "result": result})
-            except ValueError:
-                self._json(400, {"status": "invalid_request", "error": "MCP approval or request is invalid"})
-            except RuntimeError:
-                self._json(502, {"status": "failed", "error": "MCP operation failed"})
             return
         if endpoint in {"/api/models/pull", "/api/models/unload", "/api/models/remove"}:
             if set(payload) != {"specialist"}:
