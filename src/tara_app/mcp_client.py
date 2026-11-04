@@ -14,6 +14,7 @@ servers that are not already listed in config.
 from __future__ import annotations
 
 import asyncio
+from threading import Lock
 from dataclasses import dataclass
 from typing import Any, Callable, Mapping, Protocol
 
@@ -65,12 +66,14 @@ _APPROVAL_GRANT_SEAL = object()
 class _McpApprovalGrant:
     """Opaque proof that the orchestrator validated and consumed an approval."""
 
-    __slots__ = ("_seal",)
+    __slots__ = ("_seal", "_used", "_lock")
 
     def __init__(self, seal: object) -> None:
         if seal is not _APPROVAL_GRANT_SEAL:
             raise ValueError("MCP approval grants can only be created by the app")
         self._seal = seal
+        self._used = False
+        self._lock = Lock()
 
 
 def _create_mcp_approval_grant(approval_token: str) -> _McpApprovalGrant:
@@ -80,8 +83,14 @@ def _create_mcp_approval_grant(approval_token: str) -> _McpApprovalGrant:
     return _McpApprovalGrant(_APPROVAL_GRANT_SEAL)
 
 
-def _is_valid_mcp_approval_grant(grant: object) -> bool:
-    return isinstance(grant, _McpApprovalGrant) and grant._seal is _APPROVAL_GRANT_SEAL
+def _consume_mcp_approval_grant(grant: object) -> bool:
+    if not isinstance(grant, _McpApprovalGrant) or grant._seal is not _APPROVAL_GRANT_SEAL:
+        return False
+    with grant._lock:
+        if grant._used:
+            return False
+        grant._used = True
+    return True
 
 
 def _extract_tool_page(result: Any, server_name: str) -> tuple[list[McpToolInfo], str | None]:
@@ -195,7 +204,7 @@ class McpToolGateway:
         self._ensure_ready()
         if not self._config.enable:
             raise McpClientError("MCP is disabled")
-        if not _is_valid_mcp_approval_grant(approval_grant):
+        if not _consume_mcp_approval_grant(approval_grant):
             raise McpClientError("a validated app approval grant is required")
         if not isinstance(tool_name, str) or not tool_name.strip() or len(tool_name) > _MAX_TOOL_NAME:
             raise McpClientError("tool_name is invalid")
