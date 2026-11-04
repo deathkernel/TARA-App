@@ -31,6 +31,11 @@ class McpApprovalTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             app.call_mcp_tool("time", "get_time", arguments, approval_token=token, session_id="session-1")
 
+    def test_approval_rejects_unlisted_read_only_tool(self):
+        app = _App()
+        with self.assertRaisesRegex(ValueError, "read-only allowlist"):
+            app.issue_mcp_approval_token("time", "delete_file", {}, session_id="session-1")
+
     def test_approval_rejects_disabled_server(self):
         app = _App()
         with self.assertRaises(ValueError):
