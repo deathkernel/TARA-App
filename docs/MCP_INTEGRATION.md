@@ -22,6 +22,15 @@ Optional package: `python -m pip install -e ".[mcp]"`
 6. Prefer `read_only = true` until mutating tools have Security review.
 7. Do not enable unrestricted filesystem or shell MCP servers on the host.
 
+## Built-in reference servers
+
+| Module | Tools | Notes |
+|--------|-------|-------|
+| `python -m tara_app.mcp_servers.time_server` | `get_current_time` | Read-only clock |
+| `python -m tara_app.mcp_servers.scoped_fs_server` | `list_dir`, `read_file` | Paths must stay under `TARA_MCP_FS_ROOTS` |
+
+Logic for these servers is unit-tested without a live stdio MCP session. The optional `mcp` package is required only to *run* the stdio process.
+
 ## Example config
 
 ```toml
@@ -30,9 +39,10 @@ enable = false
 
 [[mcp.servers]]
 name = "time"
-command = ["uvx", "mcp-server-time"]
+command = ["{python}", "-m", "tara_app.mcp_servers.time_server"]
 enabled = true
 read_only = true
+read_only_tools = ["get_current_time"]
 timeout_seconds = 30
 ```
 

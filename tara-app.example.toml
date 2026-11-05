@@ -28,13 +28,25 @@ timeout_seconds = 10
 [mcp]
 enable = false
 
-# Example (still inactive until enable = true):
+# Built-in reference servers (still inactive until enable = true).
+# Requires: python -m pip install -e '.[mcp]'
+#
 # [[mcp.servers]]
 # name = "time"
-# command = ["uvx", "mcp-server-time"]
+# command = ["{python}", "-m", "tara_app.mcp_servers.time_server"]
 # enabled = true
 # read_only = true
 # read_only_tools = ["get_current_time"]
+# timeout_seconds = 30
+#
+# Scoped filesystem (read-only). Set TARA_MCP_FS_ROOTS to a semicolon-separated
+# list of absolute directories before starting TARA.
+# [[mcp.servers]]
+# name = "scoped_fs"
+# command = ["{python}", "-m", "tara_app.mcp_servers.scoped_fs_server"]
+# enabled = true
+# read_only = true
+# read_only_tools = ["list_dir", "read_file"]
 # timeout_seconds = 30
 
 [[modules]]
@@ -57,8 +69,8 @@ environment = ["TARA_CODE_API_BASE_URL", "TARA_CODE_API_KEY", "TARA_CODE_MODEL"]
 id = "research"
 command = ["{python}", "-m", "tara_research"]
 working_directory = "."
-timeout_seconds = 30
-allow_remote = true # Sends the research query to Crossref and Wikipedia; no API key or paid model is used.
+timeout_seconds = 60
+allow_remote = true # Public Crossref and Wikipedia APIs; no API key required.
 
 [[modules]]
 id = "data"
