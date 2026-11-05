@@ -48,6 +48,13 @@ class _Handler(BaseHTTPRequestHandler):
                 return
             self._json(200, self.server.app.health_status())
             return
+        if endpoint == "/api/skills":
+            if not self._local_origin():
+                self._json(403, {"status": "permission_denied", "error": "request origin is not allowed"})
+                return
+            skills = self.server.app.list_skills() if hasattr(self.server.app, "list_skills") else []
+            self._json(200, {"status": "ok", "skills": skills})
+            return
         if endpoint in {"/api/mcp/status", "/api/mcp/tools"}:
             if not self._local_origin():
                 self._json(403, {"status": "permission_denied", "error": "request origin is not allowed"})
@@ -71,7 +78,7 @@ class _Handler(BaseHTTPRequestHandler):
             except RuntimeError:
                 self._json(502, {"status": "failed", "error": "MCP tool discovery failed"})
                 return
-            self._json(200, {"status": "ok", "tools": tools})
+            self._json(200, {"status": "ok", {"tools": tools})
             return
         if endpoint == "/api/models":
             if not self._local_origin():
@@ -81,8 +88,6 @@ class _Handler(BaseHTTPRequestHandler):
             status_code = 200 if payload.get("status") == "available" else 503
             self._json(status_code, payload)
             return
-        # Prefer the compiled React frontend when a build is present. The
-        # original static UI remains a safe fallback for source-only installs.
         react_root = (_WEB_ROOT / "react-dist").resolve()
         react_file: Path | None = None
         if _react_ui_enabled() and react_root.is_dir():
@@ -148,7 +153,7 @@ class _Handler(BaseHTTPRequestHandler):
             self._json(400, {"status": "invalid_request", "error": "request must be UTF-8 JSON"})
             return
         if endpoint == "/api/chat":
-            fields = {"question", "session_id", "attachments", "history"}
+            fields = {"question", "session_id", "attachments", "history", "skill"}
         elif endpoint in {"/api/models/pull", "/api/models/unload", "/api/models/remove"}:
             fields = {"specialist"}
         else:
@@ -191,11 +196,20 @@ class _Handler(BaseHTTPRequestHandler):
                 except ValueError:
                     self._json(400, {"status": "invalid_request", "error": "conversation history is invalid"})
                     return
-            outcome = self.server.app.handle_question(
-                payload.get("question"),
-                session_id=payload.get("session_id", "default"),
-                attachments=payload.get("attachments", []),
-            )
+            skill = payload.get("skill")
+            if skill is not None and (not isinstance(skill, str) or not skill.strip() or len(skill) > 64):
+                self._json(400, {"status": "invalid_request", "error": "skill name is invalid"})
+                return
+            try:
+                outcome = self.server.app.handle_question(
+                    payload.get("question"),
+                    session_id=payload.get("session_id", "default"),
+                    attachments=payload.get("attachments", []),
+                    skill=skill.strip() if isinstance(skill, str) else None,
+                )
+            except ValueError:
+                self._json(400, {"status": "invalid_request", "error": "skill pack is unavailable or invalid"})
+                return
         elif endpoint == "/api/approve":
             outcome = self.server.app.approve(payload.get("approval_id"), session_id=payload.get("session_id"))
         else:
@@ -223,7 +237,6 @@ class _Handler(BaseHTTPRequestHandler):
         self.wfile.write(encoded)
 
     def log_message(self, format: str, *args: object) -> None:
-        # Do not log prompts, attachment names, or provider responses.
         return
 
 
@@ -239,4 +252,3 @@ def serve(app: ApplicationFacade, *, port: int = 8765) -> None:
         print("\nTARA-App stopped")
     finally:
         server.server_close()
-
