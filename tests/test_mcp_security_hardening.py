@@ -111,6 +111,44 @@ class ToolLoopApprovalTests(unittest.TestCase):
         self.assertEqual(coordinator.issued, 0)
         self.assertEqual(coordinator.calls, [])
 
+    def test_bridge_mints_app_token_only_for_configured_read_only_tool(self):
+        class Gateway:
+            _config = SimpleNamespace(
+                enabled_servers=[
+                    SimpleNamespace(
+                        name="read-server",
+                        read_only=True,
+                        read_only_tools=("list_items",),
+                    )
+                ]
+            )
+
+        class Coordinator:
+            mcp_gateway = Gateway()
+
+            def __init__(self):
+                self.issued = 0
+                self.calls = []
+
+            def issue_mcp_approval_token(self, *args, **kwargs):
+                self.issued += 1
+                return "app-read-only-token"
+
+            def call_mcp_tool(self, *args, **kwargs):
+                self.calls.append((args, kwargs))
+                return "listed"
+
+        coordinator = Coordinator()
+        plan = ToolPlan(
+            "read-only-check",
+            (ToolStep("read", "read-server.list_items", {}, read_only=True),),
+        )
+        result = run_validated_tool_plan(coordinator, plan, session_id="session-1")
+
+        self.assertEqual(result.steps[0].status, ToolStepStatus.SUCCEEDED)
+        self.assertEqual(coordinator.issued, 1)
+        self.assertEqual(coordinator.calls[0][1]["approval_token"], "app-read-only-token")
+
     def test_bridge_uses_only_a_supplied_approval_token(self):
         class Gateway:
             _config = SimpleNamespace(enabled_servers=[SimpleNamespace(name="write-server")])
