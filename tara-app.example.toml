@@ -28,14 +28,33 @@ timeout_seconds = 10
 [mcp]
 enable = false
 
-# Example (still inactive until enable = true):
+# Built-in reference servers (still inactive until enable = true).
+# Requires: python -m pip install -e '.[mcp]'
+#
 # [[mcp.servers]]
 # name = "time"
-# command = ["uvx", "mcp-server-time"]
+# command = ["{python}", "-m", "tara_app.mcp_servers.time_server"]
 # enabled = true
 # read_only = true
 # read_only_tools = ["get_current_time"]
 # timeout_seconds = 30
+#
+# [[mcp.servers]]
+# name = "fetch"
+# command = ["{python}", "-m", "tara_app.mcp_servers.fetch_server"]
+# enabled = true
+# read_only = true
+# read_only_tools = ["fetch"]
+# timeout_seconds = 30
+#
+# [[mcp.servers]]
+# name = "scoped_fs"
+# command = ["{python}", "-m", "tara_app.mcp_servers.scoped_fs_server"]
+# enabled = true
+# read_only = true
+# read_only_tools = ["list_dir", "read_file"]
+# timeout_seconds = 30
+# # Set TARA_MCP_FS_ROOTS=/abs/path before launch
 
 [[modules]]
 id = "chat"
