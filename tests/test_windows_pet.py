@@ -72,6 +72,32 @@ class WindowsPetContractTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "HTTP 302"):
                 _post_chat("http://127.0.0.1:8765", {"question": "hello"})
 
+    def test_post_chat_sends_same_origin_header(self) -> None:
+        from tara_app.windows_pet import _post_chat
+
+        class Response:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def read(self, limit):
+                return b'{"result":{"data":{"text":"hello"}}}'
+
+        class CapturingOpener:
+            request = None
+
+            def open(self, request, timeout):
+                self.request = request
+                return Response()
+
+        opener = CapturingOpener()
+        with patch("tara_app.windows_pet.urllib.request.build_opener", return_value=opener):
+            self.assertEqual(_post_chat("http://127.0.0.1:8765", {"question": "hello"}), "hello")
+
+        self.assertEqual(opener.request.get_header("Origin"), "http://127.0.0.1:8765")
+
     def test_post_chat_rejects_oversized_response(self) -> None:
         from tara_app.windows_pet import _post_chat
 

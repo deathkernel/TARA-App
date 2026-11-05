@@ -50,11 +50,9 @@ def run_validated_tool_plan(
                 )
             server, tool = enabled[0].name, name
         try:
+            # Approval is a human action. A model-proposed plan must never
+            # manufacture its own token, even for an enabled writable server.
             token = approval_token
-            if token is None and hasattr(coordinator, "issue_mcp_approval_token"):
-                token = coordinator.issue_mcp_approval_token(
-                    server, tool, dict(step.arguments), session_id=session_id
-                )
             if token is None:
                 return ToolStepResult(
                     step.step_id,

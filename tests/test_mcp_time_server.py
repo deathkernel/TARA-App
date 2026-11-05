@@ -114,13 +114,12 @@ class McpTimeServerTests(unittest.TestCase):
             ) as time_payload,
         ):
             self.assertEqual(main(), 0)
-
-        server = fake_server.instances[-1]
-        self.assertEqual(server.name, "tara-time")
-        self.assertEqual(server.transport, "stdio")
-        self.assertEqual(set(server.tools), {"get_current_time"})
-        self.assertEqual(json.loads(server.tools["get_current_time"]("Asia/Kolkata")), expected)
-        time_payload.assert_called_once_with("Asia/Kolkata")
+            server = fake_server.instances[-1]
+            self.assertEqual(server.name, "tara-time")
+            self.assertEqual(server.transport, "stdio")
+            self.assertEqual(set(server.tools), {"get_current_time"})
+            self.assertEqual(json.loads(server.tools["get_current_time"]("Asia/Kolkata")), expected)
+            time_payload.assert_called_once_with("Asia/Kolkata")
 
     def test_time_tool_returns_validation_errors_as_json(self):
         mcp_module, server_module, fastmcp_module, fake_server = self._fake_mcp_modules()

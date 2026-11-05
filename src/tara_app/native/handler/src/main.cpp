@@ -443,7 +443,13 @@ int runCommand(const std::string& executable,
 
     handler::CommandSpec spec{"cli-command", executable, args,
                               handler::classifyCommandRisk(executable, args)};
-    std::cout << handler::buildCommandLine(spec) << "\n";
+    const auto commandLine = handler::buildCommandLine(spec);
+    std::cout << commandLine << "\n";
+    const auto commandRisk = handler::inspectCommandRisk(commandLine);
+    if (commandRisk.risk == handler::CommandRisk::Blocked) {
+        std::cerr << "Command blocked: " << commandRisk.reason << "\n";
+        return 3;
+    }
 
     const auto policy =
         handler::evaluatePolicy(handler::SafetyMode::Confirm, spec.risk);
