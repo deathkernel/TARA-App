@@ -76,6 +76,10 @@ These edges are direct Python imports observed in the listed files. Runtime call
 
 Specialist package names describe capabilities that exist today. The target architecture does not require retaining them as top-level architectural layers; they can become use cases/handlers within the responsibility-oriented system once their contracts are mapped.
 
+## Workflow contract groundwork
+
+`workflow_contracts.py` now defines versioned request, step, plan and result shapes. `WorkflowPlan` rejects duplicate step IDs, missing dependencies and dependency cycles. Input/result mappings are checked for JSON compatibility and a 1 MB bound. These contracts are not yet consumed by the live `Orchestrator`; no dispatch or persistence behavior changes until the coordinator integration phase.
+
 ## Duplicate / competing ownership to resolve
 
 1. **Composition:** \`runtime.py\` is the live CLI composition path; \`application_service.py\` is a separate headless path with its own session/audit/model dependencies. Do not replace one with the other until feature parity is demonstrated.
