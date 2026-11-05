@@ -144,6 +144,8 @@ def handle_request(request: Any) -> dict[str, Any]:
         return _result(request_id, "unavailable", error="TARA-Chat has no language provider configured")
     memory_path = os.environ.get("TARA_CHAT_MEMORY_PATH", "").strip()
     skill_prompt = inputs.get("skill_prompt")
+    if not (isinstance(skill_prompt, str) and skill_prompt.strip()):
+        skill_prompt = os.environ.get("TARA_ACTIVE_SKILL_PROMPT")
     system_prompt = None
     if isinstance(skill_prompt, str) and skill_prompt.strip():
         if len(skill_prompt) > 100_000:
