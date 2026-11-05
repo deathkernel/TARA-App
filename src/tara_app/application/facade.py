@@ -45,6 +45,10 @@ class ApplicationFacade:
                 "status": "unavailable",
                 "reason": "The Chat specialist is configured, but its authenticated OmniRoute model-catalogue check failed.",
             }
+        try:
+            mcp_summary = self.mcp_status()
+        except Exception:
+            mcp_summary = {"enable": False, "status": "unavailable"}
         return {
             "status": "ok" if capabilities and gateway_status == "healthy" else "degraded",
             "app": "TARA-App",
@@ -54,6 +58,12 @@ class ApplicationFacade:
             "model_runtime": "omniroute",
             "specialists": specialists,
             "model_gateway": {"provider": "omniroute", "status": gateway_status},
+            "mcp": {
+                "enable": bool(mcp_summary.get("enable")),
+                "status": mcp_summary.get("status", "disabled"),
+                "package_available": bool(mcp_summary.get("package_available")),
+                "enabled_server_count": int(mcp_summary.get("enabled_server_count") or 0),
+            },
         }
 
     def model_catalogue(self) -> dict[str, Any]:
