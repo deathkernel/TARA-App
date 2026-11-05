@@ -59,7 +59,7 @@ class SkillsLoaderTests(unittest.TestCase):
     def test_invalid_utf8_pack_does_not_hide_valid_packs(self) -> None:
         broken = self.root / "broken-pack"
         broken.mkdir()
-        (broken / "SKILL.md").write_bytes(b"\\xff")
+        (broken / "SKILL.md").write_bytes(b"\xff")
         packs = list_skill_packs(skills_root=self.root)
         self.assertEqual({pack.name for pack in packs}, {"demo-skill"})
 
