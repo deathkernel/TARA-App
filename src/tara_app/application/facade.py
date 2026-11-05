@@ -113,6 +113,28 @@ class ApplicationFacade:
             raise ValueError("unsupported model lifecycle action")
         return handler(specialist)
 
+    def prepare_runtime(self) -> str | None:
+        """Run optional legacy catalogue startup hooks when a runtime provides them."""
+        catalogue = getattr(self._coordinator, "model_catalog", None)
+        if catalogue is None:
+            return None
+        catalogue.ensure_service_started()
+        if "chat" not in catalogue.profiles:
+            return None
+        print("Preparing TARA's local chat model before the app opens.", flush=True)
+        try:
+            catalogue.ensure_model_installed("chat")
+            catalogue.preload_model("chat", keep_alive="15m")
+        except RuntimeError:
+            return "TARA-App will start, but the chat model could not be prepared. Check the Models panel."
+        return "TARA's chat model is ready."
+
+    def close(self) -> None:
+        """Release optional runtime resources during interface shutdown."""
+        catalogue = getattr(self._coordinator, "model_catalog", None)
+        if catalogue is not None:
+            catalogue.close()
+
     def replace_conversation_history(self, session_id: str, history: Sequence[Mapping[str, str]]) -> None:
         self._coordinator.replace_conversation_history(session_id, history)
 
