@@ -1,10 +1,13 @@
 """Tests for the allowlisted skill-pack loader."""
 from __future__ import annotations
 
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
+from tara_app.application.facade import ApplicationFacade
 from tara_app.skills.loader import SkillLoadError, list_skill_packs, load_skill_pack
 
 
@@ -51,6 +54,40 @@ class SkillsLoaderTests(unittest.TestCase):
         (pack / "skill.toml").write_text('scripts = ["../../evil.sh"]\n', encoding="utf-8")
         with self.assertRaises(SkillLoadError):
             load_skill_pack("bad-scripts", skills_root=self.root)
+
+
+    def test_invalid_utf8_pack_does_not_hide_valid_packs(self) -> None:
+        broken = self.root / "broken-pack"
+        broken.mkdir()
+        (broken / "SKILL.md").write_bytes(b"\\xff")
+        packs = list_skill_packs(skills_root=self.root)
+        self.assertEqual({pack.name for pack in packs}, {"demo-skill"})
+
+    def test_symlinked_skill_file_cannot_escape_root(self) -> None:
+        pack = self.root / "linked-pack"
+        pack.mkdir()
+        outside = self.root.parent / f"{self.root.name}-outside.md"
+        outside.write_text("outside instructions", encoding="utf-8")
+        try:
+            (pack / "SKILL.md").symlink_to(outside)
+        except OSError:
+            outside.unlink(missing_ok=True)
+            self.skipTest("symlink creation is unavailable on this runner")
+        try:
+            with self.assertRaises(SkillLoadError):
+                load_skill_pack("linked-pack", skills_root=self.root)
+        finally:
+            outside.unlink(missing_ok=True)
+
+    def test_facade_passes_skill_prompt_as_request_data(self) -> None:
+        coordinator = MagicMock()
+        facade = ApplicationFacade(coordinator)
+        with patch.dict(os.environ, {"TARA_SKILLS_ROOT": str(self.root)}):
+            facade.handle_question("hello", skill="demo-skill")
+        self.assertEqual(
+            coordinator.handle_question.call_args.kwargs["skill_prompt"],
+            load_skill_pack("demo-skill", skills_root=self.root).prompt_block(),
+        )
 
 
 class BundledSkillsTests(unittest.TestCase):
