@@ -78,7 +78,7 @@ class _Handler(BaseHTTPRequestHandler):
             except RuntimeError:
                 self._json(502, {"status": "failed", "error": "MCP tool discovery failed"})
                 return
-            self._json(200, {"status": "ok", {"tools": tools})
+            self._json(200, {"status": "ok", "tools": tools})
             return
         if endpoint == "/api/models":
             if not self._local_origin():
