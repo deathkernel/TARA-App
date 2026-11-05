@@ -136,3 +136,11 @@ def list_skill_packs(*, skills_root: str | Path) -> tuple[SkillPack, ...]:
         if len(packs) >= _MAX_PACKS:
             break
     return tuple(packs)
+
+
+def default_skills_root() -> Path:
+    """Resolve the skills root from TARA_SKILLS_ROOT or the local ./skills directory."""
+    import os
+
+    configured = os.environ.get("TARA_SKILLS_ROOT", "").strip()
+    return Path(configured).expanduser() if configured else Path("skills")
