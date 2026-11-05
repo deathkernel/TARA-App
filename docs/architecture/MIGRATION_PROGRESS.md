@@ -14,7 +14,7 @@
 - Preserved the existing coordinator, capability registry, adapter implementations, OmniRoute routing, MCP approval behavior and Windows pet's local HTTP transport.
 - Added focused facade tests.
 - Restored optional model-catalogue startup and shutdown hooks through the facade, with regression tests.
-- Added versioned workflow request, step and result contracts with validation tests.
+- Added versioned workflow request, step, DAG plan and result contracts with JSON payload bounds, cycle detection and validation tests.
 - Added a source inventory and verified core dependency map; 93 Python source files and 82 native Handler files are recorded in the snapshot.
 
 ## Not completed yet
