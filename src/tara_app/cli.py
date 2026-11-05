@@ -25,6 +25,9 @@ def main() -> int:
         if args.floating_pet and sys.platform != "win32":
             raise RuntimeConfigurationError("--floating-pet is supported on Windows only")
         app = create_application(args.config)
+        startup_warning = app.prepare_runtime()
+        if startup_warning:
+            print(startup_warning, file=sys.stderr, flush=True)
         if args.floating_pet:
             from tara_app.windows_pet import run_floating_pet
             run_floating_pet(app, port=args.port)
@@ -33,6 +36,9 @@ def main() -> int:
     except (RuntimeConfigurationError, OSError, RuntimeError, ValueError) as exc:
         print(f"TARA-App could not start: {exc}", file=sys.stderr)
         return 2
+    finally:
+        if app is not None:
+            app.close()
     return 0
 
 
