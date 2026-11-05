@@ -81,5 +81,18 @@ class ToolLoopTests(unittest.TestCase):
         self.assertEqual(plan.steps[0].tool_name, "time.get_current_time")
 
 
+class ToolLoopBridgeTests(unittest.TestCase):
+    def test_bridge_validate(self) -> None:
+        from tara_app.tool_loop_bridge import validate_tool_plan
+
+        plan = validate_tool_plan(
+            {
+                "plan_id": "b1",
+                "steps": [{"step_id": "a", "tool_name": "time.get_current_time", "arguments": {}}],
+            }
+        )
+        self.assertEqual(plan.plan_id, "b1")
+
+
 if __name__ == "__main__":
     unittest.main()
