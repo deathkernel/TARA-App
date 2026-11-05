@@ -22,6 +22,16 @@ Optional package: `python -m pip install -e ".[mcp]"`
 6. Prefer `read_only = true` until mutating tools have Security review.
 7. Do not enable unrestricted filesystem or shell MCP servers on the host.
 
+## Built-in reference servers
+
+| Module | Tools | Notes |
+|--------|-------|-------|
+| `python -m tara_app.mcp_servers.time_server` | `get_current_time` | Read-only clock |
+| `python -m tara_app.mcp_servers.fetch_server` | `fetch` | Public HTTP(S) only; blocks private IPs; 256KB body cap |
+| `python -m tara_app.mcp_servers.scoped_fs_server` | `list_dir`, `read_file` | Paths under `TARA_MCP_FS_ROOTS` only |
+
+`/api/health` includes a compact `mcp` summary (`enable`, `status`, `package_available`, `enabled_server_count`).
+
 ## Example config
 
 ```toml
@@ -30,7 +40,7 @@ enable = false
 
 [[mcp.servers]]
 name = "time"
-command = ["uvx", "mcp-server-time"]
+command = ["{python}", "-m", "tara_app.mcp_servers.time_server"]
 enabled = true
 read_only = true
 timeout_seconds = 30
@@ -52,8 +62,8 @@ tools = gateway.list_tools()  # requires enable=true + package if using live std
 
 ## Next slices
 
-1. Register MCP diagnostics on `/api/health`.
+1. ~~Register MCP diagnostics on `/api/health`.~~ (done in this branch)
 2. Wire `list_tools` into a read-only app capability.
 3. Wire `call_tool` through Security + one-shot approval UX.
-4. Optional reference servers: time → fetch → scoped filesystem → git (read).
+4. Optional reference servers: ~~time → fetch → scoped filesystem~~ → git (read).
 5. Agent tool-loop patterns (claude-agent-sdk) without host shell.
