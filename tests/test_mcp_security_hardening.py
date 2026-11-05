@@ -54,7 +54,11 @@ class FetchSecurityTests(unittest.TestCase):
         self.assertTrue(connection.closed)
 
     def test_http_connection_uses_the_validated_ip(self):
-        fake_socket = object()
+        class FakeSocket:
+            def close(self):
+                pass
+
+        fake_socket = FakeSocket()
         with patch("tara_app.mcp_servers.fetch_logic.socket.create_connection", return_value=fake_socket) as connect:
             connection = _PinnedHTTPConnection("example.test", 8080, "93.184.216.34", 3.0)
             connection.connect()

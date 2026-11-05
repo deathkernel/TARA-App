@@ -78,7 +78,7 @@ def validate_public_https_url(url: str) -> str:
         raise FetchError("url is too long")
     try:
         parsed = urlsplit(raw)
-        port = parsed.port or (443 if parsed.scheme == "https" else 80)
+        port = parsed.port if parsed.port is not None else (443 if parsed.scheme == "https" else 80)
     except ValueError:
         raise FetchError("url is invalid") from None
     if parsed.scheme not in {"http", "https"}:
