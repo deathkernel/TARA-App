@@ -43,6 +43,12 @@ class _Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         endpoint = urlsplit(self.path).path
+        if endpoint == "/api/skills":
+            if not self._local_origin():
+                self._json(403, {"status": "permission_denied", "error": "request origin is not allowed"})
+                return
+            self._json(200, self.server.app.skill_catalogue())
+            return
         if endpoint == "/api/health":
             if not self._local_origin():
                 self._json(403, {"status": "permission_denied", "error": "request origin is not allowed"})
