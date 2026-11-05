@@ -150,7 +150,7 @@ def handle_request(request: Any) -> dict[str, Any]:
         return _result(request_id, "invalid_request", error="skill prompt is invalid")
     system_prompt = DEFAULT_SYSTEM_PROMPT
     if skill_prompt is not None:
-        system_prompt = f"{DEFAULT_SYSTEM_PROMPT.strip()}\\n\\n{skill_prompt.strip()}"
+        system_prompt = f"{DEFAULT_SYSTEM_PROMPT.strip()}\n\n{skill_prompt.strip()}"
     brain = TARABrain(
         llm_provider=provider,
         memory=LongTermMemory(memory_path or None),
