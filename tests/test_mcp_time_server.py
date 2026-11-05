@@ -7,7 +7,7 @@ import json
 import sys
 import unittest
 from datetime import datetime, timedelta, timezone
-from types import ModuleType, SimpleNamespace
+from types import ModuleType
 from unittest.mock import patch
 from zoneinfo import ZoneInfoNotFoundError
 
@@ -88,8 +88,10 @@ class McpTimeServerTests(unittest.TestCase):
 
         fastmcp_module.FastMCP = FakeFastMCP
         server_module = ModuleType("mcp.server")
+        server_module.__path__ = []
         server_module.fastmcp = fastmcp_module
         mcp_module = ModuleType("mcp")
+        mcp_module.__path__ = []
         mcp_module.server = server_module
         return mcp_module, server_module, fastmcp_module, FakeFastMCP
 
