@@ -12,6 +12,7 @@ from tara_app.mcp_servers.fetch_logic import FetchError, _PinnedHTTPConnection, 
 from tara_app.mcp_servers.git_read_logic import _run_git
 from tara_app.tool_loop import ToolPlan, ToolStep, ToolStepStatus
 from tara_app.tool_loop_bridge import run_validated_tool_plan
+from tara_app.runtime import _remote_permission_message
 
 
 class FetchSecurityTests(unittest.TestCase):
@@ -181,6 +182,18 @@ class ToolLoopApprovalTests(unittest.TestCase):
         self.assertEqual(result.steps[0].status, ToolStepStatus.SUCCEEDED)
         self.assertEqual(len(coordinator.calls), 1)
         self.assertEqual(coordinator.calls[0][1]["approval_token"], "human-approved-token")
+
+
+class RemotePermissionMessageTests(unittest.TestCase):
+    def test_voice_message_describes_local_audio_and_weight_download(self):
+        message = _remote_permission_message("voice")
+        self.assertIn("audio transcription", message)
+        self.assertIn("on-device", message)
+        self.assertNotIn("OmniRoute", message)
+
+    def test_public_api_modules_do_not_claim_omniroute_processing(self):
+        self.assertIn("public research sources", _remote_permission_message("research"))
+        self.assertIn("Open-Meteo", _remote_permission_message("weather"))
 
 
 if __name__ == "__main__":

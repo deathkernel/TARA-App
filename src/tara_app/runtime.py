@@ -67,6 +67,30 @@ _OLLAMA_MODULE_ENV = {
 }
 
 
+def _remote_permission_message(module_id: str) -> str:
+    """Explain the actual external dependency for each opt-in module."""
+    if module_id == "voice":
+        return (
+            "Local speech recognition is disabled. Set allow_remote = true only "
+            "to permit downloading open Whisper model weights; audio transcription "
+            "and read-aloud remain on-device."
+        )
+    if module_id == "research":
+        return (
+            "Research is disabled. Set allow_remote = true to permit requests to "
+            "the configured public research sources."
+        )
+    if module_id == "weather":
+        return (
+            "Weather is disabled. Set allow_remote = true to permit public "
+            "Open-Meteo geocoding and forecast requests."
+        )
+    return (
+        "Remote processing is disabled. Set allow_remote = true only if you "
+        "approve sending this module's content through the configured OmniRoute gateway."
+    )
+
+
 class RuntimeConfigurationError(ValueError):
     """Raised when a local TARA-App configuration is incomplete or unsafe."""
 
@@ -117,10 +141,7 @@ def create_application(config_path: str | Path) -> Orchestrator:
             raise RuntimeConfigurationError(f"module is configured more than once: {module_id}")
         seen.add(module_id)
         if module_id in _REMOTE_MODULES and item.get("allow_remote") is not True:
-            registry.mark_disabled(
-                module_id,
-                "Remote processing is disabled. Set allow_remote = true in this module's [[modules]] entry only if you approve sending its content through OmniRoute.",
-            )
+            registry.mark_disabled(module_id, _remote_permission_message(module_id))
             continue
         env_names = item.get("environment", [])
         if not isinstance(env_names, list) or any(not isinstance(name, str) or not _ENV_NAME.fullmatch(name) for name in env_names):
