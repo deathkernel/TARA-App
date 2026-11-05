@@ -2,26 +2,25 @@
 
 MCP is disabled unless `[mcp].enable = true` and at least one server is explicitly configured. The local HTTP API is loopback-only and reuses the app's origin, JSON content-type, and 1 MB request-size checks.
 
-## Endpoints
+Browser-facing `POST` mutation requests must include an `Origin` header that exactly matches the loopback host and port serving TARA. Missing, malformed, or cross-origin values are rejected with HTTP 403. Read-only `GET` routes retain compatibility with clients that omit `Origin`.
+
+This is browser CSRF protection, **not authentication of local processes**. A separate process running as the same Windows user can forge HTTP headers and reach loopback. Do not treat this check as a security boundary against same-user malware; a future native IPC boundary with OS-enforced access control is needed for that threat model.
+
+## Available endpoints
 
 - `GET /api/mcp/status` — safe registry summary; never includes credentials.
 - `GET /api/mcp/tools` — list tools from enabled servers.
 - `GET /api/mcp/tools?server=time` — list tools from one enabled server.
-- `POST /api/mcp/approve` — issue a one-shot approval token bound to the session, server, tool, and canonical arguments digest.
-- `POST /api/mcp/call` — consume that token and execute exactly the approved call.
 
-Approval request:
+Tool discovery is metadata-only from TARA's perspective, but it launches the explicitly configured MCP server process. Enable only trusted server commands.
 
-```json
-{
-  "server": "time",
-  "tool": "get_current_time",
-  "arguments": {"timezone": "Asia/Kolkata"},
-  "session_id": "local-session"
-}
-```
+## Tool execution is intentionally not exposed over HTTP yet
 
-The response contains an opaque `approval_token`. Send it with the exact same server, tool, arguments, and session to `/api/mcp/call`. Tokens expire, are one-shot, and are rejected if any bound field differs. Do not expose tokens to model-generated text or remote clients.
+`POST /api/mcp/approve` and `POST /api/mcp/call` are not available. The previous HTTP design allowed any local client that could reach the loopback API to request an approval token and execute an allowlisted tool. A session ID supplied by that client is not proof of human identity or consent.
+
+TARA does not yet have an MCP-specific confirmation surface that displays the exact server, tool, and arguments and requires a deliberate user action. Until that UX is implemented and connected to TARA's approval flow, the HTTP mutation endpoints remain disabled.
+
+The orchestrator retains operation-bound, one-shot approval tokens for trusted in-process integration. The gateway additionally requires an opaque grant created only after the orchestrator validates and consumes the token; a caller-supplied non-empty string is not accepted as approval. This is defense in depth, not a security boundary against malicious code already executing inside the TARA Python process.
 
 ## Read-only server policy
 
@@ -42,4 +41,4 @@ read_only_tools = ["get_current_time"]
 timeout_seconds = 30
 ```
 
-Tool listing is metadata discovery only. No server is launched unless it is explicitly enabled, and no shell command is accepted through the HTTP API.
+No server definitions or shell commands are accepted through the HTTP API.
