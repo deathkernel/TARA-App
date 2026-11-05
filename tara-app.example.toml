@@ -48,6 +48,15 @@ enable = false
 # read_only = true
 # read_only_tools = ["list_dir", "read_file"]
 # timeout_seconds = 30
+#
+# [[mcp.servers]]
+# name = "git_read"
+# command = ["{python}", "-m", "tara_app.mcp_servers.git_read_server"]
+# enabled = true
+# read_only = true
+# read_only_tools = ["status", "log", "show_file"]
+# timeout_seconds = 30
+# # Set TARA_MCP_GIT_ROOTS=/abs/path/to/repos before launch
 
 [[modules]]
 id = "chat"

@@ -27,7 +27,8 @@ Optional package: `python -m pip install -e ".[mcp]"`
 | Module | Tools | Notes |
 |--------|-------|-------|
 | `python -m tara_app.mcp_servers.time_server` | `get_current_time` | Read-only clock |
-| `python -m tara_app.mcp_servers.scoped_fs_server` | `list_dir`, `read_file` | Paths must stay under `TARA_MCP_FS_ROOTS` |
+| `python -m tara_app.mcp_servers.scoped_fs_server` | `list_dir`, `read_file` | Paths under `TARA_MCP_FS_ROOTS` only |
+| `python -m tara_app.mcp_servers.git_read_server` | `status`, `log`, `show_file` | Repos under `TARA_MCP_GIT_ROOTS` only; no fetch/push/commit |
 
 Logic for these servers is unit-tested without a live stdio MCP session. The optional `mcp` package is required only to *run* the stdio process.
 
@@ -62,8 +63,8 @@ tools = gateway.list_tools()  # requires enable=true + package if using live std
 
 ## Next slices
 
-1. Register MCP diagnostics on `/api/health`.
+1. Register MCP diagnostics on `/api/health` (see `feat/mcp-health-and-fetch`).
 2. Wire `list_tools` into a read-only app capability.
 3. Wire `call_tool` through Security + one-shot approval UX.
-4. Optional reference servers: time → fetch → scoped filesystem → git (read).
+4. Optional reference servers: time → fetch → scoped filesystem → ~~git (read)~~.
 5. Agent tool-loop patterns (claude-agent-sdk) without host shell.
