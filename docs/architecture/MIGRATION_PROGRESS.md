@@ -13,11 +13,15 @@
 - Changed the HTTP server so it no longer reads the coordinator's registry or model catalogue directly.
 - Preserved the existing coordinator, capability registry, adapter implementations, OmniRoute routing, MCP approval behavior and Windows pet's local HTTP transport.
 - Added focused facade tests.
+- Restored optional model-catalogue startup and shutdown hooks through the facade, with regression tests.
+- Added versioned workflow request, step and result contracts with validation tests.
+- Added a source inventory and verified core dependency map; 93 Python source files and 82 native Handler files are recorded in the snapshot.
 
 ## Not completed yet
 
 - The existing runtime builder still constructs the current coordinator and specialist adapters.
 - Workflow state is not yet durable or centrally persisted.
+- The workflow contracts are not yet wired into dispatch; they define the migration target only.
 - Conversation history and pending approvals still live inside the current coordinator.
 - \`orchestrator.py\` and \`orchestration.py\` have not yet been consolidated.
 - Existing \`tara_*\` packages have not been moved or deleted.
