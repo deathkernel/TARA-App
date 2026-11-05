@@ -56,6 +56,25 @@ class ApplicationFacade:
             "model_gateway": {"provider": "omniroute", "status": gateway_status},
         }
 
+    def skill_catalogue(self) -> dict[str, Any]:
+        """Return safe, display-only metadata for installed skill packs."""
+        from tara_app.skills.loader import default_skills_root, list_skill_packs
+
+        packs = list_skill_packs(skills_root=default_skills_root())
+        return {
+            "status": "available",
+            "skills": [
+                {
+                    "name": pack.name,
+                    "title": pack.title,
+                    "description": pack.description,
+                    "version": pack.version,
+                    "tags": list(pack.tags),
+                }
+                for pack in packs
+            ],
+        }
+
     def model_catalogue(self) -> dict[str, Any]:
         adapter = self._coordinator.registry.adapter("models")
         if adapter is None:
