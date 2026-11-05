@@ -6,7 +6,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from tara_app.runtime import RuntimeConfigurationError, create_application
+from tara_app.application.bootstrap import RuntimeConfigurationError, create_application
 from tara_app.webapp import serve
 
 
@@ -25,16 +25,9 @@ def main() -> int:
         if args.floating_pet and sys.platform != "win32":
             raise RuntimeConfigurationError("--floating-pet is supported on Windows only")
         app = create_application(args.config)
-        if app.model_catalog is not None:
-            app.model_catalog.ensure_service_started()
-            if "chat" in app.model_catalog.profiles:
-                print("Preparing TARA's local chat model before the app opens.", flush=True)
-                try:
-                    app.model_catalog.ensure_model_installed("chat")
-                    app.model_catalog.preload_model("chat", keep_alive="15m")
-                    print("TARA's chat model is ready.", flush=True)
-                except RuntimeError:
-                    print("TARA-App will start, but the chat model could not be prepared. Check the Models panel.", file=sys.stderr, flush=True)
+        startup_warning = app.prepare_runtime()
+        if startup_warning:
+            print(startup_warning, file=sys.stderr, flush=True)
         if args.floating_pet:
             from tara_app.windows_pet import run_floating_pet
             run_floating_pet(app, port=args.port)
@@ -44,8 +37,8 @@ def main() -> int:
         print(f"TARA-App could not start: {exc}", file=sys.stderr)
         return 2
     finally:
-        if app is not None and app.model_catalog is not None:
-            app.model_catalog.close()
+        if app is not None:
+            app.close()
     return 0
 
 
