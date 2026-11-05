@@ -7,6 +7,7 @@ later steps.
 """
 from __future__ import annotations
 
+import os
 from typing import Any, Mapping, Sequence
 
 from tara_app.contracts import ModuleRequest
@@ -149,14 +150,28 @@ class ApplicationFacade:
         request_id: str | None = None,
         skill: str | None = None,
     ) -> Any:
-        return self._coordinator.handle_question(
-            question,
-            session_id=session_id,
-            attachments=attachments,
-            workspace_root=workspace_root,
-            request_id=request_id,
-            skill=skill,
-        )
+        previous = os.environ.get("TARA_ACTIVE_SKILL_PROMPT")
+        if skill is not None:
+            if not isinstance(skill, str) or not skill.strip() or len(skill) > 64:
+                raise ValueError("skill name is invalid")
+            from tara_app.skills.loader import default_skills_root, load_skill_pack
+
+            pack = load_skill_pack(skill.strip(), skills_root=default_skills_root())
+            os.environ["TARA_ACTIVE_SKILL_PROMPT"] = pack.prompt_block()
+        try:
+            return self._coordinator.handle_question(
+                question,
+                session_id=session_id,
+                attachments=attachments,
+                workspace_root=workspace_root,
+                request_id=request_id,
+            )
+        finally:
+            if skill is not None:
+                if previous is None:
+                    os.environ.pop("TARA_ACTIVE_SKILL_PROMPT", None)
+                else:
+                    os.environ["TARA_ACTIVE_SKILL_PROMPT"] = previous
 
     def list_skills(self) -> list[dict[str, str]]:
         """Return available skill pack summaries (instructions not expanded)."""
