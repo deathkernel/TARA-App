@@ -7,4 +7,4 @@ configures them. Mutating host tools are intentionally absent.
 
 __all__ = ["KNOWN_BUILTIN_SERVERS"]
 
-KNOWN_BUILTIN_SERVERS = frozenset({"time", "scoped_fs", "git_read"})
+KNOWN_BUILTIN_SERVERS = frozenset({"time", "scoped_fs", "git_read", "fetch"})
