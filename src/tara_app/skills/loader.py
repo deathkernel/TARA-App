@@ -1,8 +1,4 @@
-"""Allowlisted skill-pack loader.
-
-A skill pack is a directory containing ``SKILL.md`` (required) and optional
-``skill.toml`` metadata. Only packs under an explicit root are visible.
-"""
+"""Allowlisted skill-pack loader."""
 from __future__ import annotations
 
 import re
@@ -26,8 +22,6 @@ class SkillLoadError(ValueError):
 
 @dataclass(frozen=True, slots=True)
 class SkillPack:
-    """One loaded skill pack (instructions are text data only)."""
-
     name: str
     title: str
     description: str
@@ -39,7 +33,6 @@ class SkillPack:
     root_path: str = ""
 
     def prompt_block(self) -> str:
-        """Format instructions for inclusion in a specialist prompt."""
         header = f"# Skill: {self.title or self.name}\n"
         if self.description:
             header += f"{self.description.strip()}\n\n"
@@ -69,7 +62,6 @@ def _parse_toml_meta(path: Path) -> dict[str, Any]:
 
 
 def load_skill_pack(name: str, *, skills_root: str | Path) -> SkillPack:
-    """Load a single skill pack by directory name under ``skills_root``."""
     if not isinstance(name, str) or not _NAME_RE.match(name):
         raise SkillLoadError("skill name must be lowercase alphanumeric with - or _")
     root = Path(skills_root)
@@ -118,7 +110,6 @@ def load_skill_pack(name: str, *, skills_root: str | Path) -> SkillPack:
 
 
 def list_skill_packs(*, skills_root: str | Path) -> tuple[SkillPack, ...]:
-    """List and load all valid skill packs under ``skills_root``."""
     root = Path(skills_root)
     if not root.is_dir():
         return ()
@@ -135,3 +126,13 @@ def list_skill_packs(*, skills_root: str | Path) -> tuple[SkillPack, ...]:
         if len(packs) >= _MAX_PACKS:
             break
     return tuple(packs)
+
+
+def default_skills_root() -> Path:
+    """Resolve skills root from ``TARA_SKILLS_ROOT`` or ``./skills``."""
+    import os
+
+    env = os.environ.get("TARA_SKILLS_ROOT", "").strip()
+    if env:
+        return Path(env).expanduser()
+    return Path("skills")
