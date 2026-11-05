@@ -1,0 +1,4 @@
+title = "Planner Outline"
+description = "Bounded multi-step planning templates without automatic execution."
+version = "0.1.0"
+tags = ["planner", "plan"]

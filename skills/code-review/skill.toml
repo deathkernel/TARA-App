@@ -1,0 +1,4 @@
+title = "Code Review"
+description = "Read-only code review guidance for TARA-Code proposals."
+version = "0.1.0"
+tags = ["code", "review"]
