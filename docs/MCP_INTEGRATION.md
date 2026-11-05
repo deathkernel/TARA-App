@@ -47,7 +47,7 @@ optional MCP package.
 Run the focused tests with:
 
 ```powershell
-python -m unittest tests.test_mcp_time_server -v
+python -m unittest discover -s tests -p "test_mcp_time_server.py" -v
 ```
 
 The repository CI also discovers this test through
