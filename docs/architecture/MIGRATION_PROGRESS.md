@@ -1,41 +1,51 @@
 # Architecture Migration Progress
 
-**Branch:** \`architecture/wide-system-blueprint\`  
-**Pull request:** [#69 — Wide responsibility-oriented architecture](https://github.com/deathkernel/TARA-App/pull/69)  
-**Status:** In progress; first application-boundary slice committed.
+**Branch:** `architecture/workflow-engine-state`  
+**Base:** `main` @ `43010144784e6dc2dcd69209fdcec6bed696db60` (includes PR #69 facade + workflow contracts)  
+**Status:** In progress — workflow **execution** engine added (not live-wired).
 
-## Completed in this slice
+## Completed
 
-- Added \`tara_app.application\` as the application-facing package.
-- Added \`ApplicationFacade\` as the single interface boundary for health, model catalogue, model lifecycle requests, chat, approval, cancellation and MCP operations.
-- Added \`application.bootstrap.create_application()\` to compose the existing runtime coordinator behind the facade.
-- Changed the CLI and public \`tara_app.create_application\` entry point to use the facade.
-- Changed the HTTP server so it no longer reads the coordinator's registry or model catalogue directly.
-- Preserved the existing coordinator, capability registry, adapter implementations, OmniRoute routing, MCP approval behavior and Windows pet's local HTTP transport.
-- Added focused facade tests.
-- Restored optional model-catalogue startup and shutdown hooks through the facade, with regression tests.
-- Added versioned workflow request, step, DAG plan and result contracts with JSON payload bounds, cycle detection and validation tests.
-- Added a source inventory and verified core dependency map; 93 Python source files and 82 native Handler files are recorded in the snapshot.
+### Slice A (PR #69, on main)
+- `tara_app.application` package with `ApplicationFacade` and bootstrap.
+- CLI / public entry use facade.
+- HTTP server no longer reads registry/catalogue directly from coordinator.
+- Versioned workflow request/step/plan/result contracts + DAG validation tests.
+- Source inventory notes in architecture docs.
+
+### Slice B (this branch)
+- **`tara_app.workflow_engine.WorkflowEngine`**: real in-process DAG executor.
+  - Sequential deterministic execution of dependency-ready steps.
+  - Hard fail stops downstream steps (marks cancelled).
+  - Approval-gated steps pause as `WAITING_APPROVAL` until `continue_run(..., approved_step_ids=...)`.
+  - Cancellation marks remaining steps cancelled.
+  - Result aggregation into `WorkflowResult`.
+- **Tests:** `tests/test_workflow_engine.py` (6 cases).
+- **Safety:** Engine does **not** authorize side effects; executor + existing Security/Orchestrator remain authoritative.
+- **Not connected** to live Orchestrator dispatch (per migration plan Phase 4 gate).
+
+## Baseline verification (this environment)
+
+```text
+PYTHONPATH=src python3 -m unittest discover -s tests
+# Ran 346 tests — OK (prior suite + 6 workflow engine tests)
+```
+
+Windows native Handler and live OmniRoute smoke are **not** claimed by this slice.
 
 ## Not completed yet
 
-- The existing runtime builder still constructs the current coordinator and specialist adapters.
-- Workflow state is not yet durable or centrally persisted.
-- The workflow contracts are not yet wired into dispatch; they define the migration target only.
-- Conversation history and pending approvals still live inside the current coordinator.
-- \`orchestrator.py\` and \`orchestration.py\` have not yet been consolidated.
-- Existing \`tara_*\` packages have not been moved or deleted.
-- No full repository dependency graph or per-file ownership matrix has been generated yet.
-- Windows native Handler and live OmniRoute behavior have not been verified by this documentation/code slice.
+- Wire workflow engine into Orchestrator / ApplicationFacade with parity tests.
+- Durable SQLite workflow state store (in-memory only).
+- Parallel step execution (ready steps still run one-at-a-time for determinism).
+- Consolidate `orchestrator.py` vs `orchestration.py`.
+- Consolidate dual composition paths (`runtime.create_application` vs `TARAApplicationService`).
+- Move packages by responsibility (Phase 6).
+- Full per-file ownership matrix.
 
-## Verification
+## Next sequence
 
-The GitHub Actions workflow is triggered by branch pushes and the pull request. Do not treat a queued or pending run as a passing result. The full test suite and Windows-specific checks must pass before this slice is considered validated.
-
-## Next implementation sequence
-
-1. Validate this facade slice through CI and repair any regressions.
-2. Build a source-level dependency and runtime call graph.
-3. Consolidate the duplicate application/runtime composition paths.
-4. Introduce typed workflow state and result propagation.
-5. Move ownership and source files only after the call graph and tests establish safe boundaries.
+1. Optional SQLite `WorkflowStore` for durable run state (still offline from live dispatch).
+2. Facade methods for inspect/cancel workflow runs (read-only surface).
+3. Parity harness comparing approval lifecycle before any live wire-up.
+4. Consolidate composition roots behind one bootstrap.
