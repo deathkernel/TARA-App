@@ -33,6 +33,15 @@ study = load_skill_pack("study-notes", skills_root=Path("skills"))
 prompt = study.prompt_block()
 ```
 
+## Chat integration
+
+- `GET /api/skills` — list available packs (`name`, `title`, `description`, `version`)
+- `POST /api/chat` body may include `"skill": "study-notes"` (optional)
+
+When set, TARA loads that pack from `TARA_SKILLS_ROOT` or `./skills` and appends
+its instructions to the Chat system prompt for that request only. Skills are
+**user-selected**, never auto-chosen from model text alone.
+
 ## Sample packs in this repo
 
 | Pack | Use |
