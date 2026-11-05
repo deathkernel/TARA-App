@@ -4,7 +4,7 @@ Safety rules enforced here:
 
 - Only servers present in an enabled ``McpRegistryConfig`` may be contacted.
 - ``list_tools`` is read-only metadata.
-- ``call_tool`` always requires a non-empty ``approval_token`` (app-issued).
+- ``call_tool`` requires an opaque grant created only after app-level token validation.
 - Live stdio transport requires the optional ``mcp`` package.
 - Session factories are injectable so tests never need a real MCP process.
 
@@ -14,6 +14,7 @@ servers that are not already listed in config.
 from __future__ import annotations
 
 import asyncio
+from threading import Lock
 from dataclasses import dataclass
 from typing import Any, Callable, Mapping, Protocol
 
@@ -57,6 +58,32 @@ class McpSession(Protocol):
 
 
 SessionFactory = Callable[[McpServerSpec], McpSession]
+
+
+_APPROVAL_GRANT_SEAL = object()
+
+
+class _McpApprovalGrant:
+    """Opaque proof that the orchestrator validated and consumed an approval."""
+
+    __slots__ = ("_seal", "_used", "_lock")
+
+    def __init__(self, seal: object) -> None:
+        if seal is not _APPROVAL_GRANT_SEAL:
+            raise ValueError("MCP approval grants can only be created by the app")
+        self._seal = seal
+        self._used = False
+        self._lock = Lock()
+
+
+def _consume_mcp_approval_grant(grant: object) -> bool:
+    if not isinstance(grant, _McpApprovalGrant) or grant._seal is not _APPROVAL_GRANT_SEAL:
+        return False
+    with grant._lock:
+        if grant._used:
+            return False
+        grant._used = True
+    return True
 
 
 def _extract_tool_page(result: Any, server_name: str) -> tuple[list[McpToolInfo], str | None]:
@@ -161,18 +188,17 @@ class McpToolGateway:
         tool_name: str,
         arguments: Mapping[str, Any] | None,
         *,
-        approval_token: str,
+        approval_grant: object,
     ) -> str:
-        """Call one tool on an allowlisted server.
+        """Call one tool with an opaque grant issued by the orchestrator.
 
-        ``approval_token`` must be a non-empty app-issued token. Model text is
-        never treated as approval.
+        Raw strings and model-provided values are never accepted as approval.
         """
         self._ensure_ready()
         if not self._config.enable:
             raise McpClientError("MCP is disabled")
-        if not isinstance(approval_token, str) or not approval_token.strip():
-            raise McpClientError("approval_token is required for MCP tool calls")
+        if not _consume_mcp_approval_grant(approval_grant):
+            raise McpClientError("a validated app approval grant is required")
         if not isinstance(tool_name, str) or not tool_name.strip() or len(tool_name) > _MAX_TOOL_NAME:
             raise McpClientError("tool_name is invalid")
         if arguments is None:
