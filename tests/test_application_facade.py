@@ -54,6 +54,25 @@ class FakeCoordinator:
         return "tool-result"
 
 
+class FakeModelCatalogue:
+    profiles = {"chat": object()}
+
+    def __init__(self):
+        self.calls = []
+
+    def ensure_service_started(self):
+        self.calls.append("start")
+
+    def ensure_model_installed(self, specialist):
+        self.calls.append(("install", specialist))
+
+    def preload_model(self, specialist, *, keep_alive):
+        self.calls.append(("preload", specialist, keep_alive))
+
+    def close(self):
+        self.calls.append("close")
+
+
 class ApplicationFacadeTests(unittest.TestCase):
     def test_health_status_exposes_diagnostics_without_registry_access(self):
         coordinator = FakeCoordinator()
@@ -84,6 +103,25 @@ class ApplicationFacadeTests(unittest.TestCase):
         app = ApplicationFacade(FakeCoordinator())
 
         self.assertIsNone(app.model_lifecycle_action("pull", "chat"))
+
+    def test_optional_model_catalogue_startup_and_cleanup_are_preserved(self):
+        coordinator = FakeCoordinator()
+        coordinator.model_catalog = FakeModelCatalogue()
+        app = ApplicationFacade(coordinator)
+
+        self.assertIsNone(app.prepare_runtime())
+        app.close()
+
+        self.assertEqual(
+            coordinator.model_catalog.calls,
+            ["start", ("install", "chat"), ("preload", "chat", "15m"), "close"],
+        )
+
+    def test_runtime_lifecycle_is_a_noop_without_local_catalogue(self):
+        app = ApplicationFacade(FakeCoordinator())
+
+        self.assertIsNone(app.prepare_runtime())
+        app.close()
 
     def test_interface_calls_are_forwarded_through_facade(self):
         coordinator = FakeCoordinator()
