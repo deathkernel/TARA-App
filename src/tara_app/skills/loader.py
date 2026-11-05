@@ -61,7 +61,7 @@ def _parse_toml_meta(path: Path) -> dict[str, Any]:
         return {}
     try:
         data = tomllib.loads(path.read_text(encoding="utf-8"))
-    except (OSError, tomllib.TOMLDecodeError) as exc:
+    except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError) as exc:
         raise SkillLoadError(f"invalid skill.toml: {exc}") from exc
     if not isinstance(data, dict):
         raise SkillLoadError("skill.toml must be a table")
@@ -78,17 +78,18 @@ def load_skill_pack(name: str, *, skills_root: str | Path) -> SkillPack:
     pack_dir = _require_under_root(root / name, root)
     if not pack_dir.is_dir():
         raise SkillLoadError(f"skill pack not found: {name}")
-    skill_md = pack_dir / "SKILL.md"
+    skill_md = _require_under_root(pack_dir / "SKILL.md", root)
     if not skill_md.is_file():
         raise SkillLoadError("SKILL.md is required")
     try:
         instructions = skill_md.read_text(encoding="utf-8")
-    except OSError as exc:
+    except (OSError, UnicodeDecodeError) as exc:
         raise SkillLoadError(f"cannot read SKILL.md: {exc}") from exc
     if len(instructions) > _MAX_INSTRUCTION_CHARS:
         raise SkillLoadError("SKILL.md exceeds size limit")
 
-    meta = _parse_toml_meta(pack_dir / "skill.toml")
+    meta_path = _require_under_root(pack_dir / "skill.toml", root)
+    meta = _parse_toml_meta(meta_path)
     title = str(meta.get("title") or name.replace("-", " ").title())
     description = str(meta.get("description") or "")
     version = str(meta.get("version") or "0.1.0")
@@ -135,3 +136,11 @@ def list_skill_packs(*, skills_root: str | Path) -> tuple[SkillPack, ...]:
         if len(packs) >= _MAX_PACKS:
             break
     return tuple(packs)
+
+
+def default_skills_root() -> Path:
+    """Resolve the skills root from TARA_SKILLS_ROOT or the local ./skills directory."""
+    import os
+
+    configured = os.environ.get("TARA_SKILLS_ROOT", "").strip()
+    return Path(configured).expanduser() if configured else Path("skills")

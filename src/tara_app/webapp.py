@@ -11,6 +11,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
 from tara_app.application.facade import ApplicationFacade
+from tara_app.skills.loader import SkillLoadError
 
 _WEB_ROOT = Path(__file__).with_name("web")
 _ASSETS = {
@@ -148,7 +149,7 @@ class _Handler(BaseHTTPRequestHandler):
             self._json(400, {"status": "invalid_request", "error": "request must be UTF-8 JSON"})
             return
         if endpoint == "/api/chat":
-            fields = {"question", "session_id", "attachments", "history"}
+            fields = {"question", "session_id", "attachments", "history", "skill"}
         elif endpoint in {"/api/models/pull", "/api/models/unload", "/api/models/remove"}:
             fields = {"specialist"}
         else:
@@ -191,11 +192,22 @@ class _Handler(BaseHTTPRequestHandler):
                 except ValueError:
                     self._json(400, {"status": "invalid_request", "error": "conversation history is invalid"})
                     return
-            outcome = self.server.app.handle_question(
-                payload.get("question"),
-                session_id=payload.get("session_id", "default"),
-                attachments=payload.get("attachments", []),
-            )
+            skill = payload.get("skill")
+            if skill is not None and (
+                not isinstance(skill, str) or not skill.strip() or len(skill) > 64
+            ):
+                self._json(400, {"status": "invalid_request", "error": "skill name is invalid"})
+                return
+            try:
+                outcome = self.server.app.handle_question(
+                    payload.get("question"),
+                    session_id=payload.get("session_id", "default"),
+                    attachments=payload.get("attachments", []),
+                    skill=skill.strip() if isinstance(skill, str) else None,
+                )
+            except SkillLoadError:
+                self._json(400, {"status": "invalid_request", "error": "selected skill is unavailable or invalid"})
+                return
         elif endpoint == "/api/approve":
             outcome = self.server.app.approve(payload.get("approval_id"), session_id=payload.get("session_id"))
         else:

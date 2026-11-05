@@ -136,6 +136,7 @@ class Orchestrator(McpOrchestratorMixin):
         attachments: Sequence[Mapping[str, str]] = (),
         workspace_root: str | None = None,
         request_id: str | None = None,
+        skill_prompt: str | None = None,
     ) -> DispatchOutcome:
         operation_id = request_id or str(uuid4())
         if not isinstance(operation_id, str) or not operation_id.strip() or len(operation_id) > 128:
@@ -144,6 +145,10 @@ class Orchestrator(McpOrchestratorMixin):
             return self._outcome(operation_id, "invalid_request", None, "invalid_request", "question is empty or too long")
         if not isinstance(session_id, str) or not session_id.strip() or len(session_id) > 128:
             return self._outcome(operation_id, "invalid_request", None, "invalid_request", "session_id is invalid")
+        if skill_prompt is not None and (
+            not isinstance(skill_prompt, str) or not skill_prompt.strip() or len(skill_prompt) > 100_000
+        ):
+            return self._outcome(operation_id, "invalid_request", None, "invalid_request", "skill prompt is invalid")
         try:
             safe_attachments = self._validate_attachments(attachments)
         except ValueError:
@@ -224,6 +229,8 @@ class Orchestrator(McpOrchestratorMixin):
         if decision.module == "chat" and decision.action == "respond":
             with self._history_lock:
                 inputs["history"] = [dict(turn) for turn in self._conversation_history.get(session_id, [])]
+            if skill_prompt is not None:
+                inputs["skill_prompt"] = skill_prompt
         if decision.intended_module:
             inputs["intended_module"] = decision.intended_module
         if decision.intended_action:

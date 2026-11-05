@@ -6,7 +6,7 @@ import sys
 import time
 from collections.abc import Mapping
 from typing import Any
-from .brain import DEFAULT_MAX_NEW_TOKENS, TARABrain
+from .brain import DEFAULT_MAX_NEW_TOKENS, DEFAULT_SYSTEM_PROMPT, TARABrain
 from .llm_provider_factory import provider_from_env
 from .memory import LongTermMemory
 
@@ -143,7 +143,19 @@ def handle_request(request: Any) -> dict[str, Any]:
     if provider is None:
         return _result(request_id, "unavailable", error="TARA-Chat has no language provider configured")
     memory_path = os.environ.get("TARA_CHAT_MEMORY_PATH", "").strip()
-    brain = TARABrain(llm_provider=provider, memory=LongTermMemory(memory_path or None))
+    skill_prompt = inputs.get("skill_prompt")
+    if skill_prompt is not None and (
+        not isinstance(skill_prompt, str) or not skill_prompt.strip() or len(skill_prompt) > 100_000
+    ):
+        return _result(request_id, "invalid_request", error="skill prompt is invalid")
+    system_prompt = DEFAULT_SYSTEM_PROMPT
+    if skill_prompt is not None:
+        system_prompt = f"{DEFAULT_SYSTEM_PROMPT.strip()}\n\n{skill_prompt.strip()}"
+    brain = TARABrain(
+        llm_provider=provider,
+        memory=LongTermMemory(memory_path or None),
+        system_prompt=system_prompt,
+    )
     brain.conversation_history = normalized
     start = time.monotonic()
     try:

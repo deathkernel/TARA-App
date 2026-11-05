@@ -147,14 +147,26 @@ class ApplicationFacade:
         attachments: Sequence[Mapping[str, str]] = (),
         workspace_root: str | None = None,
         request_id: str | None = None,
+        skill: str | None = None,
     ) -> Any:
-        return self._coordinator.handle_question(
-            question,
-            session_id=session_id,
-            attachments=attachments,
-            workspace_root=workspace_root,
-            request_id=request_id,
-        )
+        skill_prompt = None
+        if skill is not None:
+            if not isinstance(skill, str) or not skill.strip() or len(skill) > 64:
+                raise ValueError("skill name is invalid")
+            from tara_app.skills.loader import default_skills_root, load_skill_pack
+
+            skill_prompt = load_skill_pack(
+                skill.strip(), skills_root=default_skills_root()
+            ).prompt_block()
+        request = {
+            "session_id": session_id,
+            "attachments": attachments,
+            "workspace_root": workspace_root,
+            "request_id": request_id,
+        }
+        if skill_prompt is not None:
+            request["skill_prompt"] = skill_prompt
+        return self._coordinator.handle_question(question, **request)
 
     def approve(self, approval_id: str, *, session_id: str) -> Any:
         return self._coordinator.approve(approval_id, session_id=session_id)
