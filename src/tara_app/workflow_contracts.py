@@ -5,12 +5,14 @@ change the current Orchestrator dispatch path by themselves.
 """
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any, Mapping
 
 
 WORKFLOW_SCHEMA_VERSION = "1.0"
+MAX_WORKFLOW_DATA_BYTES = 1_000_000
 
 
 class WorkflowStatus(StrEnum):
@@ -51,8 +53,7 @@ class WorkflowRequest:
         _require_identifier(self.session_id, "session_id")
         if self.schema_version != WORKFLOW_SCHEMA_VERSION:
             raise ValueError("unsupported workflow request schema version")
-        if not isinstance(self.input, Mapping):
-            raise ValueError("workflow input must be a mapping")
+        _validate_json_mapping(self.input, "workflow input")
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,8 +69,7 @@ class WorkflowStepSpec:
     def __post_init__(self) -> None:
         _require_identifier(self.step_id, "step_id")
         _require_identifier(self.operation_id, "operation_id")
-        if not isinstance(self.input, Mapping):
-            raise ValueError("step input must be a mapping")
+        _validate_json_mapping(self.input, "step input")
         if not isinstance(self.depends_on, tuple) or any(
             not isinstance(item, str) or not item.strip() for item in self.depends_on
         ):
@@ -85,6 +85,47 @@ class WorkflowStepSpec:
 
 
 @dataclass(frozen=True, slots=True)
+class WorkflowPlan:
+    workflow_id: str
+    request_id: str
+    steps: tuple[WorkflowStepSpec, ...]
+    schema_version: str = WORKFLOW_SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        _require_identifier(self.workflow_id, "workflow_id")
+        _require_identifier(self.request_id, "request_id")
+        if self.schema_version != WORKFLOW_SCHEMA_VERSION:
+            raise ValueError("unsupported workflow plan schema version")
+        if not isinstance(self.steps, tuple) or any(
+            not isinstance(step, WorkflowStepSpec) for step in self.steps
+        ):
+            raise ValueError("workflow steps must be a tuple of WorkflowStepSpec values")
+        by_id = {step.step_id: step for step in self.steps}
+        if len(by_id) != len(self.steps):
+            raise ValueError("workflow plan cannot contain duplicate step IDs")
+        for step in self.steps:
+            missing = set(step.depends_on) - by_id.keys()
+            if missing:
+                raise ValueError(f"workflow step references an unknown dependency: {sorted(missing)[0]}")
+        visiting: set[str] = set()
+        visited: set[str] = set()
+
+        def visit(step_id: str) -> None:
+            if step_id in visiting:
+                raise ValueError("workflow plan dependencies must be acyclic")
+            if step_id in visited:
+                return
+            visiting.add(step_id)
+            for dependency in by_id[step_id].depends_on:
+                visit(dependency)
+            visiting.remove(step_id)
+            visited.add(step_id)
+
+        for step_id in by_id:
+            visit(step_id)
+
+
+@dataclass(frozen=True, slots=True)
 class WorkflowStepResult:
     step_id: str
     status: StepStatus
@@ -97,8 +138,7 @@ class WorkflowStepResult:
         _require_identifier(self.step_id, "step_id")
         if not isinstance(self.status, StepStatus):
             raise ValueError("step status must be a StepStatus")
-        if not isinstance(self.data, Mapping):
-            raise ValueError("step result data must be a mapping")
+        _validate_json_mapping(self.data, "step result data")
         if not isinstance(self.artifact_refs, tuple) or any(
             not isinstance(item, str) or not item.strip() for item in self.artifact_refs
         ):
@@ -129,6 +169,17 @@ class WorkflowResult:
         step_ids = [step.step_id for step in self.steps]
         if len(step_ids) != len(set(step_ids)):
             raise ValueError("workflow result cannot contain duplicate step IDs")
+
+
+def _validate_json_mapping(value: Mapping[str, Any], name: str) -> None:
+    if not isinstance(value, Mapping):
+        raise ValueError(f"{name} must be a mapping")
+    try:
+        encoded = json.dumps(dict(value), ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must contain JSON-compatible values") from exc
+    if len(encoded) > MAX_WORKFLOW_DATA_BYTES:
+        raise ValueError(f"{name} exceeds the workflow data limit")
 
 
 def _require_identifier(value: str, name: str) -> None:
