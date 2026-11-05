@@ -127,7 +127,8 @@ class ApplicationFacade:
             catalogue.preload_model("chat", keep_alive="15m")
         except RuntimeError:
             return "TARA-App will start, but the chat model could not be prepared. Check the Models panel."
-        return "TARA's chat model is ready."
+        print("TARA's chat model is ready.", flush=True)
+        return None
 
     def close(self) -> None:
         """Release optional runtime resources during interface shutdown."""
