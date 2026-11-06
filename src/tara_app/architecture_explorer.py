@@ -195,6 +195,9 @@ class ArchitectureExplorer:
                 module_path + ".py", module_path + "/__init__.py",
                 module_path + ".ts", module_path + ".tsx", module_path + ".js",
                 module_path + ".jsx",
+                "src/" + module_path + ".py", "src/" + module_path + "/__init__.py",
+                "src/" + module_path + ".ts", "src/" + module_path + ".tsx",
+                "src/" + module_path + ".js", "src/" + module_path + ".jsx",
             }
             source_parent = Path(source_path).parent
             candidates |= {
