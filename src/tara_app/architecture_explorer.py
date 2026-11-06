@@ -151,31 +151,31 @@ class ArchitectureExplorer:
 
     def _parse_ecmascript(self, relative: str, source: str) -> tuple[list[Symbol], list[str]]:
         symbols: list[Symbol] = []
-        imports = re.findall(r"""(?:import|export)\\s+(?:[^;]*?\\s+from\\s+)?["']([^"']+)["']""", source)
+        imports = re.findall(r"""(?:import|export)\s+(?:[^;]*?\s+from\s+)?["']([^"']+)["']""", source)
         patterns = (
-            ("class", r"\\bclass\\s+([A-Za-z_$][\\w$]*)"),
-            ("function", r"\\bfunction\\s+([A-Za-z_$][\\w$]*)\\s*\\("),
-            ("function", r"\\b(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*(?:async\\s*)?(?:\\([^)]*\\)|[A-Za-z_$][\\w$]*)\\s*=>"),
+            ("class", r"\bclass\s+([A-Za-z_$][\w$]*)"),
+            ("function", r"\bfunction\s+([A-Za-z_$][\w$]*)\s*\("),
+            ("function", r"\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>"),
         )
         module = self._module_id(relative)
         for kind, pattern in patterns:
             for match in re.finditer(pattern, source):
-                line = source.count("\\n", 0, match.start()) + 1
+                line = source.count("\n", 0, match.start()) + 1
                 name = match.group(1)
                 symbols.append(Symbol(f"{module}::{name}", name, kind, relative, line))
         return symbols, imports
 
     def _parse_cpp(self, relative: str, source: str) -> tuple[list[Symbol], list[str]]:
         symbols: list[Symbol] = []
-        imports = re.findall(r'^\\s*#\\s*include\\s*["<]([^">]+)[">]', source, re.MULTILINE)
+        imports = re.findall(r'^\s*#\s*include\s*["<]([^">]+)[">]', source, re.MULTILINE)
         patterns = (
-            ("class", r"\\b(?:class|struct)\\s+([A-Za-z_][\\w]*)"),
-            ("function", r"(?m)^\\s*(?:[A-Za-z_][\\w:<>,*&\\s]+)\\s+([A-Za-z_][\\w]*)\\s*\\([^;{}]*\\)\\s*(?:const\\s*)?\\{"),
+            ("class", r"\b(?:class|struct)\s+([A-Za-z_][\w]*)"),
+            ("function", r"(?m)^\s*(?:[A-Za-z_][\w:<>,*&\s]+)\s+([A-Za-z_][\w]*)\s*\([^;{}]*\)\s*(?:const\s*)?\{"),
         )
         module = self._module_id(relative)
         for kind, pattern in patterns:
             for match in re.finditer(pattern, source):
-                line = source.count("\\n", 0, match.start()) + 1
+                line = source.count("\n", 0, match.start()) + 1
                 name = match.group(1)
                 symbols.append(Symbol(f"{module}::{name}", name, kind, relative, line))
         return symbols, imports
@@ -229,7 +229,7 @@ def to_mermaid(graph: dict[str, object]) -> str:
         source = re.sub(r"[^A-Za-z0-9_]", "_", str(edge["source"]))
         target = re.sub(r"[^A-Za-z0-9_]", "_", str(edge["target"]))
         lines.append(f"    {source} -->|imports| {target}")
-    return "\\n".join(lines) + "\\n"
+    return "\n".join(lines) + "\n"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -242,7 +242,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         graph = ArchitectureExplorer(args.root, max_files=args.max_files).scan()
-        args.json_path.write_text(json.dumps(graph, indent=2, sort_keys=True) + "\\n", encoding="utf-8")
+        args.json_path.write_text(json.dumps(graph, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         args.mermaid.write_text(to_mermaid(graph), encoding="utf-8")
     except (OSError, ValueError) as exc:
         print(f"Architecture scan failed: {exc}", file=sys.stderr)
