@@ -1,5 +1,5 @@
 """Application boundary shared by every TARA interface.
-
+ 
 The facade hides the coordinator, registry, adapters and integration details
 from HTTP, desktop and CLI transports. It is intentionally thin in this first
 migration slice; workflow persistence and durable application state follow in
@@ -7,9 +7,10 @@ later steps.
 """
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Mapping, Sequence
 
-from tara_app.contracts import ModuleRequest
+from tara_app.contracts import AdapterHealth, ModuleRequest
 
 
 class ApplicationFacade:
@@ -18,35 +19,51 @@ class ApplicationFacade:
     def __init__(self, coordinator: Any) -> None:
         self._coordinator = coordinator
 
+    @staticmethod
+    def _adapter_health(adapter: Any) -> AdapterHealth:
+        """Normalize one adapter's health result without leaking exceptions."""
+        try:
+            health = adapter.health()
+        except Exception:
+            return AdapterHealth("unavailable", "specialist health check failed")
+        if not isinstance(health, AdapterHealth):
+            return AdapterHealth("unavailable", "specialist returned an invalid health response")
+        return health
+
     def health_status(self) -> dict[str, Any]:
+        """Return bounded, independent health diagnostics for registered specialists."""
         registry = self._coordinator.registry
         capabilities = tuple(registry.capability_ids())
-        chat_adapter = registry.adapter("chat")
-        gateway_health = None
-        if chat_adapter is not None:
-            try:
-                gateway_health = chat_adapter.health()
-            except Exception:
-                gateway_health = None
-        gateway_status = gateway_health.status if gateway_health is not None else "unavailable"
         disabled_modules = getattr(registry, "disabled_modules", lambda: {})()
         specialists: dict[str, dict[str, str]] = {}
-        for module_id in ("chat", "code", "vision", "creative", "models"):
-            adapter = registry.adapter(module_id)
+        health_results: dict[str, AdapterHealth] = {}
+
+        module_ids = ("chat", "code", "vision", "creative", "models")
+        adapters = {module_id: registry.adapter(module_id) for module_id in module_ids}
+        registered = {module_id: adapter for module_id, adapter in adapters.items() if adapter is not None}
+        with ThreadPoolExecutor(max_workers=max(1, len(registered))) as executor:
+            checked_health = dict(zip(registered, executor.map(self._adapter_health, registered.values())))
+
+        for module_id in module_ids:
+            adapter = adapters[module_id]
             if adapter is None:
                 specialists[module_id] = {
                     "status": "disabled",
                     "reason": disabled_modules.get(module_id, "The specialist is not registered."),
                 }
-            else:
-                specialists[module_id] = {"status": "configured"}
-        if chat_adapter is not None and gateway_status != "healthy":
-            specialists["chat"] = {
-                "status": "unavailable",
-                "reason": "The Chat specialist is configured, but its authenticated OmniRoute model-catalogue check failed.",
-            }
+                continue
+
+            health = checked_health[module_id]
+            health_results[module_id] = health
+            specialist = {"status": health.status}
+            if health.detail:
+                specialist["reason"] = health.detail
+            specialists[module_id] = specialist
+
+        gateway_health = health_results.get("chat")
+        gateway_status = gateway_health.status if gateway_health is not None else "unavailable"
         return {
-            "status": "ok" if capabilities and gateway_status == "healthy" else "degraded",
+            "status": "ok" if capabilities and health_results and all(item.status == "healthy" for item in health_results.values()) else "degraded",
             "app": "TARA-App",
             "api_version": "1.0",
             "capability_count": len(capabilities),
