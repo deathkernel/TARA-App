@@ -181,29 +181,53 @@ class ArchitectureExplorer:
         return symbols, imports
 
     def _resolve_import(self, source_path: str, imported: str, modules: dict[str, str]) -> str | None:
-        if imported.startswith("."):
-            level = len(imported) - len(imported.lstrip("."))
-            module_name = imported[level:]
-            parent = Path(source_path).parent
+        """Resolve a static import/include to a scanned repository file."""
+        source_parent = Path(source_path).parent
+        raw = imported.strip()
+        if not raw or raw.startswith(("http://", "https://")):
+            return None
+
+        if raw.startswith("."):
+            level = len(raw) - len(raw.lstrip("."))
+            module_name = raw[level:].replace(".", "/")
+            parent = source_parent
             for _ in range(max(0, level - 1)):
                 parent = parent.parent
-            candidate = (parent / module_name.replace(".", "/")).as_posix()
-            candidates = {candidate + ".py", candidate + "/__init__.py", candidate + ".ts", candidate + ".tsx", candidate + ".js"}
+            base = (parent / module_name).as_posix()
+        elif "/" in raw or Path(raw).suffix:
+            # C/C++ include paths and explicit file paths must preserve their
+            # suffix (e.g. engine.h); replacing dots would corrupt the path.
+            base = (source_parent / raw).as_posix()
         else:
-            module_path = imported.replace(".", "/")
-            candidates = {
-                module_path + ".py", module_path + "/__init__.py",
-                module_path + ".ts", module_path + ".tsx", module_path + ".js",
-                module_path + ".jsx",
-                "src/" + module_path + ".py", "src/" + module_path + "/__init__.py",
-                "src/" + module_path + ".ts", "src/" + module_path + ".tsx",
-                "src/" + module_path + ".js", "src/" + module_path + ".jsx",
-            }
-            source_parent = Path(source_path).parent
-            candidates |= {
-                (source_parent / candidate).as_posix()
-                for candidate in tuple(candidates)
-            }
+            module_path = raw.replace(".", "/")
+            candidates = [
+                module_path,
+                "src/" + module_path,
+                (source_parent / module_path).as_posix(),
+            ]
+            for base in candidates:
+                resolved = self._match_module_candidates(base, modules)
+                if resolved:
+                    return resolved
+            return None
+
+        return self._match_module_candidates(base, modules)
+
+    @staticmethod
+    def _match_module_candidates(base: str, modules: dict[str, str]) -> str | None:
+        """Match exact files, language extensions, or package index files."""
+        normalized = Path(base).as_posix()
+        candidates = [normalized]
+        if not Path(normalized).suffix:
+            for suffix in (
+                ".py", ".pyi", ".js", ".jsx", ".mjs", ".cjs",
+                ".ts", ".tsx", ".c", ".h", ".cc", ".cpp", ".cxx", ".hpp", ".hh",
+            ):
+                candidates.append(normalized + suffix)
+            for filename in (
+                "__init__.py", "index.js", "index.jsx", "index.ts", "index.tsx",
+            ):
+                candidates.append(normalized + "/" + filename)
         for candidate in candidates:
             if candidate in modules:
                 return modules[candidate]
