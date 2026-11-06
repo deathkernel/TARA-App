@@ -189,7 +189,7 @@ class ArchitectureExplorer:
 
         if raw.startswith("."):
             level = len(raw) - len(raw.lstrip("."))
-            module_name = raw[level:].replace(".", "/")
+            module_name = raw[level:].lstrip("/").replace(".", "/")
             parent = source_parent
             for _ in range(max(0, level - 1)):
                 parent = parent.parent
