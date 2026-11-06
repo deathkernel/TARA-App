@@ -55,7 +55,7 @@ class ApplicationFacade:
         gateway_health = health_results.get("chat")
         gateway_status = gateway_health.status if gateway_health is not None else "unavailable"
         return {
-            "status": "ok" if capabilities and gateway_status == "healthy" else "degraded",
+            "status": "ok" if capabilities and all(item.status == "healthy" for item in health_results.values()) else "degraded",
             "app": "TARA-App",
             "api_version": "1.0",
             "capability_count": len(capabilities),
