@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -25,6 +24,18 @@ class ArchitectureExplorerTests(unittest.TestCase):
             self.assertIn("Service", names)
             self.assertIn("run", names)
             self.assertEqual(graph["summary"]["files"], 2)
+            self.assertEqual(graph["summary"]["dependencies"], 1)
+
+    def test_resolves_absolute_imports_in_src_layout(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "src/tara_app").mkdir(parents=True)
+            (root / "src/tara_app/__init__.py").write_text("", encoding="utf-8")
+            (root / "src/tara_app/runtime.py").write_text("class Runtime: pass\\n", encoding="utf-8")
+            (root / "src/tara_app/app.py").write_text("from tara_app.runtime import Runtime\\n", encoding="utf-8")
+
+            graph = ArchitectureExplorer(root).scan()
+
             self.assertEqual(graph["summary"]["dependencies"], 1)
 
     def test_extracts_typescript_symbols_and_relative_imports(self):
