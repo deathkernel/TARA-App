@@ -99,6 +99,25 @@ class ArchitectureExplorerTests(unittest.TestCase):
             self.assertEqual(graph["summary"]["diagnostics"], 1)
             self.assertIn("Valid", {item["name"] for item in graph["symbols"]})
 
+    def test_mermaid_ids_do_not_collide_for_similar_paths(self):
+        graph = {
+            "nodes": [
+                {"id": "file:src/a_b.py", "kind": "file", "path": "src/a_b.py"},
+                {"id": "file:src/a/b.py", "kind": "file", "path": "src/a/b.py"},
+            ],
+            "edges": [],
+        }
+
+        rendered = to_mermaid(graph)
+        identifiers = [
+            line.strip().split("[", 1)[0]
+            for line in rendered.splitlines()
+            if "[" in line
+        ]
+
+        self.assertEqual(len(identifiers), 2)
+        self.assertEqual(len(set(identifiers)), 2)
+
     def test_mermaid_output_contains_file_nodes_and_edges(self):
         graph = {
             "nodes": [
