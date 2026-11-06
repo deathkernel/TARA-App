@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import hashlib
 import json
 import os
 import re
@@ -104,6 +105,7 @@ class ArchitectureExplorer:
         }
 
     def _source_files(self) -> Iterable[Path]:
+        """Yield bounded, supported source files without following symlinks."""
         count = 0
         for current, directories, filenames in os.walk(self.root, topdown=True, followlinks=False):
             current_path = Path(current)
@@ -127,6 +129,7 @@ class ArchitectureExplorer:
                     return
 
     def _parse_file(self, relative: str, source: str) -> tuple[list[Symbol], list[str]]:
+        """Dispatch source text to the parser for its file extension."""
         suffix = Path(relative).suffix.lower()
         if suffix in {".py", ".pyi"}:
             return self._parse_python(relative, source)
@@ -135,6 +138,7 @@ class ArchitectureExplorer:
         return self._parse_cpp(relative, source)
 
     def _parse_python(self, relative: str, source: str) -> tuple[list[Symbol], list[str]]:
+        """Extract Python declarations and statically declared imports."""
         tree = ast.parse(source, filename=relative)
         symbols: list[Symbol] = []
         imports: list[str] = []
@@ -150,6 +154,7 @@ class ArchitectureExplorer:
         return symbols, imports
 
     def _parse_ecmascript(self, relative: str, source: str) -> tuple[list[Symbol], list[str]]:
+        """Extract common JavaScript/TypeScript declarations and imports."""
         symbols: list[Symbol] = []
         imports = re.findall(r"""(?:import|export)\s+(?:[^;]*?\s+from\s+)?["']([^"']+)["']""", source)
         patterns = (
@@ -166,6 +171,7 @@ class ArchitectureExplorer:
         return symbols, imports
 
     def _parse_cpp(self, relative: str, source: str) -> tuple[list[Symbol], list[str]]:
+        """Extract C/C++ type/function declarations and include paths."""
         symbols: list[Symbol] = []
         imports = re.findall(r'^\s*#\s*include\s*["<]([^">]+)[">]', source, re.MULTILINE)
         patterns = (
@@ -235,11 +241,20 @@ class ArchitectureExplorer:
 
     @staticmethod
     def _module_id(path: str) -> str:
+        """Return a stable graph identifier for a repository-relative path."""
         return "file:" + path
 
     @staticmethod
     def _deduplicate_edges(edges: list[Edge]) -> list[Edge]:
+        """Remove duplicate dependency edges and sort the remaining edges."""
         return sorted(set(edges), key=lambda edge: (edge.source, edge.target, edge.kind))
+
+
+def _mermaid_id(raw: str) -> str:
+    """Return a Mermaid-safe identifier with a stable collision-resistant suffix."""
+    safe = re.sub(r"[^A-Za-z0-9_]", "_", raw)
+    digest = hashlib.sha1(raw.encode("utf-8")).hexdigest()[:8]
+    return f"{safe}_{digest}"
 
 
 def to_mermaid(graph: dict[str, object]) -> str:
@@ -249,12 +264,12 @@ def to_mermaid(graph: dict[str, object]) -> str:
     file_nodes = [node for node in nodes if node.get("kind") == "file"]
     lines = ["flowchart LR"]
     for node in file_nodes:
-        identifier = re.sub(r"[^A-Za-z0-9_]", "_", str(node["id"]))
+        identifier = _mermaid_id(str(node["id"]))
         label = str(node["path"]).replace('"', "'")
         lines.append(f'    {identifier}["{label}"]')
     for edge in edges:
-        source = re.sub(r"[^A-Za-z0-9_]", "_", str(edge["source"]))
-        target = re.sub(r"[^A-Za-z0-9_]", "_", str(edge["target"]))
+        source = _mermaid_id(str(edge["source"]))
+        target = _mermaid_id(str(edge["target"]))
         lines.append(f"    {source} -->|imports| {target}")
     return "\n".join(lines) + "\n"
 
@@ -269,6 +284,8 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         graph = ArchitectureExplorer(args.root, max_files=args.max_files).scan()
+        args.json_path.parent.mkdir(parents=True, exist_ok=True)
+        args.mermaid.parent.mkdir(parents=True, exist_ok=True)
         args.json_path.write_text(json.dumps(graph, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         args.mermaid.write_text(to_mermaid(graph), encoding="utf-8")
     except (OSError, ValueError) as exc:
