@@ -102,6 +102,11 @@ button, textarea { font: inherit; }
 .attachment-button { display: grid; width: 37px; height: 37px; flex: 0 0 auto; place-items: center; border-radius: 13px; background: var(--panel-raised); color: #c5c7cf; font-size: 23px; cursor: pointer; }
 .attachment-button:hover { color: var(--accent); }
 .input-wrap { flex: 1; min-width: 0; }
+.skill-control { display: flex; align-items: center; gap: 8px; padding: 0 2px 5px; color: #a7a9b3; font-size: 11px; }
+.skill-control label { flex: 0 0 auto; }
+.skill-control select { max-width: 190px; min-width: 110px; padding: 5px 25px 5px 8px; border: 1px solid #3a3d47; border-radius: 8px; background: #202229; color: var(--text); font: inherit; }
+.skill-control select:disabled { opacity: .6; }
+.skill-control span { overflow: hidden; color: #777b85; text-overflow: ellipsis; white-space: nowrap; }
 textarea { display: block; width: 100%; max-height: 180px; padding: 8px 3px; resize: none; border: 0; outline: 0; background: transparent; color: var(--text); }
 textarea::placeholder { color: #777b85; }
 .send-button { display: grid; width: 37px; min-width: 37px; box-sizing: border-box; height: 37px; flex: 0 0 37px; place-items: center; border: 0; border-radius: 13px; background: var(--accent); color: #1c1329; font-size: 22px; font-weight: 700; cursor: pointer; }

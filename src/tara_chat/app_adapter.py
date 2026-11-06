@@ -144,20 +144,18 @@ def handle_request(request: Any) -> dict[str, Any]:
         return _result(request_id, "unavailable", error="TARA-Chat has no language provider configured")
     memory_path = os.environ.get("TARA_CHAT_MEMORY_PATH", "").strip()
     skill_prompt = inputs.get("skill_prompt")
-    if not (isinstance(skill_prompt, str) and skill_prompt.strip()):
-        skill_prompt = os.environ.get("TARA_ACTIVE_SKILL_PROMPT")
-    system_prompt = None
-    if isinstance(skill_prompt, str) and skill_prompt.strip():
-        if len(skill_prompt) > 100_000:
-            return _result(request_id, "invalid_request", error="skill_prompt is too large")
-        system_prompt = (DEFAULT_SYSTEM_PROMPT.strip() + "\n\n" + skill_prompt.strip()).strip()
-    brain_kwargs: dict[str, Any] = {
-        "llm_provider": provider,
-        "memory": LongTermMemory(memory_path or None),
-    }
-    if system_prompt is not None:
-        brain_kwargs["system_prompt"] = system_prompt
-    brain = TARABrain(**brain_kwargs)
+    if skill_prompt is not None and (
+        not isinstance(skill_prompt, str) or not skill_prompt.strip() or len(skill_prompt) > 100_000
+    ):
+        return _result(request_id, "invalid_request", error="skill prompt is invalid")
+    system_prompt = DEFAULT_SYSTEM_PROMPT
+    if skill_prompt is not None:
+        system_prompt = f"{DEFAULT_SYSTEM_PROMPT.strip()}\n\n{skill_prompt.strip()}"
+    brain = TARABrain(
+        llm_provider=provider,
+        memory=LongTermMemory(memory_path or None),
+        system_prompt=system_prompt,
+    )
     brain.conversation_history = normalized
     start = time.monotonic()
     try:

@@ -33,10 +33,14 @@ study = load_skill_pack("study-notes", skills_root=Path("skills"))
 prompt = study.prompt_block()
 ```
 
-## Chat integration
+## Chat UI
 
-- `GET /api/skills` — list available packs (`name`, `title`, `description`, `version`)
-- `POST /api/chat` body may include `"skill": "study-notes"` (optional)
+The loopback-only static Chat UI reads the installed skill list from
+`GET /api/skills`. The endpoint returns display metadata (`name`, `title`,
+`description`, `version`, and `tags`) only; it never returns skill instructions
+or script metadata. The composer sends the selected pack name as the optional
+`skill` field in `POST /api/chat`. Omitting the field keeps the default chat
+behavior. Selecting a skill does not grant tool access or bypass approval.
 
 When set, TARA loads that pack from `TARA_SKILLS_ROOT` or `./skills` and appends
 its instructions to the Chat system prompt for that request only. Skills are

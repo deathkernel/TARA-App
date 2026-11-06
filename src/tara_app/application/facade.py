@@ -7,7 +7,6 @@ later steps.
 """
 from __future__ import annotations
 
-import os
 from typing import Any, Mapping, Sequence
 
 from tara_app.contracts import ModuleRequest
@@ -55,6 +54,25 @@ class ApplicationFacade:
             "model_runtime": "omniroute",
             "specialists": specialists,
             "model_gateway": {"provider": "omniroute", "status": gateway_status},
+        }
+
+    def skill_catalogue(self) -> dict[str, Any]:
+        """Return safe, display-only metadata for installed skill packs."""
+        from tara_app.skills.loader import default_skills_root, list_skill_packs
+
+        packs = list_skill_packs(skills_root=default_skills_root())
+        return {
+            "status": "available",
+            "skills": [
+                {
+                    "name": pack.name,
+                    "title": pack.title,
+                    "description": pack.description,
+                    "version": pack.version,
+                    "tags": list(pack.tags),
+                }
+                for pack in packs
+            ],
         }
 
     def model_catalogue(self) -> dict[str, Any]:
@@ -150,28 +168,24 @@ class ApplicationFacade:
         request_id: str | None = None,
         skill: str | None = None,
     ) -> Any:
-        previous = os.environ.get("TARA_ACTIVE_SKILL_PROMPT")
+        skill_prompt = None
         if skill is not None:
             if not isinstance(skill, str) or not skill.strip() or len(skill) > 64:
                 raise ValueError("skill name is invalid")
             from tara_app.skills.loader import default_skills_root, load_skill_pack
 
-            pack = load_skill_pack(skill.strip(), skills_root=default_skills_root())
-            os.environ["TARA_ACTIVE_SKILL_PROMPT"] = pack.prompt_block()
-        try:
-            return self._coordinator.handle_question(
-                question,
-                session_id=session_id,
-                attachments=attachments,
-                workspace_root=workspace_root,
-                request_id=request_id,
-            )
-        finally:
-            if skill is not None:
-                if previous is None:
-                    os.environ.pop("TARA_ACTIVE_SKILL_PROMPT", None)
-                else:
-                    os.environ["TARA_ACTIVE_SKILL_PROMPT"] = previous
+            skill_prompt = load_skill_pack(
+                skill.strip(), skills_root=default_skills_root()
+            ).prompt_block()
+        request = {
+            "session_id": session_id,
+            "attachments": attachments,
+            "workspace_root": workspace_root,
+            "request_id": request_id,
+        }
+        if skill_prompt is not None:
+            request["skill_prompt"] = skill_prompt
+        return self._coordinator.handle_question(question, **request)
 
     def list_skills(self) -> list[dict[str, str]]:
         """Return available skill pack summaries (instructions not expanded)."""

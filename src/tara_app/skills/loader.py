@@ -1,4 +1,8 @@
-"""Allowlisted skill-pack loader."""
+"""Allowlisted skill-pack loader.
+
+A skill pack is a directory containing ``SKILL.md`` (required) and optional
+``skill.toml`` metadata. Only packs under an explicit root are visible.
+"""
 from __future__ import annotations
 
 import re
@@ -22,6 +26,8 @@ class SkillLoadError(ValueError):
 
 @dataclass(frozen=True, slots=True)
 class SkillPack:
+    """One loaded skill pack (instructions are text data only)."""
+
     name: str
     title: str
     description: str
@@ -33,6 +39,7 @@ class SkillPack:
     root_path: str = ""
 
     def prompt_block(self) -> str:
+        """Format instructions for inclusion in a specialist prompt."""
         header = f"# Skill: {self.title or self.name}\n"
         if self.description:
             header += f"{self.description.strip()}\n\n"
@@ -54,7 +61,7 @@ def _parse_toml_meta(path: Path) -> dict[str, Any]:
         return {}
     try:
         data = tomllib.loads(path.read_text(encoding="utf-8"))
-    except (OSError, tomllib.TOMLDecodeError) as exc:
+    except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError) as exc:
         raise SkillLoadError(f"invalid skill.toml: {exc}") from exc
     if not isinstance(data, dict):
         raise SkillLoadError("skill.toml must be a table")
@@ -62,6 +69,7 @@ def _parse_toml_meta(path: Path) -> dict[str, Any]:
 
 
 def load_skill_pack(name: str, *, skills_root: str | Path) -> SkillPack:
+    """Load a single skill pack by directory name under ``skills_root``."""
     if not isinstance(name, str) or not _NAME_RE.match(name):
         raise SkillLoadError("skill name must be lowercase alphanumeric with - or _")
     root = Path(skills_root)
@@ -70,17 +78,18 @@ def load_skill_pack(name: str, *, skills_root: str | Path) -> SkillPack:
     pack_dir = _require_under_root(root / name, root)
     if not pack_dir.is_dir():
         raise SkillLoadError(f"skill pack not found: {name}")
-    skill_md = pack_dir / "SKILL.md"
+    skill_md = _require_under_root(pack_dir / "SKILL.md", root)
     if not skill_md.is_file():
         raise SkillLoadError("SKILL.md is required")
     try:
         instructions = skill_md.read_text(encoding="utf-8")
-    except OSError as exc:
+    except (OSError, UnicodeDecodeError) as exc:
         raise SkillLoadError(f"cannot read SKILL.md: {exc}") from exc
     if len(instructions) > _MAX_INSTRUCTION_CHARS:
         raise SkillLoadError("SKILL.md exceeds size limit")
 
-    meta = _parse_toml_meta(pack_dir / "skill.toml")
+    meta_path = _require_under_root(pack_dir / "skill.toml", root)
+    meta = _parse_toml_meta(meta_path)
     title = str(meta.get("title") or name.replace("-", " ").title())
     description = str(meta.get("description") or "")
     version = str(meta.get("version") or "0.1.0")
@@ -110,6 +119,7 @@ def load_skill_pack(name: str, *, skills_root: str | Path) -> SkillPack:
 
 
 def list_skill_packs(*, skills_root: str | Path) -> tuple[SkillPack, ...]:
+    """List and load all valid skill packs under ``skills_root``."""
     root = Path(skills_root)
     if not root.is_dir():
         return ()
@@ -129,10 +139,8 @@ def list_skill_packs(*, skills_root: str | Path) -> tuple[SkillPack, ...]:
 
 
 def default_skills_root() -> Path:
-    """Resolve skills root from ``TARA_SKILLS_ROOT`` or ``./skills``."""
+    """Resolve the skills root from TARA_SKILLS_ROOT or the local ./skills directory."""
     import os
 
-    env = os.environ.get("TARA_SKILLS_ROOT", "").strip()
-    if env:
-        return Path(env).expanduser()
-    return Path("skills")
+    configured = os.environ.get("TARA_SKILLS_ROOT", "").strip()
+    return Path(configured).expanduser() if configured else Path("skills")
