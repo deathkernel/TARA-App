@@ -11,6 +11,7 @@ import ast
 import hashlib
 import json
 import os
+import posixpath
 import re
 import sys
 from dataclasses import asdict, dataclass
@@ -149,8 +150,11 @@ class ArchitectureExplorer:
                 symbols.append(Symbol(f"{module}::{node.name}", node.name, kind, relative, node.lineno))
             elif isinstance(node, ast.Import):
                 imports.extend(alias.name for alias in node.names)
-            elif isinstance(node, ast.ImportFrom) and node.module:
-                imports.append("." * node.level + node.module)
+            elif isinstance(node, ast.ImportFrom):
+                if node.module:
+                    imports.append("." * node.level + node.module)
+                elif node.level:
+                    imports.extend("." * node.level + alias.name for alias in node.names)
         return symbols, imports
 
     def _parse_ecmascript(self, relative: str, source: str) -> tuple[list[Symbol], list[str]]:
@@ -193,6 +197,14 @@ class ArchitectureExplorer:
         if not raw or raw.startswith(("http://", "https://")):
             return None
 
+        if raw.startswith(("./", "../")):
+            base = posixpath.normpath((source_parent / raw).as_posix())
+            return self._match_module_candidates(
+                base,
+                modules,
+                allow_dotted_basename=Path(source_path).suffix.lower()
+                in {".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx"},
+            )
         if raw.startswith("."):
             level = len(raw) - len(raw.lstrip("."))
             module_name = raw[level:].lstrip("/").replace(".", "/")
@@ -220,11 +232,17 @@ class ArchitectureExplorer:
         return self._match_module_candidates(base, modules)
 
     @staticmethod
-    def _match_module_candidates(base: str, modules: dict[str, str]) -> str | None:
+    def _match_module_candidates(
+        base: str,
+        modules: dict[str, str],
+        *,
+        allow_dotted_basename: bool = False,
+    ) -> str | None:
         """Match exact files, language extensions, or package index files."""
         normalized = Path(base).as_posix()
         candidates = [normalized]
-        if not Path(normalized).suffix:
+        suffix = Path(normalized).suffix.lower()
+        if not suffix or (allow_dotted_basename and suffix not in SOURCE_SUFFIXES):
             for suffix in (
                 ".py", ".pyi", ".js", ".jsx", ".mjs", ".cjs",
                 ".ts", ".tsx", ".c", ".h", ".cc", ".cpp", ".cxx", ".hpp", ".hh",
@@ -285,6 +303,17 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         graph = ArchitectureExplorer(args.root, max_files=args.max_files).scan()
+        root = Path(graph["root"])
+        source_paths = {
+            (root / node["path"]).resolve()
+            for node in graph["nodes"]
+            if node.get("kind") == "file"
+        }
+        output_paths = {args.json_path.resolve(), args.mermaid.resolve()}
+        if len(output_paths) != 2:
+            raise ValueError("JSON and Mermaid output paths must be different")
+        if output_paths & source_paths:
+            raise ValueError("output paths must not overwrite scanned source files")
         args.json_path.parent.mkdir(parents=True, exist_ok=True)
         args.mermaid.parent.mkdir(parents=True, exist_ok=True)
         args.json_path.write_text(json.dumps(graph, indent=2, sort_keys=True) + "\n", encoding="utf-8")
