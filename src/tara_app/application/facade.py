@@ -7,6 +7,7 @@ later steps.
 """
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Mapping, Sequence
 
 from tara_app.contracts import AdapterHealth, ModuleRequest
@@ -30,14 +31,21 @@ class ApplicationFacade:
         return health
 
     def health_status(self) -> dict[str, Any]:
+        """Return bounded, independent health diagnostics for registered specialists."""
         registry = self._coordinator.registry
         capabilities = tuple(registry.capability_ids())
         disabled_modules = getattr(registry, "disabled_modules", lambda: {})()
         specialists: dict[str, dict[str, str]] = {}
         health_results: dict[str, AdapterHealth] = {}
 
-        for module_id in ("chat", "code", "vision", "creative", "models"):
-            adapter = registry.adapter(module_id)
+        module_ids = ("chat", "code", "vision", "creative", "models")
+        adapters = {module_id: registry.adapter(module_id) for module_id in module_ids}
+        registered = {module_id: adapter for module_id, adapter in adapters.items() if adapter is not None}
+        with ThreadPoolExecutor(max_workers=max(1, len(registered))) as executor:
+            checked_health = dict(zip(registered, executor.map(self._adapter_health, registered.values())))
+
+        for module_id in module_ids:
+            adapter = adapters[module_id]
             if adapter is None:
                 specialists[module_id] = {
                     "status": "disabled",
@@ -45,7 +53,7 @@ class ApplicationFacade:
                 }
                 continue
 
-            health = self._adapter_health(adapter)
+            health = checked_health[module_id]
             health_results[module_id] = health
             specialist = {"status": health.status}
             if health.detail:
@@ -55,7 +63,7 @@ class ApplicationFacade:
         gateway_health = health_results.get("chat")
         gateway_status = gateway_health.status if gateway_health is not None else "unavailable"
         return {
-            "status": "ok" if capabilities and all(item.status == "healthy" for item in health_results.values()) else "degraded",
+            "status": "ok" if capabilities and health_results and all(item.status == "healthy" for item in health_results.values()) else "degraded",
             "app": "TARA-App",
             "api_version": "1.0",
             "capability_count": len(capabilities),
