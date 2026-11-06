@@ -15,10 +15,12 @@ from tara_app.workflow_engine import WorkflowEngine
 
 
 def _ok(step, *, context):
+    """Build a successful result for a workflow step."""
     return WorkflowStepResult(step.step_id, StepStatus.SUCCEEDED, data={"op": step.operation_id})
 
 
 def _fail(step, *, context):
+    """Build a failed result for a workflow step."""
     return WorkflowStepResult(
         step.step_id, StepStatus.FAILED, error_code="boom", error_message="failed"
     )
@@ -53,6 +55,7 @@ class WorkflowEngineTests(unittest.TestCase):
     def test_hard_failure_stops_workflow(self) -> None:
         """Verify test hard failure stops workflow behavior."""
         def executor(step, *, context):
+            """Fail the first step and succeed any later step."""
             return _fail(step, context=context) if step.step_id == "a" else _ok(step, context=context)
 
         plan = WorkflowPlan(
@@ -119,6 +122,7 @@ class WorkflowEngineTests(unittest.TestCase):
         calls = []
 
         def executor(step, *, context):
+            """Block the first step so a concurrent continuation can be tested."""
             calls.append(step.step_id)
             entered.set()
             self.assertTrue(release.wait(2))
@@ -147,6 +151,7 @@ class WorkflowEngineTests(unittest.TestCase):
         release = threading.Event()
 
         def executor(step, *, context):
+            """Block the active step until cancellation has been recorded."""
             entered.set()
             self.assertTrue(release.wait(2))
             return _ok(step, context=context)
@@ -173,6 +178,7 @@ class WorkflowEngineTests(unittest.TestCase):
         engine.create_run(plan)
 
         def partial(step, *, context):
+            """Return a partial result to exercise terminal-state handling."""
             return WorkflowStepResult(step.step_id, StepStatus.PARTIAL)
 
         result = engine.continue_run("wf-partial", partial)
@@ -189,6 +195,7 @@ class WorkflowEngineTests(unittest.TestCase):
         engine = WorkflowEngine()
 
         def interrupt(step, *, context):
+            """Raise an interruption while a step is marked as running."""
             raise KeyboardInterrupt()
 
         with self.assertRaises(KeyboardInterrupt):
