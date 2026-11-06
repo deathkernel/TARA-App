@@ -42,6 +42,7 @@ class ArchitectureExplorerTests(unittest.TestCase):
 
 
     def test_resolves_module_less_python_relative_imports(self):
+        """Resolve Python relative imports that omit the module name."""
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "pkg").mkdir()
@@ -55,6 +56,7 @@ class ArchitectureExplorerTests(unittest.TestCase):
             self.assertEqual(graph["edges"][0]["target"], "file:pkg/sibling.py")
 
     def test_resolves_dotted_relative_typescript_filenames(self):
+        """Resolve relative TypeScript imports with dotted basenames."""
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "src").mkdir()
@@ -67,6 +69,7 @@ class ArchitectureExplorerTests(unittest.TestCase):
             self.assertEqual(graph["edges"][0]["target"], "file:src/foo.bar.ts")
 
     def test_cli_refuses_to_overwrite_scanned_source_files(self):
+        """Prevent CLI output from overwriting a scanned source file."""
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             source = root / "app.py"
