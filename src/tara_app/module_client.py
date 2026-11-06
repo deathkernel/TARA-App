@@ -76,7 +76,7 @@ class StdioModuleAdapter:
         try:
             response = self._invoke(payload, timeout=min(self.timeout_seconds, 10), request_id="tara-health-check")
             if response.status != "success" or response.data.get("healthy") is not True:
-                return AdapterHealth("unavailable", "module health check did not succeed")
+                return AdapterHealth("unavailable", response.error or "module health check did not succeed")
             return AdapterHealth("healthy")
         except (ModuleProcessError, OSError, subprocess.TimeoutExpired):
             return AdapterHealth("unavailable", "module process did not pass its health check")
