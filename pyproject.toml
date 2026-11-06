@@ -18,6 +18,7 @@ mcp = ["mcp>=1.9,<2"]
 
 [project.scripts]
 tara-app = "tara_app.cli:main"
+tara-architecture = "tara_app.architecture_explorer:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
