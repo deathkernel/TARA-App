@@ -12,11 +12,12 @@ class FakeAdapter:
     capabilities = (Capability("models", "catalog", "Model catalogue", True),)
     timeout_seconds = 8
 
-    def __init__(self, result: ModuleResult):
+    def __init__(self, result: ModuleResult, health: AdapterHealth | None = None):
         self.result = result
+        self.health_result = health or AdapterHealth("healthy")
 
     def health(self):
-        return AdapterHealth("healthy")
+        return self.health_result
 
     def execute(self, request):
         self.request = request
@@ -84,6 +85,69 @@ class ApplicationFacadeTests(unittest.TestCase):
         self.assertEqual(payload["status"], "degraded")
         self.assertEqual(payload["capabilities"], [])
         self.assertEqual(payload["model_runtime"], "omniroute")
+
+    def test_health_status_checks_each_registered_specialist_independently(self):
+        registry = CapabilityRegistry()
+        adapters = {}
+        for module_id, health in (
+            ("chat", AdapterHealth("healthy")),
+            ("code", AdapterHealth("degraded", "coding route is not configured")),
+            ("vision", AdapterHealth("unavailable", "vision route is unavailable")),
+            ("creative", AdapterHealth("healthy")),
+            ("models", AdapterHealth("healthy")),
+        ):
+            adapter = FakeAdapter(
+                ModuleResult("success", {}),
+                health=health,
+            )
+            adapter.module_id = module_id
+            adapter.capabilities = (Capability(module_id, "check", f"{module_id} check", True),)
+            registry.register(adapter)
+            adapters[module_id] = adapter
+
+        payload = ApplicationFacade(FakeCoordinator(registry)).health_status()
+
+        self.assertEqual(payload["specialists"]["chat"]["status"], "healthy")
+        self.assertEqual(payload["specialists"]["code"]["status"], "degraded")
+        self.assertEqual(payload["specialists"]["code"]["reason"], "coding route is not configured")
+        self.assertEqual(payload["specialists"]["vision"]["status"], "unavailable")
+        self.assertEqual(payload["specialists"]["vision"]["reason"], "vision route is unavailable")
+        self.assertEqual(payload["specialists"]["creative"]["status"], "healthy")
+        self.assertEqual(payload["specialists"]["models"]["status"], "healthy")
+        self.assertEqual(payload["model_gateway"]["status"], "healthy")
+        self.assertEqual(payload["status"], "ok")
+
+    def test_health_status_does_not_hide_specialist_health_exceptions(self):
+        class BrokenHealthAdapter(FakeAdapter):
+            def health(self):
+                raise RuntimeError("private endpoint details must not leak")
+
+        registry = CapabilityRegistry()
+        adapter = BrokenHealthAdapter(ModuleResult("success", {}))
+        adapter.module_id = "code"
+        adapter.capabilities = (Capability("code", "check", "code check", True),)
+        registry.register(adapter)
+
+        payload = ApplicationFacade(FakeCoordinator(registry)).health_status()
+
+        self.assertEqual(payload["specialists"]["code"]["status"], "unavailable")
+        self.assertEqual(payload["specialists"]["code"]["reason"], "specialist health check failed")
+
+    def test_invalid_health_payload_fails_closed(self):
+        class InvalidHealthAdapter(FakeAdapter):
+            def health(self):
+                return {"status": "healthy"}
+
+        registry = CapabilityRegistry()
+        adapter = InvalidHealthAdapter(ModuleResult("success", {}))
+        adapter.module_id = "code"
+        adapter.capabilities = (Capability("code", "check", "code check", True),)
+        registry.register(adapter)
+
+        payload = ApplicationFacade(FakeCoordinator(registry)).health_status()
+
+        self.assertEqual(payload["specialists"]["code"]["status"], "unavailable")
+        self.assertEqual(payload["specialists"]["code"]["reason"], "specialist returned an invalid health response")
 
     def test_model_catalogue_uses_registered_operation(self):
         registry = CapabilityRegistry()
