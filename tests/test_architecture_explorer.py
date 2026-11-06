@@ -31,8 +31,8 @@ class ArchitectureExplorerTests(unittest.TestCase):
             root = Path(directory)
             (root / "src/tara_app").mkdir(parents=True)
             (root / "src/tara_app/__init__.py").write_text("", encoding="utf-8")
-            (root / "src/tara_app/runtime.py").write_text("class Runtime: pass\\n", encoding="utf-8")
-            (root / "src/tara_app/app.py").write_text("from tara_app.runtime import Runtime\\n", encoding="utf-8")
+            (root / "src/tara_app/runtime.py").write_text("class Runtime: pass\n", encoding="utf-8")
+            (root / "src/tara_app/app.py").write_text("from tara_app.runtime import Runtime\n", encoding="utf-8")
 
             graph = ArchitectureExplorer(root).scan()
 
