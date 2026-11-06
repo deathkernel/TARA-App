@@ -1,4 +1,4 @@
-"Application boundary shared by every TARA interface.
+"""Application boundary shared by every TARA interface.
  
 The facade hides the coordinator, registry, adapters and integration details
 from HTTP, desktop and CLI transports. It is intentionally thin in this first
