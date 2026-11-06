@@ -46,8 +46,8 @@ class ArchitectureExplorerTests(unittest.TestCase):
             root = Path(directory)
             (root / "pkg").mkdir()
             (root / "pkg/__init__.py").write_text("", encoding="utf-8")
-            (root / "pkg/user.py").write_text("from . import sibling\\n", encoding="utf-8")
-            (root / "pkg/sibling.py").write_text("class Sibling: pass\\n", encoding="utf-8")
+            (root / "pkg/user.py").write_text("from . import sibling\n", encoding="utf-8")
+            (root / "pkg/sibling.py").write_text("class Sibling: pass\n", encoding="utf-8")
 
             graph = ArchitectureExplorer(root).scan()
 
@@ -58,8 +58,8 @@ class ArchitectureExplorerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "src").mkdir()
-            (root / "src/app.ts").write_text('import "./foo.bar";\\n', encoding="utf-8")
-            (root / "src/foo.bar.ts").write_text("export const value = 1;\\n", encoding="utf-8")
+            (root / "src/app.ts").write_text('import "./foo.bar";\n', encoding="utf-8")
+            (root / "src/foo.bar.ts").write_text("export const value = 1;\n", encoding="utf-8")
 
             graph = ArchitectureExplorer(root).scan()
 
@@ -70,7 +70,7 @@ class ArchitectureExplorerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             source = root / "app.py"
-            original = "class App: pass\\n"
+            original = "class App: pass\n"
             source.write_text(original, encoding="utf-8")
             mermaid = root / "architecture.mmd"
             stderr = io.StringIO()
