@@ -54,6 +54,12 @@ class ScopedFsLogicTests(unittest.TestCase):
         with self.assertRaises(ScopedFsError):
             resolve_under_roots(str(self.root / ".." / ".." / "etc" / "passwd"), [str(self.root)])
 
+    def test_read_rejects_oversized_files_without_loading_them_fully(self) -> None:
+        large_file = self.root / "large.txt"
+        large_file.write_bytes(b"x" * 256_001)
+        with self.assertRaisesRegex(ScopedFsError, "read limit"):
+            read_text_file(str(large_file), [str(self.root)])
+
     def test_list_and_read(self) -> None:
         entries = list_directory(str(self.root), [str(self.root)])
         names = {item["name"] for item in entries}

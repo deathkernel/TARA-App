@@ -43,7 +43,7 @@ class ApplicationFacade:
         if chat_adapter is not None and gateway_status != "healthy":
             specialists["chat"] = {
                 "status": "unavailable",
-                "reason": "The Chat specialist is configured, but its authenticated OmniRoute model-catalogue check failed.",
+                "reason": gateway_health.detail if gateway_health and gateway_health.detail else "The Chat specialist is configured, but its OmniRoute health check failed.",
             }
         return {
             "status": "ok" if capabilities and gateway_status == "healthy" else "degraded",

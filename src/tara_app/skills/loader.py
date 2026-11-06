@@ -47,8 +47,21 @@ class SkillPack:
 
 
 def _require_under_root(path: Path, root: Path) -> Path:
-    resolved = path.expanduser().resolve()
     root_resolved = root.expanduser().resolve()
+    candidate = path.expanduser()
+    try:
+        relative = candidate.relative_to(root)
+    except ValueError as exc:
+        raise SkillLoadError("skill path is outside the allowlisted skills root") from exc
+    current = root_resolved
+    for part in relative.parts:
+        current = current / part
+        try:
+            if current.is_symlink():
+                raise SkillLoadError("symbolic links are not allowed in skill packs")
+        except OSError as exc:
+            raise SkillLoadError("skill path could not be inspected safely") from exc
+    resolved = candidate.resolve()
     try:
         resolved.relative_to(root_resolved)
     except ValueError as exc:

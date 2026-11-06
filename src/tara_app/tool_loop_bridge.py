@@ -50,11 +50,26 @@ def run_validated_tool_plan(
                 )
             server, tool = enabled[0].name, name
         try:
+            # Read-only access may receive an app-scoped token only when the
+            # server configuration explicitly allowlists this exact tool.
+            # Writable operations always require a token supplied after human approval.
             token = approval_token
-            if token is None and hasattr(coordinator, "issue_mcp_approval_token"):
-                token = coordinator.issue_mcp_approval_token(
-                    server, tool, dict(step.arguments), session_id=session_id
-                )
+            config = getattr(gateway, "_config", None)
+            server_spec = next(
+                (item for item in getattr(config, "enabled_servers", ()) if item.name == server),
+                None,
+            )
+            is_configured_read_only = (
+                server_spec is not None
+                and bool(getattr(server_spec, "read_only", False))
+                and tool in getattr(server_spec, "read_only_tools", ())
+            )
+            if token is None and is_configured_read_only:
+                issuer = getattr(coordinator, "issue_mcp_approval_token", None)
+                if callable(issuer):
+                    token = issuer(
+                        server, tool, dict(step.arguments), session_id=session_id
+                    )
             if token is None:
                 return ToolStepResult(
                     step.step_id,
