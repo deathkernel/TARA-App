@@ -257,4 +257,3 @@ def serve(app: ApplicationFacade, *, port: int = 8765) -> None:
         print("\nTARA-App stopped")
     finally:
         server.server_close()
-

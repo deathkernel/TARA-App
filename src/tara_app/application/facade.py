@@ -204,6 +204,24 @@ class ApplicationFacade:
             request["skill_prompt"] = skill_prompt
         return self._coordinator.handle_question(question, **request)
 
+    def list_skills(self) -> list[dict[str, str]]:
+        """Return available skill pack summaries (instructions not expanded)."""
+        try:
+            from tara_app.skills.loader import default_skills_root, list_skill_packs
+
+            packs = list_skill_packs(skills_root=default_skills_root())
+        except Exception:
+            return []
+        return [
+            {
+                "name": pack.name,
+                "title": pack.title,
+                "description": pack.description,
+                "version": pack.version,
+            }
+            for pack in packs
+        ]
+
     def approve(self, approval_id: str, *, session_id: str) -> Any:
         return self._coordinator.approve(approval_id, session_id=session_id)
 
