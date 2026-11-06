@@ -26,6 +26,7 @@ def _fail(step, *, context):
 
 class WorkflowEngineTests(unittest.TestCase):
     def test_sequential_success(self) -> None:
+        """Verify test sequential success behavior."""
         plan = WorkflowPlan(
             workflow_id="wf-1", request_id="req-1",
             steps=(WorkflowStepSpec("a", "op.a"), WorkflowStepSpec("b", "op.b", depends_on=("a",))),
@@ -36,6 +37,7 @@ class WorkflowEngineTests(unittest.TestCase):
         self.assertTrue(all(s.status == StepStatus.SUCCEEDED for s in result.steps))
 
     def test_parallel_ready_steps_both_succeed(self) -> None:
+        """Verify test parallel ready steps both succeed behavior."""
         plan = WorkflowPlan(
             workflow_id="wf-2", request_id="req-2",
             steps=(
@@ -49,6 +51,7 @@ class WorkflowEngineTests(unittest.TestCase):
         self.assertEqual(len(result.steps), 3)
 
     def test_hard_failure_stops_workflow(self) -> None:
+        """Verify test hard failure stops workflow behavior."""
         def executor(step, *, context):
             return _fail(step, context=context) if step.step_id == "a" else _ok(step, context=context)
 
@@ -62,6 +65,7 @@ class WorkflowEngineTests(unittest.TestCase):
         self.assertEqual(result.steps[1].status, StepStatus.CANCELLED)
 
     def test_approval_pause_and_continue(self) -> None:
+        """Verify test approval pause and continue behavior."""
         plan = WorkflowPlan(
             workflow_id="wf-4", request_id="req-4",
             steps=(
@@ -80,6 +84,7 @@ class WorkflowEngineTests(unittest.TestCase):
         self.assertEqual(continued.status, WorkflowStatus.SUCCEEDED)
 
     def test_cancel_marks_remaining_cancelled(self) -> None:
+        """Verify test cancel marks remaining cancelled behavior."""
         plan = WorkflowPlan(
             workflow_id="wf-5", request_id="req-5",
             steps=(WorkflowStepSpec("write", "op.write", requires_approval=True, read_only=False),),
@@ -91,6 +96,7 @@ class WorkflowEngineTests(unittest.TestCase):
         self.assertEqual(cancelled.steps[0].status, StepStatus.CANCELLED)
 
     def test_duplicate_workflow_id_rejected(self) -> None:
+        """Verify test duplicate workflow id rejected behavior."""
         plan = WorkflowPlan(
             workflow_id="wf-dup", request_id="req-d",
             steps=(WorkflowStepSpec("a", "op.a"),),
@@ -101,6 +107,7 @@ class WorkflowEngineTests(unittest.TestCase):
             engine.create_run(plan)
 
     def test_concurrent_continue_does_not_execute_step_twice(self) -> None:
+        """Verify test concurrent continue does not execute step twice behavior."""
         plan = WorkflowPlan(
             workflow_id="wf-concurrent", request_id="req-concurrent",
             steps=(WorkflowStepSpec("a", "op.a"),),
@@ -129,6 +136,7 @@ class WorkflowEngineTests(unittest.TestCase):
         self.assertEqual(engine.get_run("wf-concurrent").snapshot().status, WorkflowStatus.SUCCEEDED)
 
     def test_cancel_during_executor_preserves_cancellation(self) -> None:
+        """Verify test cancel during executor preserves cancellation behavior."""
         plan = WorkflowPlan(
             workflow_id="wf-cancel-race", request_id="req-cancel-race",
             steps=(WorkflowStepSpec("a", "op.a"), WorkflowStepSpec("b", "op.b")),
@@ -156,6 +164,7 @@ class WorkflowEngineTests(unittest.TestCase):
         self.assertTrue(all(step.status == StepStatus.CANCELLED for step in final.steps))
 
     def test_partial_workflow_is_terminal(self) -> None:
+        """Verify test partial workflow is terminal behavior."""
         plan = WorkflowPlan(
             workflow_id="wf-partial", request_id="req-partial",
             steps=(WorkflowStepSpec("a", "op.a"),),
@@ -172,6 +181,7 @@ class WorkflowEngineTests(unittest.TestCase):
         self.assertEqual(engine.continue_run("wf-partial", _ok).status, WorkflowStatus.PARTIAL)
 
     def test_executor_interrupt_does_not_strand_running_state(self) -> None:
+        """Verify test executor interrupt does not strand running state behavior."""
         plan = WorkflowPlan(
             workflow_id="wf-interrupted", request_id="req-interrupted",
             steps=(WorkflowStepSpec("a", "op.a"),),
@@ -186,6 +196,9 @@ class WorkflowEngineTests(unittest.TestCase):
         state = engine.get_run("wf-interrupted")
         self.assertEqual(state.snapshot().status, WorkflowStatus.FAILED)
         self.assertEqual(state.error_code, "workflow_interrupted")
+        self.assertEqual(state.snapshot().steps[0].status, StepStatus.FAILED)
+        self.assertFalse(any(step.status == StepStatus.RUNNING for step in state.snapshot().steps))
+        self.assertEqual(state.snapshot().steps[0].error_code, "workflow_interrupted")
 
 
 if __name__ == "__main__":
