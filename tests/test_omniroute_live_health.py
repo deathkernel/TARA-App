@@ -5,7 +5,7 @@ import json
 import unittest
 from unittest.mock import patch
 
-from tara_app.omniroute_health import check_gateway
+from tara_app.omniroute_health import check_gateway, diagnose_gateway
 from tara_chat.app_adapter import handle_request as handle_chat
 from tara_models.__main__ import handle_request as handle_models
 from tara_vision.__main__ import handle_request as handle_vision
@@ -63,11 +63,28 @@ class OmniRouteLiveHealthTests(unittest.TestCase):
             with patch("tara_app.omniroute_health.build_opener", return_value=opener):
                 self.assertFalse(check_gateway("http://127.0.0.1:20128/v1", "test-key"))
 
+    def test_gateway_diagnostic_identifies_missing_api_key(self) -> None:
+        self.assertIn("TARA_OMNIROUTE_API_KEY is not set", diagnose_gateway(
+            "http://127.0.0.1:20128/v1", ""
+        ))
+
+    def test_gateway_diagnostic_reports_authentication_status_without_response_body(self) -> None:
+        from urllib.error import HTTPError
+
+        class _UnauthorizedOpener:
+            def open(self, request, timeout: float):
+                raise HTTPError(request.full_url, 401, "Unauthorized", {}, None)
+
+        with patch("tara_app.omniroute_health.build_opener", return_value=_UnauthorizedOpener()):
+            message = diagnose_gateway("http://127.0.0.1:20128/v1", "secret-test-key")
+        self.assertIn("HTTP 401", message)
+        self.assertNotIn("secret-test-key", message)
+
     def test_chat_health_fails_when_gateway_is_unreachable(self) -> None:
         with patch.dict("os.environ", {
             "TARA_OMNIROUTE_API_KEY": "test-key",
             "TARA_LLM_BACKEND": "omniroute",
-        }, clear=True), patch("tara_chat.omniroute_provider.check_gateway", return_value=False):
+        }, clear=True), patch("tara_chat.omniroute_provider.diagnose_gateway", return_value="Cannot connect to OmniRoute."):
             result = handle_chat(module_request("chat"))
         self.assertEqual(result["status"], "unavailable")
         self.assertNotIn("test-key", json.dumps(result))
