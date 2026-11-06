@@ -51,7 +51,7 @@ This table replaces the informal “all pending” list. It does **not** claim t
 | 31 | P2 | Platform | Windows/Linux installation testing | Pending verification | |
 | 32 | P2 | Release | Packaging, versioning and installer | Pending | |
 | 33 | P3 | Specialists | Adapter contract tests for all specialists | Foundation / partial | |
-| 34 | P3 | Specialists | Independent health checks | Foundation / partial | |
+| 34 | P3 | Specialists | Independent health checks | Implemented (code) | Facade checks each registered specialist independently; CI and live provider verification remain required. |
 | 35 | P3 | Specialists | End-to-end workflow testing | Pending verification | |
 | 36 | P3 | OmniRoute | Provider, quota and model availability verification | Pending verification | |
 | 37 | P3 | Ecosystem | Optional AI/developer tool evaluation | Pending | |
