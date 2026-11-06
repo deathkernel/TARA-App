@@ -115,7 +115,7 @@ class ApplicationFacadeTests(unittest.TestCase):
         self.assertEqual(payload["specialists"]["creative"]["status"], "healthy")
         self.assertEqual(payload["specialists"]["models"]["status"], "healthy")
         self.assertEqual(payload["model_gateway"]["status"], "healthy")
-        self.assertEqual(payload["status"], "ok")
+        self.assertEqual(payload["status"], "degraded")
 
     def test_health_status_does_not_hide_specialist_health_exceptions(self):
         class BrokenHealthAdapter(FakeAdapter):
