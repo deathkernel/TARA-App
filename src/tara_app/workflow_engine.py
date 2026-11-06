@@ -60,6 +60,7 @@ class WorkflowRunState:
     _lock: threading.RLock = field(default_factory=threading.RLock, repr=False)
 
     def snapshot(self) -> WorkflowResult:
+        """Return an immutable view of the current workflow state."""
         with self._lock:
             steps = tuple(
                 self.step_results.get(
@@ -82,10 +83,12 @@ class WorkflowEngine:
     """Execute DAG workflow plans with approval pauses and cancellation."""
 
     def __init__(self) -> None:
+        """Initialize an engine with an empty run registry."""
         self._runs: dict[str, WorkflowRunState] = {}
         self._lock = threading.RLock()
 
     def create_run(self, plan: WorkflowPlan) -> WorkflowRunState:
+        """Register a new workflow plan and return its mutable run state."""
         if not isinstance(plan, WorkflowPlan):
             raise TypeError("plan must be a WorkflowPlan")
         state = WorkflowRunState(plan=plan)
@@ -96,10 +99,12 @@ class WorkflowEngine:
         return state
 
     def get_run(self, workflow_id: str) -> WorkflowRunState | None:
+        """Look up a workflow run by its unique identifier."""
         with self._lock:
             return self._runs.get(workflow_id)
 
     def cancel(self, workflow_id: str) -> WorkflowResult:
+        """Cancel a nonterminal run and mark unfinished steps cancelled."""
         state = self.get_run(workflow_id)
         if state is None:
             raise KeyError(f"unknown workflow: {workflow_id}")
@@ -249,14 +254,31 @@ class WorkflowEngine:
             with state._lock:
                 if state.cancelled:
                     return state.snapshot()
+                error_message = str(exc)[:500] or "workflow execution failed"
+                for step_id, existing in state.step_results.items():
+                    if existing.status == StepStatus.RUNNING:
+                        state.step_results[step_id] = WorkflowStepResult(
+                            step_id,
+                            StepStatus.FAILED,
+                            error_code="workflow_engine_error",
+                            error_message=error_message,
+                        )
                 state.status = WorkflowStatus.FAILED
                 state.error_code = "workflow_engine_error"
-                state.error_message = str(exc)[:500]
+                state.error_message = error_message
                 state.finished_at = time.monotonic()
                 return state.snapshot()
         except BaseException:
             with state._lock:
                 if not state.cancelled and state.status not in _TERMINAL_WORKFLOW_STATUSES:
+                    for step_id, existing in state.step_results.items():
+                        if existing.status == StepStatus.RUNNING:
+                            state.step_results[step_id] = WorkflowStepResult(
+                                step_id,
+                                StepStatus.FAILED,
+                                error_code="workflow_interrupted",
+                                error_message="Workflow execution was interrupted",
+                            )
                     state.status = WorkflowStatus.FAILED
                     state.error_code = "workflow_interrupted"
                     state.error_message = "Workflow execution was interrupted"
@@ -269,6 +291,7 @@ class WorkflowEngine:
     def _ready_steps(
         self, state: WorkflowRunState, approved: frozenset[str]
     ) -> list[WorkflowStepSpec]:
+        """Return steps whose dependencies and approval requirements are met."""
         with state._lock:
             done_ok = {
                 step_id
@@ -288,6 +311,7 @@ class WorkflowEngine:
             return ready
 
     def _finalize(self, state: WorkflowRunState) -> WorkflowResult:
+        """Derive and store the terminal status from completed step results."""
         with state._lock:
             if state.status in _TERMINAL_WORKFLOW_STATUSES:
                 return state.snapshot()
