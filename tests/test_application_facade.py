@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 import unittest
 
 from tara_app.application.facade import ApplicationFacade
@@ -148,6 +149,39 @@ class ApplicationFacadeTests(unittest.TestCase):
 
         self.assertEqual(payload["specialists"]["code"]["status"], "unavailable")
         self.assertEqual(payload["specialists"]["code"]["reason"], "specialist returned an invalid health response")
+
+    def test_health_status_degrades_when_only_unlisted_specialists_are_registered(self):
+        registry = CapabilityRegistry()
+        adapter = FakeAdapter(ModuleResult("success", {}))
+        adapter.module_id = "planner"
+        adapter.capabilities = (Capability("planner", "plan", "Planning", True),)
+        registry.register(adapter)
+
+        payload = ApplicationFacade(FakeCoordinator(registry)).health_status()
+
+        self.assertEqual(payload["capability_count"], 1)
+        self.assertEqual(payload["status"], "degraded")
+
+    def test_health_status_checks_registered_specialists_concurrently(self):
+        barrier = threading.Barrier(2)
+
+        class ConcurrentHealthAdapter(FakeAdapter):
+            def health(self):
+                barrier.wait(timeout=1)
+                return AdapterHealth("healthy")
+
+        registry = CapabilityRegistry()
+        for module_id in ("chat", "code"):
+            adapter = ConcurrentHealthAdapter(ModuleResult("success", {}))
+            adapter.module_id = module_id
+            adapter.capabilities = (Capability(module_id, "check", f"{module_id} check", True),)
+            registry.register(adapter)
+
+        payload = ApplicationFacade(FakeCoordinator(registry)).health_status()
+
+        self.assertEqual(payload["specialists"]["chat"]["status"], "healthy")
+        self.assertEqual(payload["specialists"]["code"]["status"], "healthy")
+        self.assertEqual(payload["status"], "ok")
 
     def test_model_catalogue_uses_registered_operation(self):
         registry = CapabilityRegistry()
