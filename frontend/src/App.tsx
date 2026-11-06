@@ -213,7 +213,7 @@ export default function App() {
           Chat specialist is disabled. In tara-app.toml, find the [[modules]] entry with id = "chat" and set allow_remote = true to explicitly permit Chat prompts to use OmniRoute. Then restart TARA. Your existing configuration is not changed automatically.
         </div>}
         {health?.specialists?.chat?.status === "unavailable" && <div className="notice" role="alert">
-          Chat is configured, but OmniRoute is not responding to its authenticated model-catalogue check. Verify that OmniRoute is running at the configured local /v1 address and that TARA_OMNIROUTE_API_KEY is valid, then restart TARA.
+          {health.specialists.chat.reason || "OmniRoute is unavailable. Check the local gateway and API key, then restart TARA."}
         </div>}
         {modelsOpen && <section className="models-panel">
           <div className="panel-heading"><div><h2>OmniRoute models</h2><p>Model selection and lifecycle are managed by the OmniRoute gateway.</p></div><button className="secondary" onClick={() => void refreshModels()} disabled={modelBusy === "refresh"}>{modelBusy === "refresh" ? "Refreshing…" : "Refresh"}</button></div>

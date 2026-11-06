@@ -35,3 +35,20 @@ Optional package: `python -m pip install -e ".[mcp]"`
 injected executor. Plans are **data** — model text is never executed as a host shell
 command. Approval-gated steps pause until the application supplies a one-shot
 token keyed by `step_id`. See `tara_app.tool_loop_bridge`.
+
+## Time server tests
+
+`tests/test_mcp_time_server.py` covers the UTC payload and Unix timestamp,
+timezone normalization and conversion, invalid timezone handling, stdio server
+registration, and the missing-optional-dependency message. The server tests use a
+small fake FastMCP module, so they do not launch a subprocess or require the
+optional MCP package.
+
+Run the focused tests with:
+
+```powershell
+python -m unittest discover -s tests -p "test_mcp_time_server.py" -v
+```
+
+The repository CI also discovers this test through
+`python -m unittest discover -s tests -v`.

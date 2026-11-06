@@ -2,12 +2,17 @@
 setlocal
 cd /d "%~dp0"
 
-rem Stop early when Git merge-conflict markers remain in project metadata or Python source.
-findstr /s /m /c:"<<<<<<<" /c:"=======" /c:">>>>>>>" pyproject.toml src\*.py tests\*.py >nul 2>nul
+rem Check tracked project files only; recursive findstr can scan .venv and match separator text.
+git grep -n -I -E "^(<<<<<<<|=======|>>>>>>>)" -- pyproject.toml src tests >nul 2>nul
 if not errorlevel 1 (
-  echo ERROR: Unresolved Git conflict markers were found in project files.
-  echo Search tracked source files with: git grep -n -E "^(<<<<<<<|=======|>>>>>>>)"
+  echo ERROR: Unresolved Git conflict markers were found in tracked project files.
+  git grep -n -I -E "^(<<<<<<<|=======|>>>>>>>)" -- pyproject.toml src tests
   echo Resolve every conflict, save the files, and run run-tara.bat again.
+  exit /b 1
+)
+if errorlevel 2 (
+  echo ERROR: Could not inspect tracked project files for merge-conflict markers.
+  echo Verify that Git is installed and this folder is a valid Git repository.
   exit /b 1
 )
 

@@ -56,14 +56,11 @@ def handle_request(request: Any) -> dict[str, Any]:
     if action == "health":
         try:
             provider = provider_from_env()
-        except (OSError, RuntimeError, ValueError):
-            return _result(request_id, "unavailable", error="OmniRoute provider configuration is unavailable")
-        if not provider.health():
-            return _result(
-                request_id,
-                "unavailable",
-                error="OmniRoute gateway or authenticated model catalogue is unavailable",
-            )
+        except (OSError, RuntimeError, ValueError) as exc:
+            return _result(request_id, "unavailable", error=_display_text(exc, limit=240))
+        diagnostic = provider.health_diagnostic()
+        if diagnostic is not None:
+            return _result(request_id, "unavailable", error=diagnostic)
         return _result(
             request_id,
             "success",

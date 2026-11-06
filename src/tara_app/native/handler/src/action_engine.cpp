@@ -26,6 +26,8 @@
 
 namespace handler {
 
+namespace { constexpr std::size_t kMaxCapturedOutputBytes = 1'000'000; }
+
 #ifdef _WIN32
 
 namespace {
@@ -256,7 +258,7 @@ ActionResult executeCommand(const CommandSpec& command) {
 
     const BOOL created = CreateProcessW(
         executablePath.c_str(), commandLine.data(), nullptr, nullptr, TRUE,
-        CREATE_NO_WINDOW | EXTENDED_STARTUPINFO_PRESENT, nullptr,
+        CREATE_NO_WINDOW | EXTENDED_STARTUPINFO_PRESENT | CREATE_SUSPENDED, nullptr,
         workingDirectory.empty() ? nullptr : workingDirectory.c_str(),
         &startup.StartupInfo, &process);
 
@@ -293,15 +295,29 @@ ActionResult executeCommand(const CommandSpec& command) {
         CloseHandle(readPipe);
         return {false, -1, {}, "failed to assign process to containment job"};
     }
+    if (ResumeThread(process.hThread) == static_cast<DWORD>(-1)) {
+        TerminateJobObject(job, 125);
+        WaitForSingleObject(process.hProcess, 5000);
+        CloseHandle(job);
+        CloseHandle(process.hThread);
+        CloseHandle(process.hProcess);
+        CloseHandle(readPipe);
+        return {false, -1, {}, "failed to resume contained process"};
+    }
 
     std::string output;
+    bool outputTruncated = false;
     std::thread reader([&] {
         std::array<char, 4096> buffer{};
         DWORD bytesRead = 0;
         while (ReadFile(readPipe, buffer.data(),
                         static_cast<DWORD>(buffer.size()),
-                        &bytesRead, nullptr) && bytesRead > 0)
-            output.append(buffer.data(), bytesRead);
+                        &bytesRead, nullptr) && bytesRead > 0) {
+            const std::size_t remaining = kMaxCapturedOutputBytes - output.size();
+            const std::size_t keep = (std::min)(remaining, static_cast<std::size_t>(bytesRead));
+            if (keep > 0) output.append(buffer.data(), keep);
+            if (keep < static_cast<std::size_t>(bytesRead)) outputTruncated = true;
+        }
     });
 
     const DWORD timeout = command.timeoutMs == 0 ? 120000 : command.timeoutMs;
@@ -335,7 +351,10 @@ ActionResult executeCommand(const CommandSpec& command) {
         return {true, -1, output, "failed to read process exit code"};
 
     const int code = static_cast<int>(exitCode);
-    return {true, code, output, code == 0 ? std::string{} : output};
+    const std::string error = outputTruncated
+        ? "command output exceeded the 1 MB capture limit and was truncated"
+        : (code == 0 ? std::string{} : output);
+    return {true, code, output, error};
 }
 
 #else
@@ -406,11 +425,16 @@ ActionResult executeCommand(const CommandSpec& command) {
 
     close(outputPipe[1]);
     std::string output;
+    bool outputTruncated = false;
     std::thread reader([&] {
         std::array<char, 4096> buffer{};
         ssize_t count = 0;
-        while ((count = read(outputPipe[0], buffer.data(), buffer.size())) > 0)
-            output.append(buffer.data(), static_cast<std::size_t>(count));
+        while ((count = read(outputPipe[0], buffer.data(), buffer.size())) > 0) {
+            const std::size_t remaining = kMaxCapturedOutputBytes - output.size();
+            const std::size_t keep = (std::min)(remaining, static_cast<std::size_t>(count));
+            if (keep > 0) output.append(buffer.data(), keep);
+            if (keep < static_cast<std::size_t>(count)) outputTruncated = true;
+        }
     });
 
     const auto timeout = std::chrono::milliseconds(
@@ -424,7 +448,10 @@ ActionResult executeCommand(const CommandSpec& command) {
             if (reader.joinable()) reader.join();
             close(outputPipe[0]);
             const int code = WIFEXITED(status) ? WEXITSTATUS(status) : 128 + WTERMSIG(status);
-            return {true, code, output, code == 0 ? std::string{} : output};
+            const std::string error = outputTruncated
+                ? "command output exceeded the 1 MB capture limit and was truncated"
+                : (code == 0 ? std::string{} : output);
+            return {true, code, output, error};
         }
         if (result < 0) {
             kill(child, SIGKILL);
