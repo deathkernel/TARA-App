@@ -41,6 +41,7 @@ class StepExecutor(Protocol):
     """Callable that performs one workflow step and returns a result."""
 
     def __call__(self, step: WorkflowStepSpec, *, context: Mapping[str, Any]) -> WorkflowStepResult:
+        """Execute one validated step using the supplied request context."""
         ...
 
 
