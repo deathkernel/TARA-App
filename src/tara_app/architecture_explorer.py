@@ -200,7 +200,7 @@ class ArchitectureExplorer:
             for _ in range(max(0, level - 1)):
                 parent = parent.parent
             base = (parent / module_name).as_posix()
-        elif "/" in raw or Path(raw).suffix:
+        elif "/" in raw or Path(raw).suffix.lower() in SOURCE_SUFFIXES:
             # C/C++ include paths and explicit file paths must preserve their
             # suffix (e.g. engine.h); replacing dots would corrupt the path.
             base = (source_parent / raw).as_posix()
