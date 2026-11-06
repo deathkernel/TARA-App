@@ -275,6 +275,7 @@ def to_mermaid(graph: dict[str, object]) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Parse CLI arguments, scan a repository, and write graph outputs."""
     parser = argparse.ArgumentParser(prog="tara-architecture", description="Extract a source-code architecture graph without executing project code")
     parser.add_argument("root", nargs="?", type=Path, default=Path.cwd(), help="repository root to scan")
     parser.add_argument("--json", dest="json_path", type=Path, default=Path("tara-architecture.json"), help="JSON graph output path")
