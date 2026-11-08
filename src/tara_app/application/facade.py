@@ -234,6 +234,9 @@ class ApplicationFacade:
 
         return list_mcp_integrations()
 
+    def mcp_audit_log(self, limit: int = 50) -> dict[str, Any]:
+        return self._coordinator.mcp_audit_log(limit)
+
     def mcp_status(self) -> dict[str, Any]:
         return self._coordinator.mcp_status()
 
