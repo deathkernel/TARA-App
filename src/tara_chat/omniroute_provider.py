@@ -10,18 +10,15 @@ import math
 import os
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
-from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
+from urllib.request import ProxyHandler, Request, build_opener
+
+from tara_app.http import NoRedirectHandler
 from typing import Any
 
 from tara_app.omniroute_health import diagnose_gateway
 
 MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 MAX_COMPLETION_TOKENS = 4096
-
-
-class _NoRedirectHandler(HTTPRedirectHandler):
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        return None
 
 
 def _request_json(url: str, payload: dict[str, Any], api_key: str, timeout: float) -> dict[str, Any]:
@@ -36,7 +33,7 @@ def _request_json(url: str, payload: dict[str, Any], api_key: str, timeout: floa
         method="POST",
     )
     try:
-        with build_opener(ProxyHandler({}), _NoRedirectHandler()).open(request, timeout=timeout) as response:
+        with build_opener(ProxyHandler({}), NoRedirectHandler()).open(request, timeout=timeout) as response:
             raw = response.read(MAX_RESPONSE_BYTES + 1)
         if len(raw) > MAX_RESPONSE_BYTES:
             raise RuntimeError("OmniRoute response exceeded the 8 MiB safety limit")
