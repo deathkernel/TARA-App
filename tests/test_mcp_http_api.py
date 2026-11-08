@@ -44,6 +44,11 @@ class _App(McpOrchestratorMixin):
     def __init__(self):
         self._init_mcp_state(_Gateway())
 
+    def mcp_catalogue(self):
+        from tara_app.mcp_catalogue import list_mcp_integrations
+
+        return list_mcp_integrations()
+
 
 class McpHttpApiTests(unittest.TestCase):
     def setUp(self):
