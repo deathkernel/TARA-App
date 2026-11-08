@@ -13,7 +13,7 @@ from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 from typing import Any
 
-from tara_app.omniroute_health import check_gateway
+from tara_app.omniroute_health import diagnose_gateway
 
 MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 MAX_COMPLETION_TOKENS = 4096
@@ -109,9 +109,13 @@ class OmniRouteProvider:
             timeout=timeout,
         )
 
+    def health_diagnostic(self) -> str | None:
+        """Return a safe explanation when the authenticated model catalogue is unavailable."""
+        return diagnose_gateway(self.base_url, self.api_key, timeout=min(self.timeout, 5.0))
+
     def health(self) -> bool:
         """Check that the authenticated OmniRoute model catalogue is reachable."""
-        return check_gateway(self.base_url, self.api_key, timeout=min(self.timeout, 5.0))
+        return self.health_diagnostic() is None
 
     def complete(
         self,
