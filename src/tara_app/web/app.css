@@ -204,17 +204,7 @@ html, body { height: 100%; overflow: hidden; }
 
 
 /* Monochrome ChatGPT-inspired workspace: black, charcoal, and white */
-:root {
-  color-scheme: dark;
-  --bg: #212121;
-  --panel: #2f2f2f;
-  --panel-raised: #383838;
-  --line: #424242;
-  --text: #f7f7f8;
-  --muted: #b4b4b4;
-  --accent: #ffffff;
-  --accent-dark: #252525;
-}
+
 body { background: var(--bg); }
 .sidebar { background: #171717; border-right-color: #303030; }
 .brand-mark, .sidebar-mark {
