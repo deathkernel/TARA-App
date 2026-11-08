@@ -21,6 +21,8 @@ _ASSETS = {
     "/app.js": ("app.js", "text/javascript; charset=utf-8"),
 }
 _MAX_REQUEST_BYTES = 1_000_000
+_MCP_APPROVE_FIELDS = {"server", "tool", "arguments", "session_id"}
+_MCP_CALL_FIELDS = {"server", "tool", "arguments", "session_id", "approval_token"}
 
 
 def _react_ui_enabled() -> bool:
@@ -95,8 +97,6 @@ class _Handler(BaseHTTPRequestHandler):
             status_code = 200 if payload.get("status") == "available" else 503
             self._json(status_code, payload)
             return
-        # Prefer the compiled React frontend when a build is present. The
-        # original static UI remains a safe fallback for source-only installs.
         react_root = (_WEB_ROOT / "react-dist").resolve()
         react_file: Path | None = None
         if _react_ui_enabled() and react_root.is_dir():
@@ -139,7 +139,12 @@ class _Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         endpoint = urlsplit(self.path).path
-        if endpoint not in {"/api/chat", "/api/approve", "/api/cancel", "/api/models/pull", "/api/models/unload", "/api/models/remove"}:
+        allowed = {
+            "/api/chat", "/api/approve", "/api/cancel",
+            "/api/models/pull", "/api/models/unload", "/api/models/remove",
+            "/api/mcp/approve", "/api/mcp/call",
+        }
+        if endpoint not in allowed:
             self._json(404, {"status": "unavailable", "error": "endpoint not found"})
             return
         if not self._local_origin(require_origin=True):
@@ -165,10 +170,50 @@ class _Handler(BaseHTTPRequestHandler):
             fields = {"question", "session_id", "attachments", "history", "skill"}
         elif endpoint in {"/api/models/pull", "/api/models/unload", "/api/models/remove"}:
             fields = {"specialist"}
+        elif endpoint == "/api/mcp/approve":
+            fields = _MCP_APPROVE_FIELDS
+        elif endpoint == "/api/mcp/call":
+            fields = _MCP_CALL_FIELDS
         else:
             fields = {"approval_id", "session_id"}
         if not isinstance(payload, dict) or set(payload) - fields:
             self._json(400, {"status": "invalid_request", "error": "request fields are invalid"})
+            return
+        if endpoint in {"/api/mcp/approve", "/api/mcp/call"}:
+            required = _MCP_APPROVE_FIELDS if endpoint == "/api/mcp/approve" else _MCP_CALL_FIELDS
+            if set(payload) != required:
+                self._json(400, {"status": "invalid_request", "error": "all MCP request fields are required"})
+                return
+            server, tool, session_id, arguments = (
+                payload.get("server"), payload.get("tool"), payload.get("session_id"), payload.get("arguments")
+            )
+            if (not isinstance(server, str) or not server.strip() or len(server) > 64
+                    or not isinstance(tool, str) or not tool.strip() or len(tool) > 128
+                    or not isinstance(session_id, str) or not session_id.strip() or len(session_id) > 128
+                    or not isinstance(arguments, dict)):
+                self._json(400, {"status": "invalid_request", "error": "MCP tool target, session, or arguments are invalid"})
+                return
+            try:
+                if endpoint == "/api/mcp/approve":
+                    token = self.server.app.issue_mcp_approval_token(
+                        server, tool, arguments, session_id=session_id
+                    )
+                    self._json(200, {"status": "approved", "approval_token": token, "expires_in": 300})
+                    return
+                token = payload.get("approval_token")
+                if not isinstance(token, str) or not token.strip() or len(token) > 128:
+                    self._json(400, {"status": "invalid_request", "error": "approval token is invalid"})
+                    return
+                result = self.server.app.call_mcp_tool(
+                    server, tool, arguments, approval_token=token, session_id=session_id
+                )
+            except ValueError:
+                self._json(403, {"status": "permission_denied", "error": "MCP is disabled or approval is invalid"})
+                return
+            except RuntimeError:
+                self._json(502, {"status": "failed", "error": "MCP tool execution failed"})
+                return
+            self._json(200, {"status": "success", "result": result})
             return
         if endpoint in {"/api/models/pull", "/api/models/unload", "/api/models/remove"}:
             if set(payload) != {"specialist"}:
@@ -199,8 +244,7 @@ class _Handler(BaseHTTPRequestHandler):
             if "history" in payload:
                 try:
                     self.server.app.replace_conversation_history(
-                        payload.get("session_id", "default"),
-                        payload["history"],
+                        payload.get("session_id", "default"), payload["history"]
                     )
                 except ValueError:
                     self._json(400, {"status": "invalid_request", "error": "conversation history is invalid"})
@@ -213,8 +257,7 @@ class _Handler(BaseHTTPRequestHandler):
                 return
             try:
                 outcome = self.server.app.handle_question(
-                    payload.get("question"),
-                    session_id=payload.get("session_id", "default"),
+                    payload.get("question"), session_id=payload.get("session_id", "default"),
                     attachments=payload.get("attachments", []),
                     skill=skill.strip() if isinstance(skill, str) else None,
                 )
