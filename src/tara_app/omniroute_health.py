@@ -5,14 +5,11 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 from urllib.error import HTTPError, URLError
-from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
+from urllib.request import ProxyHandler, Request, build_opener
+
+from tara_app.http import NoRedirectHandler
 
 _MAX_RESPONSE_BYTES = 1_000_000
-
-
-class _NoRedirectHandler(HTTPRedirectHandler):
-    def redirect_request(self, request, file, code, message, headers, new_url):
-        return None
 
 
 def diagnose_gateway(base_url: str, api_key: str, *, timeout: float = 5.0) -> str | None:
@@ -29,7 +26,7 @@ def diagnose_gateway(base_url: str, api_key: str, *, timeout: float = 5.0) -> st
         method="GET",
     )
     try:
-        with build_opener(ProxyHandler({}), _NoRedirectHandler()).open(request, timeout=timeout) as response:
+        with build_opener(ProxyHandler({}), NoRedirectHandler()).open(request, timeout=timeout) as response:
             raw = response.read(_MAX_RESPONSE_BYTES + 1)
     except HTTPError as exc:
         if exc.code in {401, 403}:
