@@ -93,20 +93,42 @@ class McpHttpApiTests(unittest.TestCase):
         names = {item["id"] for item in payload["integrations"]}
         self.assertTrue({"github", "google-drive", "postgresql", "browser", "filesystem"} <= names)
 
-    def test_mcp_mutation_endpoints_are_not_exposed_without_approval_ui(self):
+    def test_mcp_call_requires_explicit_approval_and_executes_once(self):
         payload = {
             "server": "time",
             "tool": "get_current_time",
             "arguments": {"timezone": "Asia/Kolkata"},
             "session_id": "session-1",
         }
-        for endpoint, request_payload in (
-            ("/api/mcp/approve", payload),
-            ("/api/mcp/call", {**payload, "approval_token": "not-a-token"}),
-        ):
-            with self.subTest(endpoint=endpoint), self.assertRaises(HTTPError) as caught:
-                self._post(endpoint, request_payload)
-            self.assertEqual(caught.exception.code, 404)
+        with patch("tara_app.mcp_app.mcp_package_available", return_value=True):
+            status, approval = self._post("/api/mcp/approve", payload)
+            self.assertEqual(status, 200)
+            self.assertEqual(approval["status"], "approved")
+            self.assertEqual(approval["expires_in"], 300)
+            call_payload = {**payload, "approval_token": approval["approval_token"]}
+            status, result = self._post("/api/mcp/call", call_payload)
+            self.assertEqual(status, 200)
+            self.assertEqual(result["status"], "success")
+            self.assertEqual(result["result"], "2026-11-04T12:00:00+05:30")
+            with self.assertRaises(HTTPError) as caught:
+                self._post("/api/mcp/call", call_payload)
+            self.assertEqual(caught.exception.code, 403)
+        self.assertEqual(len(self.server.app.mcp_gateway.calls), 1)
+
+    def test_mcp_approval_rejects_unallowlisted_tool_and_invalid_payload(self):
+        payload = {
+            "server": "time",
+            "tool": "delete_file",
+            "arguments": {"path": "x"},
+            "session_id": "session-1",
+        }
+        with patch("tara_app.mcp_app.mcp_package_available", return_value=True):
+            with self.assertRaises(HTTPError) as caught:
+                self._post("/api/mcp/approve", payload)
+            self.assertEqual(caught.exception.code, 403)
+            with self.assertRaises(HTTPError) as caught:
+                self._post("/api/mcp/approve", {**payload, "extra": "field"})
+            self.assertEqual(caught.exception.code, 400)
         self.assertEqual(self.server.app.mcp_gateway.calls, [])
 
     def test_mcp_endpoints_reject_untrusted_origin(self):
