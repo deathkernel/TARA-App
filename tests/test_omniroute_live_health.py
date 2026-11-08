@@ -5,7 +5,7 @@ import json
 import unittest
 from unittest.mock import patch
 
-from tara_app.omniroute_health import check_gateway
+from tara_app.omniroute_health import check_gateway, diagnose_gateway
 from tara_chat.app_adapter import handle_request as handle_chat
 from tara_models.__main__ import handle_request as handle_models
 from tara_vision.__main__ import handle_request as handle_vision
@@ -62,6 +62,26 @@ class OmniRouteLiveHealthTests(unittest.TestCase):
             opener = _Opener(_Response(payload))
             with patch("tara_app.omniroute_health.build_opener", return_value=opener):
                 self.assertFalse(check_gateway("http://127.0.0.1:20128/v1", "test-key"))
+
+
+    def test_gateway_diagnostic_identifies_missing_api_key(self) -> None:
+        message = diagnose_gateway("http://127.0.0.1:20128/v1", "")
+        self.assertIn("TARA_OMNIROUTE_API_KEY is not set", message)
+
+    def test_gateway_diagnostic_reports_auth_status_without_leaking_key(self) -> None:
+        from urllib.error import HTTPError
+
+        class UnauthorizedOpener:
+            def open(self, request, timeout: float):
+                raise HTTPError(request.full_url, 401, "Unauthorized", {}, None)
+
+        with patch("tara_app.omniroute_health.build_opener", return_value=UnauthorizedOpener()):
+            message = diagnose_gateway(
+                "http://127.0.0.1:20128/v1",
+                "secret-test-key",
+            )
+        self.assertIn("HTTP 401", message)
+        self.assertNotIn("secret-test-key", message)
 
     def test_chat_health_fails_when_gateway_is_unreachable(self) -> None:
         with patch.dict("os.environ", {
