@@ -26,6 +26,21 @@ bool recentlyModified(const std::filesystem::path& path) {
     const auto now = std::filesystem::file_time_type::clock::now();
     return now - modified < std::chrono::hours(24);
 }
+
+bool treeRecentlyModified(const std::filesystem::path& path) {
+    if (recentlyModified(path)) return true;
+    std::error_code ec;
+    if (!std::filesystem::is_directory(path, ec)) return static_cast<bool>(ec);
+    std::filesystem::recursive_directory_iterator it(
+        path, std::filesystem::directory_options::none, ec);
+    const std::filesystem::recursive_directory_iterator end;
+    if (ec) return true;
+    for (; it != end; it.increment(ec)) {
+        if (ec) return true;
+        if (recentlyModified(it->path())) return true;
+    }
+    return static_cast<bool>(ec);
+}
 } // namespace
 
 CleanupResult cleanTempDirectory(const std::filesystem::path& tempDirectory, bool dryRun) {
@@ -54,7 +69,7 @@ CleanupResult cleanTempDirectory(const std::filesystem::path& tempDirectory, boo
             continue;
         }
 
-        if (recentlyModified(entry.path())) {
+        if (treeRecentlyModified(entry.path())) {
             ++result.skipped;
             ++result.recentSkipped;
             continue;
