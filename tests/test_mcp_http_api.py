@@ -93,6 +93,16 @@ class McpHttpApiTests(unittest.TestCase):
         names = {item["id"] for item in payload["integrations"]}
         self.assertTrue({"github", "google-drive", "postgresql", "browser", "filesystem"} <= names)
 
+    def test_audit_endpoint_is_read_only_and_same_origin(self):
+        with urlopen(self.base_url + "/api/mcp/audit?limit=10", timeout=2) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        self.assertEqual(response.status, 200)
+        self.assertEqual(payload["status"], "available")
+        self.assertEqual(payload["retention"], "current_process")
+        with self.assertRaises(HTTPError) as caught:
+            urlopen(self.base_url + "/api/mcp/audit?limit=101", timeout=2)
+        self.assertEqual(caught.exception.code, 400)
+
     def test_mcp_mutation_endpoints_are_not_exposed_without_approval_ui(self):
         payload = {
             "server": "time",
