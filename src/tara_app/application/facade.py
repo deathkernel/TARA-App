@@ -228,6 +228,12 @@ class ApplicationFacade:
     def cancel_approval(self, approval_id: str, *, session_id: str) -> Any:
         return self._coordinator.cancel_approval(approval_id, session_id=session_id)
 
+    def mcp_catalogue(self) -> dict[str, Any]:
+        """Return free-first MCP integration metadata for the manager UI."""
+        from tara_app.mcp_catalogue import list_mcp_integrations
+
+        return list_mcp_integrations()
+
     def mcp_status(self) -> dict[str, Any]:
         return self._coordinator.mcp_status()
 
