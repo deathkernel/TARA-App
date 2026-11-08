@@ -29,7 +29,7 @@ def run_validated_tool_plan(
     session_id: str = "tool-loop",
     approval_tokens: Mapping[str, str] | None = None,
 ) -> ToolLoopResult:
-    """Run a validated plan via MCP when the coordinator has a gateway."""
+    """Run a validated plan via MCP, but never mint approval on the plan's behalf."""
     gateway = getattr(coordinator, "mcp_gateway", None)
     if gateway is None:
         raise RuntimeError("MCP is disabled")
@@ -49,32 +49,27 @@ def run_validated_tool_plan(
                     error_message="No MCP server is enabled",
                 )
             server, tool = enabled[0].name, name
+        if approval_token is None:
+            return ToolStepResult(
+                step.step_id,
+                ToolStepStatus.WAITING_APPROVAL,
+                error_code="approval_required",
+                error_message="Explicit user approval is required before this MCP operation",
+            )
         try:
-            token = approval_token
-            if token is None and hasattr(coordinator, "issue_mcp_approval_token"):
-                token = coordinator.issue_mcp_approval_token(
-                    server, tool, dict(step.arguments), session_id=session_id
-                )
-            if token is None:
-                return ToolStepResult(
-                    step.step_id,
-                    ToolStepStatus.WAITING_APPROVAL,
-                    error_code="approval_required",
-                    error_message="Approval token missing",
-                )
             output = coordinator.call_mcp_tool(
                 server,
                 tool,
                 dict(step.arguments),
-                approval_token=token,
+                approval_token=approval_token,
                 session_id=session_id,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception:  # noqa: BLE001
             return ToolStepResult(
                 step.step_id,
                 ToolStepStatus.FAILED,
                 error_code="mcp_call_failed",
-                error_message=str(exc)[:500],
+                error_message="MCP tool call failed",
             )
         return ToolStepResult(step.step_id, ToolStepStatus.SUCCEEDED, output=str(output))
 
