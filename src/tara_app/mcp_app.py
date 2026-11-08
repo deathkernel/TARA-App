@@ -71,8 +71,8 @@ class McpOrchestratorMixin:
         specs = [item for item in self.mcp_gateway.config.enabled_servers if item.name == server]
         if not specs:
             raise ValueError("MCP server is not enabled")
-        if specs[0].read_only and tool not in specs[0].read_only_tools:
-            raise ValueError("MCP tool is not in the server read-only allowlist")
+        if not specs[0].read_only or tool not in specs[0].read_only_tools:
+            raise ValueError("MCP approval is restricted to explicitly allowlisted read-only tools (read-only allowlist)")
         digest = self._mcp_arguments_digest(arguments)
         token = secrets.token_urlsafe(24)
         expires = time.time() + float(ttl_seconds)

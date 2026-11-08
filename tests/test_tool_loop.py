@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import unittest
+from types import SimpleNamespace
 
 from tara_app.tool_loop import (
     ToolLoopError,
@@ -92,6 +93,88 @@ class ToolLoopBridgeTests(unittest.TestCase):
             }
         )
         self.assertEqual(plan.plan_id, "b1")
+
+    def test_bridge_never_mints_approval_for_read_only_steps(self) -> None:
+        from tara_app.tool_loop_bridge import run_validated_tool_plan
+
+        class Coordinator:
+            mcp_gateway = SimpleNamespace(_config=SimpleNamespace(enabled_servers=[]))
+
+            def __init__(self):
+                self.issued = []
+                self.calls = []
+
+            def issue_mcp_approval_token(self, *args, **kwargs):
+                self.issued.append((args, kwargs))
+                return "implicit-token"
+
+            def call_mcp_tool(self, *args, **kwargs):
+                self.calls.append((args, kwargs))
+                return "unexpected"
+
+        coordinator = Coordinator()
+        plan = ToolPlan("b2", (ToolStep("read", "time.get_current_time", read_only=True),))
+
+        result = run_validated_tool_plan(coordinator, plan)
+
+        self.assertEqual(result.status, "waiting_approval")
+        self.assertEqual(result.steps[0].status, ToolStepStatus.WAITING_APPROVAL)
+        self.assertEqual(coordinator.issued, [])
+        self.assertEqual(coordinator.calls, [])
+
+
+    def test_bridge_logs_only_sanitized_failure_details(self) -> None:
+        from tara_app.tool_loop_bridge import run_validated_tool_plan
+
+        class Coordinator:
+            mcp_gateway = SimpleNamespace(_config=SimpleNamespace(enabled_servers=[]))
+
+            def call_mcp_tool(self, *args, **kwargs):
+                raise RuntimeError("secret-token-and-arguments")
+
+        plan = ToolPlan(
+            "b4",
+            (ToolStep("read", "time.get_current_time", read_only=True),),
+        )
+        with self.assertLogs("tara_app.tool_loop_bridge", level="WARNING") as captured:
+            result = run_validated_tool_plan(
+                Coordinator(),
+                plan,
+                approval_tokens={"read": "explicit-token"},
+            )
+
+        self.assertEqual(result.steps[0].status, ToolStepStatus.FAILED)
+        self.assertEqual(result.steps[0].error_message, "MCP tool call failed")
+        self.assertIn("RuntimeError", captured.output[0])
+        self.assertNotIn("secret-token-and-arguments", captured.output[0])
+        self.assertNotIn("explicit-token", captured.output[0])
+
+    def test_bridge_uses_only_the_explicitly_supplied_token(self) -> None:
+        from tara_app.tool_loop_bridge import run_validated_tool_plan
+
+        class Coordinator:
+            mcp_gateway = SimpleNamespace(_config=SimpleNamespace(enabled_servers=[]))
+
+            def __init__(self):
+                self.calls = []
+
+            def call_mcp_tool(self, *args, **kwargs):
+                self.calls.append((args, kwargs))
+                return "approved-result"
+
+        coordinator = Coordinator()
+        plan = ToolPlan("b3", (ToolStep("read", "time.get_current_time", read_only=True),))
+
+        result = run_validated_tool_plan(
+            coordinator,
+            plan,
+            session_id="session-1",
+            approval_tokens={"read": "explicit-token"},
+        )
+
+        self.assertEqual(result.status, "succeeded")
+        self.assertEqual(coordinator.calls[0][1]["approval_token"], "explicit-token")
+        self.assertEqual(coordinator.calls[0][1]["session_id"], "session-1")
 
 
 if __name__ == "__main__":
