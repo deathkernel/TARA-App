@@ -72,7 +72,7 @@ class McpOrchestratorMixin:
         if not specs:
             raise ValueError("MCP server is not enabled")
         if not specs[0].read_only or tool not in specs[0].read_only_tools:
-            raise ValueError("MCP approval is restricted to the explicit read-only allowlist")
+            raise ValueError("MCP approval is restricted to explicitly allowlisted read-only tools (read-only allowlist)")
         digest = self._mcp_arguments_digest(arguments)
         token = secrets.token_urlsafe(24)
         expires = time.time() + float(ttl_seconds)
