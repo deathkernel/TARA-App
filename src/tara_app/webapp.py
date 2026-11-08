@@ -62,7 +62,7 @@ class _Handler(BaseHTTPRequestHandler):
             from tara_app.mcp_catalogue import list_mcp_integrations
             self._json(200, list_mcp_integrations())
             return
-        if endpoint in {"/api/mcp/status", "/api/mcp/tools"}:
+        if endpoint in {"/api/mcp/status", "/api/mcp/tools", "/api/mcp/audit"}:
             if not self._local_origin():
                 self._json(403, {"status": "permission_denied", "error": "request origin is not allowed"})
                 return
@@ -70,6 +70,16 @@ class _Handler(BaseHTTPRequestHandler):
                 self._json(200, self.server.app.mcp_status())
                 return
             query = parse_qs(urlsplit(self.path).query, keep_blank_values=True)
+            if endpoint == "/api/mcp/audit":
+                if set(query) - {"limit"} or any(len(values) != 1 for values in query.values()):
+                    self._json(400, {"status": "invalid_request", "error": "query parameters are invalid"})
+                    return
+                try:
+                    limit = int(query.get("limit", ["50"])[0])
+                    self._json(200, self.server.app.mcp_audit_log(limit))
+                except ValueError:
+                    self._json(400, {"status": "invalid_request", "error": "audit limit must be between 1 and 100"})
+                return
             if set(query) - {"server"} or any(len(values) != 1 for values in query.values()):
                 self._json(400, {"status": "invalid_request", "error": "query parameters are invalid"})
                 return
