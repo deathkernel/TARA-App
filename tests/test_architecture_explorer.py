@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import contextlib
+import io
 import tempfile
 import unittest
 from pathlib import Path
 
-from tara_app.architecture_explorer import ArchitectureExplorer, to_mermaid
+from tara_app.architecture_explorer import ArchitectureExplorer, main, to_mermaid
 
 
 class ArchitectureExplorerTests(unittest.TestCase):
@@ -37,6 +39,56 @@ class ArchitectureExplorerTests(unittest.TestCase):
             graph = ArchitectureExplorer(root).scan()
 
             self.assertEqual(graph["summary"]["dependencies"], 1)
+
+
+    def test_resolves_module_less_python_relative_imports(self):
+        """Resolve Python relative imports that omit the module name."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "pkg").mkdir()
+            (root / "pkg/__init__.py").write_text("", encoding="utf-8")
+            (root / "pkg/user.py").write_text("from . import sibling\n", encoding="utf-8")
+            (root / "pkg/sibling.py").write_text("class Sibling: pass\n", encoding="utf-8")
+
+            graph = ArchitectureExplorer(root).scan()
+
+            self.assertEqual(graph["summary"]["dependencies"], 1)
+            self.assertEqual(graph["edges"][0]["target"], "file:pkg/sibling.py")
+
+    def test_resolves_dotted_relative_typescript_filenames(self):
+        """Resolve relative TypeScript imports with dotted basenames."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "src").mkdir()
+            (root / "src/app.ts").write_text('import "./foo.bar";\n', encoding="utf-8")
+            (root / "src/foo.bar.ts").write_text("export const value = 1;\n", encoding="utf-8")
+
+            graph = ArchitectureExplorer(root).scan()
+
+            self.assertEqual(graph["summary"]["dependencies"], 1)
+            self.assertEqual(graph["edges"][0]["target"], "file:src/foo.bar.ts")
+
+    def test_cli_refuses_to_overwrite_scanned_source_files(self):
+        """Prevent CLI output from overwriting a scanned source file."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "app.py"
+            original = "class App: pass\n"
+            source.write_text(original, encoding="utf-8")
+            mermaid = root / "architecture.mmd"
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stderr(stderr):
+                result = main([
+                    str(root),
+                    "--json", str(source),
+                    "--mermaid", str(mermaid),
+                ])
+
+            self.assertEqual(result, 2)
+            self.assertEqual(source.read_text(encoding="utf-8"), original)
+            self.assertFalse(mermaid.exists())
+            self.assertIn("must not overwrite scanned source files", stderr.getvalue())
 
     def test_extracts_typescript_symbols_and_relative_imports(self):
         with tempfile.TemporaryDirectory() as directory:
