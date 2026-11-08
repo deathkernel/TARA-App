@@ -1,15 +1,3 @@
-:root {
-  color-scheme: dark;
-  --bg: #101114;
-  --panel: #17191e;
-  --panel-raised: #202229;
-  --line: #292c34;
-  --text: #f0f1f5;
-  --muted: #9b9eaa;
-  --accent: #c7a9ff;
-  --accent-dark: #241b35;
-}
-
 * { box-sizing: border-box; }
 body {
   margin: 0;
