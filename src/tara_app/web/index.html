@@ -25,8 +25,29 @@
           <p>Your assistant, routed to the right specialist</p>
         </div>
         <span class="local-badge"><span></span> Local app</span>
+        <button id="mcp-toggle" class="models-button" type="button" aria-expanded="false" aria-controls="mcp-panel">Integrations</button>
         <button id="models-toggle" class="models-button" type="button" aria-expanded="false" aria-controls="model-panel">Models</button>
       </header>
+
+      <section id="mcp-panel" class="model-panel" hidden aria-live="polite" aria-label="MCP integration manager">
+        <div class="model-panel-header"><div><h2>MCP integrations</h2><p id="mcp-service-status">Free-first catalogue. Servers are not installed or enabled automatically.</p></div><button id="mcp-refresh" type="button">Refresh</button></div>
+        <div id="mcp-summary" class="mcp-summary"></div><div id="mcp-list" class="mcp-list"></div>
+        <div class="mcp-approval" aria-label="MCP tool approval">
+          <h3>Run an allowlisted read-only tool</h3>
+          <p>Review the exact tool and JSON arguments. Approval is one-time, expires after five minutes, and cannot authorize write tools.</p>
+          <div class="mcp-approval-fields">
+            <label>Server<input id="mcp-server" maxlength="64" placeholder="time"></label>
+            <label>Tool<input id="mcp-tool" maxlength="128" placeholder="get_current_time"></label>
+          </div>
+          <label>Arguments (JSON)<textarea id="mcp-arguments" rows="3">{}</textarea></label>
+          <div class="mcp-approval-actions">
+            <button id="mcp-approve" type="button">Approve this exact call</button>
+            <button id="mcp-execute" type="button" disabled>Execute approved call</button>
+          </div>
+          <p id="mcp-approval-status" role="status" aria-live="polite"></p>
+          <pre id="mcp-result" hidden></pre>
+        </div>
+      </section>
 
       <section id="model-panel" class="model-panel" hidden aria-live="polite" aria-label="OmniRoute model catalogue">
         <div class="model-panel-header">
