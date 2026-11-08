@@ -31,6 +31,28 @@ class McpApprovalTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             app.call_mcp_tool("time", "get_time", arguments, approval_token=token, session_id="session-1")
 
+    def test_audit_log_records_approval_and_tool_call_without_secrets(self):
+        app = _App()
+        arguments = {"timezone": "Asia/Kolkata", "private_value": "do-not-log"}
+        token = app.issue_mcp_approval_token("time", "get_time", arguments, session_id="session-secret")
+        self.assertEqual(app.call_mcp_tool(
+            "time", "get_time", arguments, approval_token=token, session_id="session-secret"
+        ), "ok")
+        audit = app.mcp_audit_log()
+        self.assertEqual([event["event"] for event in audit["events"]], ["tool_call", "approval_issued"])
+        self.assertEqual(audit["events"][0]["outcome"], "succeeded")
+        serialized = str(audit)
+        self.assertNotIn("do-not-log", serialized)
+        self.assertNotIn("session-secret", serialized)
+        self.assertNotIn(token, serialized)
+        self.assertEqual(audit["retention"], "current_process")
+
+    def test_audit_log_rejects_invalid_limits(self):
+        app = _App()
+        for limit in (0, 101, True, "10"):
+            with self.subTest(limit=limit), self.assertRaises(ValueError):
+                app.mcp_audit_log(limit)
+
     def test_approval_rejects_unlisted_read_only_tool(self):
         app = _App()
         with self.assertRaisesRegex(ValueError, "read-only allowlist"):
