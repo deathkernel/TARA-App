@@ -29,6 +29,7 @@ class SkillsLoaderTests(unittest.TestCase):
     def test_load_pack(self) -> None:
         pack = load_skill_pack("demo-skill", skills_root=self.root)
         self.assertEqual(pack.title, "Demo")
+        self.assertIn("carefully", pack.prompt_block())
         self.assertIn("carefully", pack.instructions)
         self.assertIn("Skill: Demo", pack.prompt_block())
 
@@ -88,6 +89,14 @@ class SkillsLoaderTests(unittest.TestCase):
             coordinator.handle_question.call_args.kwargs["skill_prompt"],
             load_skill_pack("demo-skill", skills_root=self.root).prompt_block(),
         )
+
+
+class FacadeSkillsTests(unittest.TestCase):
+    def test_list_skills_empty_without_root(self) -> None:
+        coordinator = MagicMock()
+        facade = ApplicationFacade(coordinator)
+        skills = facade.list_skills()
+        self.assertIsInstance(skills, list)
 
 
 class BundledSkillsTests(unittest.TestCase):
