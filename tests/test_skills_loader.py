@@ -48,6 +48,24 @@ class SkillsLoaderTests(unittest.TestCase):
         with self.assertRaises(SkillLoadError):
             load_skill_pack("empty-pack", skills_root=self.root)
 
+
+    def test_symlinked_skill_metadata_is_rejected(self) -> None:
+        pack = self.root / "linked-metadata"
+        pack.mkdir()
+        (pack / "SKILL.md").write_text("safe instructions", encoding="utf-8")
+        outside = self.root.parent / f"{self.root.name}-outside.toml"
+        outside.write_text('title = "Outside"\\n', encoding="utf-8")
+        try:
+            (pack / "skill.toml").symlink_to(outside)
+        except OSError:
+            outside.unlink(missing_ok=True)
+            self.skipTest("symlink creation is unavailable on this runner")
+        try:
+            with self.assertRaises(SkillLoadError):
+                load_skill_pack("linked-metadata", skills_root=self.root)
+        finally:
+            outside.unlink(missing_ok=True)
+
     def test_script_traversal_rejected(self) -> None:
         pack = self.root / "bad-scripts"
         pack.mkdir()
