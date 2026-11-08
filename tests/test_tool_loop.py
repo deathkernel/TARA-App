@@ -122,6 +122,33 @@ class ToolLoopBridgeTests(unittest.TestCase):
         self.assertEqual(coordinator.issued, [])
         self.assertEqual(coordinator.calls, [])
 
+
+    def test_bridge_logs_only_sanitized_failure_details(self) -> None:
+        from tara_app.tool_loop_bridge import run_validated_tool_plan
+
+        class Coordinator:
+            mcp_gateway = SimpleNamespace(_config=SimpleNamespace(enabled_servers=[]))
+
+            def call_mcp_tool(self, *args, **kwargs):
+                raise RuntimeError("secret-token-and-arguments")
+
+        plan = ToolPlan(
+            "b4",
+            (ToolStep("read", "time.get_current_time", read_only=True),),
+        )
+        with self.assertLogs("tara_app.tool_loop_bridge", level="WARNING") as captured:
+            result = run_validated_tool_plan(
+                Coordinator(),
+                plan,
+                approval_tokens={"read": "explicit-token"},
+            )
+
+        self.assertEqual(result.steps[0].status, ToolStepStatus.FAILED)
+        self.assertEqual(result.steps[0].error_message, "MCP tool call failed")
+        self.assertIn("RuntimeError", captured.output[0])
+        self.assertNotIn("secret-token-and-arguments", captured.output[0])
+        self.assertNotIn("explicit-token", captured.output[0])
+
     def test_bridge_uses_only_the_explicitly_supplied_token(self) -> None:
         from tara_app.tool_loop_bridge import run_validated_tool_plan
 
