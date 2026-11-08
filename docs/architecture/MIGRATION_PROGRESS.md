@@ -20,7 +20,7 @@
   - Approval-gated steps pause as `WAITING_APPROVAL` until `continue_run(..., approved_step_ids=...)`.
   - Cancellation marks remaining steps cancelled.
   - Result aggregation into `WorkflowResult`.
-- **Tests:** `tests/test_workflow_engine.py` (6 cases).
+- **Tests:** `tests/test_workflow_engine.py` (10 cases, including concurrent continuation and cancellation races).
 - **Safety:** Engine does **not** authorize side effects; executor + existing Security/Orchestrator remain authoritative.
 - **Not connected** to live Orchestrator dispatch (per migration plan Phase 4 gate).
 
