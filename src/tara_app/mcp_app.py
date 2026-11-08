@@ -6,7 +6,8 @@ import json
 import math
 import secrets
 import time
-from collections import OrderedDict
+from collections import OrderedDict, deque
+from datetime import datetime, timezone
 from threading import RLock
 from typing import Any, Mapping
 
@@ -20,11 +21,40 @@ class McpOrchestratorMixin:
     mcp_gateway: Any
     _mcp_approval_tokens: OrderedDict[str, tuple[float, str, str, str, str]]
     _mcp_token_lock: RLock
+    _mcp_audit_events: deque[dict[str, str]]
+    _mcp_audit_lock: RLock
 
     def _init_mcp_state(self, mcp_gateway: Any = None) -> None:
         self.mcp_gateway = mcp_gateway
         self._mcp_approval_tokens = OrderedDict()
         self._mcp_token_lock = RLock()
+        self._mcp_audit_events = deque(maxlen=200)
+        self._mcp_audit_lock = RLock()
+
+    def _record_mcp_audit_event(
+        self, event: str, outcome: str, *, server: str = "", tool: str = "",
+        session_id: str = "",
+    ) -> None:
+        """Record bounded metadata only; never store arguments, tokens, or raw session IDs."""
+        session_fingerprint = hashlib.sha256(session_id.encode("utf-8")).hexdigest()[:12] if session_id else ""
+        entry = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "event": event,
+            "outcome": outcome,
+            "server": server[:64],
+            "tool": tool[:128],
+            "session": session_fingerprint,
+        }
+        with self._mcp_audit_lock:
+            self._mcp_audit_events.append(entry)
+
+    def mcp_audit_log(self, limit: int = 50) -> dict[str, Any]:
+        """Return recent in-memory MCP audit metadata, newest first."""
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
+            raise ValueError("limit must be an integer between 1 and 100")
+        with self._mcp_audit_lock:
+            events = list(self._mcp_audit_events)[-limit:]
+        return {"status": "available", "retention": "current_process", "events": list(reversed(events))}
 
     def mcp_status(self) -> dict[str, Any]:
         if self.mcp_gateway is None:
@@ -80,6 +110,7 @@ class McpOrchestratorMixin:
             self._mcp_approval_tokens[token] = (expires, session_id, server, tool, digest)
             while len(self._mcp_approval_tokens) > 64:
                 self._mcp_approval_tokens.popitem(last=False)
+        self._record_mcp_audit_event("approval_issued", "approved_for_review", server=server, tool=tool, session_id=session_id)
         return token
 
     def list_mcp_tools(self, server_name: str | None = None) -> list[dict[str, Any]]:
@@ -118,9 +149,17 @@ class McpOrchestratorMixin:
                 self._mcp_approval_tokens.pop(key, None)
             if entry is None or entry[0] <= now:
                 self._mcp_approval_tokens.pop(token, None)
+                self._record_mcp_audit_event("tool_call", "denied_invalid_or_expired_approval", server=server, tool=tool, session_id=session_id)
                 raise ValueError("approval_token is invalid or expired")
             if entry[1:] != (session_id, server, tool, digest):
+                self._record_mcp_audit_event("tool_call", "denied_approval_mismatch", server=server, tool=tool, session_id=session_id)
                 raise ValueError("approval_token does not match this session and tool call")
             self._mcp_approval_tokens.pop(token, None)
         grant = _McpApprovalGrant(_APPROVAL_GRANT_SEAL)
-        return self.mcp_gateway.call_tool(server, tool, arguments, approval_grant=grant)
+        try:
+            result = self.mcp_gateway.call_tool(server, tool, arguments, approval_grant=grant)
+        except Exception:
+            self._record_mcp_audit_event("tool_call", "failed", server=server, tool=tool, session_id=session_id)
+            raise
+        self._record_mcp_audit_event("tool_call", "succeeded", server=server, tool=tool, session_id=session_id)
+        return result
