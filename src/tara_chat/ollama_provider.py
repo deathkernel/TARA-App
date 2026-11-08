@@ -7,7 +7,9 @@ import os
 from typing import Any, Callable
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.request import Request, build_opener
+
+from tara_app.http import NoRedirectHandler
 
 
 JsonTransport = Callable[[str, dict[str, Any], float], dict[str, Any]]
@@ -17,13 +19,6 @@ MAX_COMPLETION_TOKENS = 4096
 MAX_CONTEXT_TOKENS = 32768
 MAX_CPU_THREADS = 256
 MAX_BATCH_SIZE = 2048
-
-
-class _NoRedirectHandler(HTTPRedirectHandler):
-    """Do not let a configured Ollama endpoint redirect requests elsewhere."""
-
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        return None
 
 # Eco is the safe default for everyday desktop use. Thread count limits CPU
 # parallelism; context/batch limits reduce peak memory and prompt-processing work.
@@ -52,7 +47,7 @@ def _http_json(url: str, payload: dict[str, Any], timeout: float) -> dict[str, A
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    opener = build_opener(_NoRedirectHandler())
+    opener = build_opener(NoRedirectHandler())
     try:
         with opener.open(request, timeout=timeout) as response:
             body = response.read(MAX_RESPONSE_BYTES + 1)
