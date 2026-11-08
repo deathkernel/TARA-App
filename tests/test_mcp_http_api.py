@@ -84,6 +84,15 @@ class McpHttpApiTests(unittest.TestCase):
         self.assertEqual(status["enabled_server_count"], 1)
         self.assertEqual(tools["tools"][0]["name"], "get_current_time")
 
+    def test_catalogue_endpoint_returns_free_first_integrations_without_enabling_them(self):
+        with urlopen(self.base_url + "/api/mcp/catalogue", timeout=2) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        self.assertEqual(payload["policy"], "free_first")
+        self.assertFalse(payload["automatic_install"])
+        self.assertFalse(payload["write_tools_enabled"])
+        names = {item["id"] for item in payload["integrations"]}
+        self.assertTrue({"github", "google-drive", "postgresql", "browser", "filesystem"} <= names)
+
     def test_mcp_mutation_endpoints_are_not_exposed_without_approval_ui(self):
         payload = {
             "server": "time",
