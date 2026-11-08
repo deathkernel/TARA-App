@@ -5,6 +5,7 @@ Paths must resolve under an allowlisted root. No writes, deletes, or shell.
 from __future__ import annotations
 
 import os
+import stat
 from pathlib import Path
 
 _MAX_READ_BYTES = 256_000
@@ -65,13 +66,25 @@ def list_directory(path: str, roots: list[str] | tuple[str, ...]) -> list[dict[s
 
 def read_text_file(path: str, roots: list[str] | tuple[str, ...]) -> str:
     target = resolve_under_roots(path, roots)
-    if not target.is_file():
-        raise ScopedFsError("path is not a regular file")
-    if target.is_symlink():
-        raise ScopedFsError("refusing to read symlink target directly")
-    data = target.read_bytes()
-    if len(data) > _MAX_READ_BYTES:
-        raise ScopedFsError(f"file exceeds {_MAX_READ_BYTES} byte read limit")
+    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    descriptor = -1
+    try:
+        descriptor = os.open(target, flags)
+        with os.fdopen(descriptor, "rb") as stream:
+            descriptor = -1
+            metadata = os.fstat(stream.fileno())
+            if not stat.S_ISREG(metadata.st_mode):
+                raise ScopedFsError("path is not a regular file")
+            if metadata.st_size > _MAX_READ_BYTES:
+                raise ScopedFsError(f"file exceeds {_MAX_READ_BYTES} byte read limit")
+            data = stream.read(_MAX_READ_BYTES + 1)
+            if len(data) > _MAX_READ_BYTES:
+                raise ScopedFsError(f"file exceeds {_MAX_READ_BYTES} byte read limit")
+    except OSError as exc:
+        raise ScopedFsError("file could not be opened safely") from exc
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
     try:
         return data.decode("utf-8")
     except UnicodeDecodeError as exc:

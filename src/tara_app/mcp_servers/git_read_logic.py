@@ -6,6 +6,7 @@ mutating commands. Invocations use fixed argv lists with ``shell=False``.
 """
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 
@@ -57,7 +58,21 @@ def resolve_repo(path: str, roots: list[str] | tuple[str, ...]) -> Path:
 
 
 def _run_git(repo: Path, args: list[str]) -> str:
-    argv = ["git", "-C", str(repo), *args]
+    # core.fsmonitor can execute a repository-configured helper during
+    # status inspection. Override it and avoid inheriting global/system config.
+    argv = ["git", "-c", "core.fsmonitor=false", "-C", str(repo), *args]
+    environment = {
+        "PATH": os.environ.get("PATH", ""),
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_TERMINAL_PROMPT": "0",
+        "GIT_OPTIONAL_LOCKS": "0",
+    }
+    if os.name == "nt":
+        for name in ("SYSTEMROOT", "WINDIR", "TEMP", "TMP"):
+            value = os.environ.get(name)
+            if value:
+                environment[name] = value
     try:
         completed = subprocess.run(  # noqa: S603 — fixed argv, no shell
             argv,
@@ -65,6 +80,7 @@ def _run_git(repo: Path, args: list[str]) -> str:
             timeout=_TIMEOUT_SECONDS,
             check=False,
             shell=False,
+            env=environment,
         )
     except FileNotFoundError as exc:
         raise GitReadError("git executable is not available") from exc

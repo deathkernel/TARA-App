@@ -8,9 +8,6 @@
   const MAX_ATTACHMENT_BYTES = 10_000_000;
   const MAX_TOTAL_ATTACHMENT_BYTES = 10_000_000;
   const send = document.querySelector("#send");
-  const skillSelector = document.querySelector("#skill-selector");
-  const skillStatus = document.querySelector("#skill-status");
-  const skillSelectionKey = "tara-app-selected-skill";
   const AUDIO_MEDIA_TYPES = new Set(["audio/mpeg", "audio/wav", "audio/mp4", "audio/webm", "audio/ogg", "audio/flac", "audio/aac"]);
   const AUDIO_SUFFIX_TYPES = { ".mp3": "audio/mpeg", ".wav": "audio/wav", ".m4a": "audio/mp4", ".mp4": "audio/mp4", ".webm": "audio/webm", ".ogg": "audio/ogg", ".flac": "audio/flac", ".aac": "audio/aac" };
   const modelPanel = document.querySelector("#model-panel");
@@ -41,40 +38,6 @@
     }
   }
 
-  async function loadSkillPacks() {
-    if (!skillSelector || !skillStatus) return;
-    try {
-      const response = await fetch("/api/skills", { headers: { Accept: "application/json" }, cache: "no-store" });
-      const payload = await response.json();
-      if (!response.ok || payload.status !== "available" || !Array.isArray(payload.skills)) {
-        throw new Error(payload.error || "Skill catalogue is unavailable");
-      }
-      const skills = payload.skills.filter(skill =>
-        skill && typeof skill.name === "string" && /^[a-z0-9][a-z0-9_-]{0,62}$/.test(skill.name)
-      );
-      const options = [new Option("No skill", "")];
-      for (const skill of skills) {
-        const title = typeof skill.title === "string" && skill.title.trim() ? skill.title : skill.name;
-        options.push(new Option(title, skill.name));
-      }
-      skillSelector.replaceChildren(...options);
-      let savedSkill = "";
-      try { savedSkill = localStorage.getItem(skillSelectionKey) || ""; } catch {}
-      if (skills.some(skill => skill.name === savedSkill)) skillSelector.value = savedSkill;
-      skillSelector.disabled = false;
-      skillStatus.textContent = skills.length + " available";
-      if (!skills.length) skillStatus.textContent = "No skills installed";
-    } catch {
-      skillSelector.replaceChildren(new Option("No skill", ""));
-      skillSelector.disabled = true;
-      skillStatus.textContent = "Skills unavailable";
-    }
-  }
-
-  skillSelector?.addEventListener("change", () => {
-    try { localStorage.setItem(skillSelectionKey, skillSelector.value); } catch {}
-  });
-  void loadSkillPacks();
   void showSpecialistHealth();
   const audioUrls = [];
   let selectedFiles = [];
@@ -1069,7 +1032,6 @@
           session_id: sessionId,
           attachments,
           history,
-          ...(skillSelector?.value ? { skill: skillSelector.value } : {})
         })
       });
       const payload = await response.json();
