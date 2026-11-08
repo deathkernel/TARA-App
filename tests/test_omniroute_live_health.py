@@ -87,9 +87,10 @@ class OmniRouteLiveHealthTests(unittest.TestCase):
         with patch.dict("os.environ", {
             "TARA_OMNIROUTE_API_KEY": "test-key",
             "TARA_LLM_BACKEND": "omniroute",
-        }, clear=True), patch("tara_chat.omniroute_provider.check_gateway", return_value=False):
+        }, clear=True), patch("tara_chat.omniroute_provider.diagnose_gateway", return_value="Cannot connect to OmniRoute."):
             result = handle_chat(module_request("chat"))
         self.assertEqual(result["status"], "unavailable")
+        self.assertIn("Cannot connect to OmniRoute", result["error"])
         self.assertNotIn("test-key", json.dumps(result))
 
     def test_vision_health_fails_when_gateway_is_unreachable(self) -> None:
