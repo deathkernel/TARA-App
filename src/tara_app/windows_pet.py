@@ -110,7 +110,7 @@ def _post_chat(server_url: str, payload: dict[str, Any]) -> str:
     request = urllib.request.Request(
         f"{server_url}/api/chat",
         data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/json", "Origin": server_url},
         method="POST",
     )
     opener = urllib.request.build_opener(_LoopbackOnlyRedirectHandler)
