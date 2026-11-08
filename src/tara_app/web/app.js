@@ -1012,6 +1012,80 @@
       mcpServiceStatus.textContent = "Free-first catalogue · no automatic installation, paid activation, or server execution.";
     } catch { mcpServiceStatus.textContent = "Could not load the local MCP integration catalogue."; }
   }
+  const mcpApproveButton = document.querySelector("#mcp-approve");
+  const mcpExecuteButton = document.querySelector("#mcp-execute");
+  const mcpApprovalStatus = document.querySelector("#mcp-approval-status");
+  const mcpResult = document.querySelector("#mcp-result");
+  let mcpApprovalToken = "";
+  let mcpApprovedCall = null;
+
+  async function postMcp(path, payload) {
+    const response = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      cache: "no-store"
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "MCP request failed");
+    return result;
+  }
+
+  function readMcpCall() {
+    const server = document.querySelector("#mcp-server").value.trim();
+    const tool = document.querySelector("#mcp-tool").value.trim();
+    const argumentsText = document.querySelector("#mcp-arguments").value;
+    const argumentsValue = JSON.parse(argumentsText);
+    if (!server || !tool || !argumentsValue || Array.isArray(argumentsValue) || typeof argumentsValue !== "object") {
+      throw new Error("Enter a server, tool, and JSON object of arguments.");
+    }
+    return { server, tool, arguments: argumentsValue, session_id: sessionId };
+  }
+
+  function clearMcpApproval() {
+    mcpApprovalToken = "";
+    mcpApprovedCall = null;
+    if (mcpExecuteButton) mcpExecuteButton.disabled = true;
+  }
+
+  ["#mcp-server", "#mcp-tool", "#mcp-arguments"].forEach(selector => {
+    document.querySelector(selector)?.addEventListener("input", clearMcpApproval);
+  });
+
+  mcpApproveButton?.addEventListener("click", async () => {
+    clearMcpApproval();
+    if (mcpResult) { mcpResult.hidden = true; mcpResult.textContent = ""; }
+    try {
+      const call = readMcpCall();
+      mcpApprovalStatus.textContent = "Requesting one-time approval for " + call.server + "." + call.tool + "...";
+      const result = await postMcp("/api/mcp/approve", call);
+      mcpApprovalToken = result.approval_token;
+      mcpApprovedCall = call;
+      mcpExecuteButton.disabled = false;
+      mcpApprovalStatus.textContent = "Approved for this exact call only. Press Execute to run it.";
+    } catch (error) {
+      mcpApprovalStatus.textContent = error instanceof SyntaxError ? "Arguments must be valid JSON." : error.message;
+    }
+  });
+
+  mcpExecuteButton?.addEventListener("click", async () => {
+    if (!mcpApprovalToken || !mcpApprovedCall) return;
+    mcpExecuteButton.disabled = true;
+    try {
+      const result = await postMcp("/api/mcp/call", {
+        ...mcpApprovedCall,
+        approval_token: mcpApprovalToken
+      });
+      mcpApprovalStatus.textContent = "Tool call completed.";
+      mcpResult.textContent = typeof result.result === "string" ? result.result : JSON.stringify(result.result, null, 2);
+      mcpResult.hidden = false;
+    } catch (error) {
+      mcpApprovalStatus.textContent = error.message;
+    } finally {
+      clearMcpApproval();
+    }
+  });
+
   mcpToggle?.addEventListener("click", () => {
     const opening = mcpPanel.hidden; mcpPanel.hidden = !opening;
     mcpToggle.setAttribute("aria-expanded", String(opening));

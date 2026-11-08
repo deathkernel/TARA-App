@@ -10,6 +10,7 @@ from collections import OrderedDict
 from threading import RLock
 from typing import Any, Mapping
 
+from tara_app.mcp_audit import McpAuditLog
 from tara_app.mcp_client import _APPROVAL_GRANT_SEAL, _McpApprovalGrant
 from tara_app.mcp_registry import describe_registry, mcp_package_available
 
@@ -21,10 +22,26 @@ class McpOrchestratorMixin:
     _mcp_approval_tokens: OrderedDict[str, tuple[float, str, str, str, str]]
     _mcp_token_lock: RLock
 
-    def _init_mcp_state(self, mcp_gateway: Any = None) -> None:
+    def _init_mcp_state(self, mcp_gateway: Any = None, *, audit_log: McpAuditLog | None = None) -> None:
         self.mcp_gateway = mcp_gateway
         self._mcp_approval_tokens = OrderedDict()
         self._mcp_token_lock = RLock()
+        self._mcp_audit = audit_log or McpAuditLog()
+
+    @staticmethod
+    def _mcp_session_digest(session_id: str) -> str:
+        return hashlib.sha256(session_id.encode("utf-8")).hexdigest()
+
+    def _audit_mcp(
+        self, event: str, *, server: str = "", tool: str = "", session_id: str = "",
+        arguments_digest: str = "", reason: str = "",
+    ) -> None:
+        """Write redacted audit metadata; audit failures never authorize a tool call."""
+        self._mcp_audit.record(
+            event, server=server, tool=tool,
+            session_digest=self._mcp_session_digest(session_id) if session_id else "",
+            arguments_digest=arguments_digest, reason=reason,
+        )
 
     def mcp_status(self) -> dict[str, Any]:
         if self.mcp_gateway is None:
@@ -80,6 +97,7 @@ class McpOrchestratorMixin:
             self._mcp_approval_tokens[token] = (expires, session_id, server, tool, digest)
             while len(self._mcp_approval_tokens) > 64:
                 self._mcp_approval_tokens.popitem(last=False)
+        self._audit_mcp("approval_issued", server=server, tool=tool, session_id=session_id, arguments_digest=digest)
         return token
 
     def list_mcp_tools(self, server_name: str | None = None) -> list[dict[str, Any]]:
@@ -118,9 +136,21 @@ class McpOrchestratorMixin:
                 self._mcp_approval_tokens.pop(key, None)
             if entry is None or entry[0] <= now:
                 self._mcp_approval_tokens.pop(token, None)
+                self._audit_mcp("approval_rejected", server=server, tool=tool, session_id=session_id,
+                                arguments_digest=digest, reason="invalid_or_expired")
                 raise ValueError("approval_token is invalid or expired")
             if entry[1:] != (session_id, server, tool, digest):
+                self._audit_mcp("approval_rejected", server=server, tool=tool, session_id=session_id,
+                                arguments_digest=digest, reason="call_binding_mismatch")
                 raise ValueError("approval_token does not match this session and tool call")
             self._mcp_approval_tokens.pop(token, None)
         grant = _McpApprovalGrant(_APPROVAL_GRANT_SEAL)
-        return self.mcp_gateway.call_tool(server, tool, arguments, approval_grant=grant)
+        try:
+            result = self.mcp_gateway.call_tool(server, tool, arguments, approval_grant=grant)
+        except Exception:
+            self._audit_mcp("tool_call_failed", server=server, tool=tool, session_id=session_id,
+                            arguments_digest=digest, reason="gateway_error")
+            raise
+        self._audit_mcp("tool_call_succeeded", server=server, tool=tool, session_id=session_id,
+                        arguments_digest=digest)
+        return result
