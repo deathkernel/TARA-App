@@ -55,6 +55,13 @@ class _Handler(BaseHTTPRequestHandler):
                 return
             self._json(200, self.server.app.health_status())
             return
+        if endpoint == "/api/mcp/catalogue":
+            if not self._local_origin():
+                self._json(403, {"status": "permission_denied", "error": "request origin is not allowed"})
+                return
+            from tara_app.mcp_catalogue import list_mcp_integrations
+            self._json(200, list_mcp_integrations())
+            return
         if endpoint in {"/api/mcp/status", "/api/mcp/tools"}:
             if not self._local_origin():
                 self._json(403, {"status": "permission_denied", "error": "request origin is not allowed"})
