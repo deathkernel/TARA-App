@@ -5,6 +5,7 @@ without requiring a large facade rewrite in the same commit.
 """
 from __future__ import annotations
 
+import logging
 from typing import Any, Mapping
 
 from tara_app.tool_loop import (
@@ -15,6 +16,9 @@ from tara_app.tool_loop import (
     plan_from_mapping,
     run_tool_plan,
 )
+
+
+_LOGGER = logging.getLogger(__name__)
 
 
 def validate_tool_plan(raw: Mapping[str, Any]) -> ToolPlan:
@@ -64,7 +68,9 @@ def run_validated_tool_plan(
                 approval_token=approval_token,
                 session_id=session_id,
             )
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            # Log only the exception class; messages and tracebacks may contain tool data or secrets.
+            _LOGGER.warning("MCP tool call failed; exception_type=%s", type(exc).__name__)
             return ToolStepResult(
                 step.step_id,
                 ToolStepStatus.FAILED,
