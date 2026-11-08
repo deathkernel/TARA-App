@@ -41,5 +41,22 @@ class McpApprovalTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             app.issue_mcp_approval_token("filesystem", "read_file", {"path": "x"}, session_id="session-1")
 
+    def test_approval_rejects_writable_server_until_security_gate_exists(self):
+        app = _App()
+        app.gateway.config = parse_mcp_config({
+            "enable": True,
+            "servers": [{
+                "name": "filesystem",
+                "command": ["uvx", "mcp-server-filesystem"],
+                "read_only": False,
+            }],
+        })
+        with self.assertRaisesRegex(ValueError, "explicitly allowlisted read-only tools"):
+            app.issue_mcp_approval_token(
+                "filesystem", "write_file", {"path": "notes.txt", "content": "hello"},
+                session_id="session-1",
+            )
+        self.assertEqual(app.gateway.calls, [])
+
 if __name__ == "__main__":
     unittest.main()
