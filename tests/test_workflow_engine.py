@@ -117,6 +117,105 @@ class WorkflowEngineTests(unittest.TestCase):
         self.assertEqual(cancelled.status, WorkflowStatus.CANCELLED)
         self.assertEqual(cancelled.steps[0].status, StepStatus.CANCELLED)
 
+
+    def test_partial_result_is_terminal_for_cancel_and_continue(self) -> None:
+        plan = WorkflowPlan(
+            workflow_id="wf-partial",
+            request_id="req-partial",
+            steps=(WorkflowStepSpec("a", "op.a"),),
+        )
+        engine = WorkflowEngine()
+        result = engine.run(
+            plan,
+            lambda step, *, context: WorkflowStepResult(
+                step.step_id, StepStatus.PARTIAL
+            ),
+        )
+        self.assertEqual(result.status, WorkflowStatus.PARTIAL)
+        finished = engine.get_run("wf-partial").finished_at
+        self.assertEqual(engine.cancel("wf-partial").status, WorkflowStatus.PARTIAL)
+        continued = engine.continue_run("wf-partial", _ok)
+        self.assertEqual(continued.status, WorkflowStatus.PARTIAL)
+        self.assertEqual(engine.get_run("wf-partial").finished_at, finished)
+
+    def test_concurrent_continue_does_not_execute_step_twice(self) -> None:
+        import threading
+
+        plan = WorkflowPlan(
+            workflow_id="wf-concurrent",
+            request_id="req-concurrent",
+            steps=(WorkflowStepSpec("a", "op.a"),),
+        )
+        engine = WorkflowEngine()
+        engine.create_run(plan)
+        started = threading.Event()
+        release = threading.Event()
+        calls = []
+
+        def executor(step, *, context):
+            calls.append(step.step_id)
+            started.set()
+            release.wait(timeout=2)
+            return _ok(step, context=context)
+
+        first = threading.Thread(
+            target=lambda: engine.continue_run("wf-concurrent", executor)
+        )
+        first.start()
+        self.assertTrue(started.wait(timeout=2))
+        second = engine.continue_run("wf-concurrent", executor)
+        self.assertEqual(second.status, WorkflowStatus.RUNNING)
+        release.set()
+        first.join(timeout=2)
+        self.assertFalse(first.is_alive())
+        self.assertEqual(calls, ["a"])
+
+    def test_cancelled_run_keeps_cancel_status_after_late_result(self) -> None:
+        import threading
+
+        plan = WorkflowPlan(
+            workflow_id="wf-cancel-race",
+            request_id="req-cancel-race",
+            steps=(WorkflowStepSpec("a", "op.a"),),
+        )
+        engine = WorkflowEngine()
+        engine.create_run(plan)
+        started = threading.Event()
+        release = threading.Event()
+
+        def executor(step, *, context):
+            started.set()
+            release.wait(timeout=2)
+            return _fail(step, context=context)
+
+        worker = threading.Thread(
+            target=lambda: engine.continue_run("wf-cancel-race", executor)
+        )
+        worker.start()
+        self.assertTrue(started.wait(timeout=2))
+        cancelled = engine.cancel("wf-cancel-race")
+        self.assertEqual(cancelled.status, WorkflowStatus.CANCELLED)
+        release.set()
+        worker.join(timeout=2)
+        self.assertFalse(worker.is_alive())
+        snapshot = engine.get_run("wf-cancel-race").snapshot()
+        self.assertEqual(snapshot.status, WorkflowStatus.CANCELLED)
+        self.assertEqual(snapshot.steps[0].status, StepStatus.FAILED)
+
+    def test_executor_base_exception_does_not_leave_run_running(self) -> None:
+        plan = WorkflowPlan(
+            workflow_id="wf-base-exception",
+            request_id="req-base-exception",
+            steps=(WorkflowStepSpec("a", "op.a"),),
+        )
+
+        def executor(step, *, context):
+            raise KeyboardInterrupt("interrupted")
+
+        result = WorkflowEngine().run(plan, executor)
+        self.assertEqual(result.status, WorkflowStatus.FAILED)
+        self.assertEqual(result.steps[0].status, StepStatus.FAILED)
+
     def test_duplicate_workflow_id_rejected(self) -> None:
         plan = WorkflowPlan(
             workflow_id="wf-dup",
