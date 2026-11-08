@@ -25,6 +25,18 @@ from tara_app.workflow_contracts import (
 )
 
 
+_TERMINAL_WORKFLOW_STATUSES = frozenset(
+    {
+        WorkflowStatus.SUCCEEDED,
+        WorkflowStatus.PARTIAL,
+        WorkflowStatus.FAILED,
+        WorkflowStatus.DENIED,
+        WorkflowStatus.CANCELLED,
+        WorkflowStatus.TIMED_OUT,
+    }
+)
+
+
 class StepExecutor(Protocol):
     """Callable that performs one workflow step and returns a result."""
 
@@ -91,13 +103,7 @@ class WorkflowEngine:
         if state is None:
             raise KeyError(f"unknown workflow: {workflow_id}")
         with state._lock:
-            if state.status in {
-                WorkflowStatus.SUCCEEDED,
-                WorkflowStatus.FAILED,
-                WorkflowStatus.DENIED,
-                WorkflowStatus.CANCELLED,
-                WorkflowStatus.TIMED_OUT,
-            }:
+            if state.status in _TERMINAL_WORKFLOW_STATUSES:
                 return state.snapshot()
             state.cancelled = True
             state.status = WorkflowStatus.CANCELLED
@@ -151,13 +157,9 @@ class WorkflowEngine:
         with state._lock:
             if state.cancelled:
                 return state.snapshot()
-            if state.status in {
-                WorkflowStatus.SUCCEEDED,
-                WorkflowStatus.FAILED,
-                WorkflowStatus.DENIED,
-                WorkflowStatus.CANCELLED,
-                WorkflowStatus.TIMED_OUT,
-            }:
+            if state.status in _TERMINAL_WORKFLOW_STATUSES:
+                return state.snapshot()
+            if state.status == WorkflowStatus.RUNNING:
                 return state.snapshot()
             if state.started_at is None:
                 state.started_at = time.monotonic()
@@ -179,6 +181,12 @@ class WorkflowEngine:
                     with state._lock:
                         if state.cancelled:
                             break
+                        current = state.step_results.get(step.step_id)
+                        if current is not None and current.status not in {
+                            StepStatus.PENDING,
+                            StepStatus.WAITING_APPROVAL,
+                        }:
+                            continue
                         if step.requires_approval and step.step_id not in approved:
                             state.step_results[step.step_id] = WorkflowStepResult(
                                 step.step_id,
@@ -194,7 +202,7 @@ class WorkflowEngine:
 
                     try:
                         result = executor(step, context=ctx)
-                    except Exception as exc:  # noqa: BLE001 — boundary capture
+                    except BaseException as exc:  # noqa: BLE001 — keep run state terminal
                         result = WorkflowStepResult(
                             step.step_id,
                             StepStatus.FAILED,
@@ -218,6 +226,8 @@ class WorkflowEngine:
 
                     with state._lock:
                         state.step_results[step.step_id] = result
+                        if state.cancelled:
+                            break
                         if result.status in {
                             StepStatus.FAILED,
                             StepStatus.DENIED,
