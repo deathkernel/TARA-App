@@ -312,3 +312,196 @@ The interactive TARA-Chat CLI also supports an explicit local command. From the 
 ```
 
 The CLI's optional folder must be a relative path inside the current working directory; absolute paths and paths that escape the working directory are rejected. The audit reports required monorepo files, Python syntax errors, multiple pytest workflows (the current check also includes targeted test commands), and warnings for process-randomized `hash()` usage. Generated/cache/dependency directories are pruned before traversal. It is a quick static check, not a replacement for unit tests, linting, CodeQL, dependency scanning, or human security review.
+
+
+## Architecture diagrams (A–Z reference)
+
+These Mermaid diagrams document the **current documented boundaries** and selected **target designs**. A target diagram is not evidence that its components are implemented. Refer to [project status](docs/PROJECT_STATUS_AND_ROADMAP.md) for verification and progress.
+
+### 1. System context — current documented architecture
+
+```mermaid
+flowchart LR
+  User[User] --> UI[TARA Web UI]
+  UI --> App[TARA-App / Orchestrator]
+  App --> Specialists[Local specialist capabilities]
+  App --> Gateway[OmniRoute gateway]
+  Gateway --> Providers[Configured model providers]
+  App --> SQLite[(Local SQLite memory)]
+  App --> Security[TARA-Security / approvals]
+  Security --> Tools[Allowlisted desktop and browser actions]
+```
+
+### 2. Specialist capability map — integrated packages
+
+```mermaid
+flowchart TB
+  R[tara_router / capability selection] --> Chat[tara_chat]
+  R --> Code[tara_code]
+  R --> Research[tara_research]
+  R --> Planner[tara_planner]
+  R --> Memory[tara_memory]
+  R --> Creative[tara_creative]
+  R --> Action[tara_action]
+  R --> Voice[tara_voice]
+  R --> Vision[tara_vision]
+  R --> Data[tara_data]
+  R --> Study[tara_study]
+  R --> Weather[tara_weather]
+  R --> Models[tara_models]
+  R --> Handler[Native Handler diagnostics]
+  Action --> Security[tara_security]
+  Memory --> Security
+```
+
+### 3. Inference routing — OmniRoute-only boundary
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant T as TARA specialist
+  participant O as OmniRoute
+  participant P as Configured provider
+  U->>T: Request
+  T->>T: Validate remote-data setting
+  alt Remote inference allowed and gateway configured
+    T->>O: Inference request and route alias
+    O->>P: Provider/model selection
+    P-->>O: Inference result
+    O-->>T: Result
+    T-->>U: Response
+  else Not allowed or unavailable
+    T-->>U: Fail closed with error
+  end
+```
+
+### 4. Conversation request lifecycle — conceptual
+
+```mermaid
+flowchart TD
+  A[Incoming user message] --> B[Validate input and limits]
+  B --> C[Select specialist capability]
+  C --> D{Requires language-model inference?}
+  D -- Yes --> E{Remote data allowed and gateway ready?}
+  E -- No --> X[Return explicit failure]
+  E -- Yes --> F[OmniRoute inference]
+  D -- No --> G[Bounded deterministic specialist]
+  F --> H[Format safe response]
+  G --> H
+  H --> I[Return to UI]
+```
+
+### 5. Permission and action approval — documented security boundary
+
+```mermaid
+flowchart TD
+  A[Requested local action] --> B[Validate operation and arguments]
+  B --> C[TARA-Security policy review]
+  C --> D{Allowed operation?}
+  D -- No --> E[Reject]
+  D -- Yes --> F[Explicit one-operation approval]
+  F --> G{User approved?}
+  G -- No --> E
+  G -- Yes --> H[Execute fixed allowlisted action]
+  H --> I[Report actual outcome]
+```
+
+### 6. Memory mutation and read paths — conceptual
+
+```mermaid
+flowchart LR
+  Request[Memory request] --> Type{Read or mutate?}
+  Type -- Read --> DB[(Local SQLite memory)]
+  Type -- Write/delete --> Policy[Security review]
+  Policy --> Approval[Per-request approval]
+  Approval --> Decision{Approved?}
+  Decision -- Yes --> DB
+  Decision -- No --> Denied[No mutation]
+  DB --> Result[Return bounded result]
+```
+
+### 7. Desktop automation — allowlisted current scope
+
+```mermaid
+flowchart TD
+  User[User request] --> Parse[Recognize supported action]
+  Parse --> Sec[Security review and explicit approval]
+  Sec --> Allowed{Approved?}
+  Allowed -- No --> Stop[Do not launch]
+  Allowed -- Yes --> Kind{Action type}
+  Kind -- App --> Fixed[Fixed OS command: Calculator / Notepad / Paint]
+  Kind -- Website --> URL[Validate HTTP(S) URL]
+  URL --> Browser[System default browser]
+  Fixed --> Status[Report result or unavailability]
+  Browser --> Status
+```
+
+### 8. Native Handler diagnostic — current boundary
+
+```mermaid
+flowchart TD
+  Launcher[Explicit launcher preparation] --> Toolchain{CMake / C++ compiler available?}
+  Toolchain -- Yes --> Native[C++17 diagnostic executable]
+  Toolchain -- No --> Fallback[Read-only Python diagnostics]
+  App[TARA-App] --> Bridge[Fixed-argument subprocess bridge]
+  Bridge --> Native
+  App --> Fallback
+  Native --> Report[Read-only environment report]
+  Fallback --> Report
+```
+
+### 9. Source and data boundaries — documented behavior
+
+```mermaid
+flowchart LR
+  User[User and attachments] --> TARA[TARA local app]
+  TARA --> Local[(Local sessions / SQLite)]
+  TARA --> Research[Crossref / Wikipedia public APIs]
+  TARA --> Weather[Open-Meteo public API]
+  TARA --> Omni[OmniRoute]
+  Omni --> Cloud[Configured provider, possibly cloud]
+  TARA --> Speech[Optional on-device transcription]
+  TARA --> CSV[Read-only CSV summaries]
+```
+
+### 10. Model, runtime and tool taxonomy
+
+```mermaid
+flowchart TB
+  App[TARA-App: product and orchestration] --> Capability[Specialist capability / adapter]
+  Capability --> Inference[Model inference request]
+  Inference --> Omni[OmniRoute: routing and provider lifecycle]
+  Omni --> Runtime[Configured provider / runtime]
+  Runtime --> Model[Actual model and weights]
+  Capability --> Tool[Deterministic local tool / engine]
+```
+
+### 11. Deployment and startup — documented paths
+
+```mermaid
+flowchart TD
+  Platform{Operating system} -->|Windows| BAT[run-tara.bat]
+  Platform -->|macOS / Linux| SH[run-tara.sh]
+  BAT --> VENV[Prepare virtual environment and install]
+  SH --> VENV
+  VENV --> Config[Initialize local configuration]
+  Config --> Handler[Prepare optional Handler diagnostic]
+  Handler --> App[Start loopback-bound TARA-App]
+  App --> Gateway[Configured OmniRoute gateway]
+```
+
+### 12. Target-only future sandboxed coding workflow — not implemented
+
+```mermaid
+flowchart TD
+  User[User coding request] --> Proposal[TARA-Code proposal and diff]
+  Proposal --> Review[Human review and approval]
+  Review --> Decision{Approved?}
+  Decision -- No --> End[Stop]
+  Decision -- Yes --> Sandbox[Future real OS/container sandbox]
+  Sandbox --> Tests[Bounded tests and results]
+  Tests --> Diff[Show diff and test report]
+  Diff --> Human[Human-controlled promotion; no automatic merge]
+```
+
+> **Status note:** Diagram 12 is a **target architecture only**. The current TARA-Code module produces review-first proposals and does not execute code. All diagrams are explanatory representations, not a substitute for security tests or live integration verification.
