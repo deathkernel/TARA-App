@@ -505,3 +505,10 @@ flowchart TD
 ```
 
 > **Status note:** Diagram 12 is a **target architecture only**. The current TARA-Code module produces review-first proposals and does not execute code. All diagrams are explanatory representations, not a substitute for security tests or live integration verification.
+
+
+## Complete feature and neural-network diagrams
+
+For the full feature-by-feature architecture reference—including specialist workflows, Chat and memory, Code safety boundary, Research, Planner, security and approvals, Handler, MCP and Skills, Windows floating pet, Voice, Vision, Study, Data, Weather, Model Hub, deployment, failure handling, and conceptual Transformer neural-network diagrams—see **[Feature & Neural-Network Diagrams](docs/FEATURE_AND_NEURAL_NETWORK_DIAGRAMS.md)**.
+
+> Neural-network diagrams are generic Transformer illustrations for the provider-hosted model behind OmniRoute. TARA-App does not claim to implement or train a neural network or own model weights. Feature status and verification gaps remain tracked in [Remaining Features](docs/REMAINING_FEATURES.md).
