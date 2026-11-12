@@ -152,7 +152,7 @@ Adapters should expose health, capabilities, and a structured execute operation.
 
 Use a versioned request with `schema_version`, `request_id`, `session_id`, `module`, `action`, structured `inputs`, `workspace_root` when applicable, `timeout_seconds`, and `approval_token` when a mutating operation requires approval.
 
-A result should include `schema_version`, `request_id`, `ok`, `status`, structured `data`, redacted `error`, duration, and audit references. Validate payload size, field types, allowable actions, workspace boundaries, and timeout limits before dispatch. The serialized adapter-request payload limit is 1,000,000 bytes (about 1 MB), matching the app HTTP handler and Chat adapter; encoded attachment data may consume additional space.
+A result should include `schema_version`, `request_id`, `ok`, `status`, structured `data`, redacted `error`, duration, and audit references. Validate payload size, field types, allowable actions, workspace boundaries, and timeout limits before dispatch. The loopback HTTP request envelope is capped at 14,000,000 bytes to accommodate base64 overhead for the 10 MB combined attachment limit. Specialist subprocesses keep their own stricter input limits (for example, Study supports a 16 MB request envelope, Voice supports 14 MB, and Code/Vision enforce 512 KB source/image limits). The shared versioned module contract has a 50 MB hard ceiling, but that does not override specialist-specific validation.
 
 ## Initial milestones
 
