@@ -104,6 +104,11 @@ const STORAGE_KEY = "tara-react-conversations";
 const SESSION_KEY = "tara-react-session";
 const MAX_FILES = 4;
 const MAX_ATTACHMENT_BYTES = 10_000_000;
+const SPECIALIST_FILE_SUFFIXES = new Set([
+  "py", "pyi", "js", "mjs", "cjs", "ts", "tsx", "jsx", "java", "go", "rs",
+  "c", "h", "cc", "hh", "hpp", "cpp", "cxx", "cs", "rb", "php", "sh",
+  "bash", "zsh", "ps1", "sql", "swift", "kt", "kts", "dart", "scala", "lua", "pl", "r", "csv",
+]);
 const FREE_MODELS_PROMPT = "List all available models";
 
 function newConversation(): Conversation {
@@ -337,6 +342,16 @@ export default function App() {
     const incoming = Array.from(fileList);
     const combined = [...selectedFiles, ...incoming];
     const totalBytes = combined.reduce((sum, file) => sum + file.size, 0);
+    const oversizedSpecialistFile = incoming.find((file) => {
+      const suffix = file.name.toLowerCase().split(".").pop() ?? "";
+      const needsSmallInput = file.type.startsWith("image/") ||
+        file.type.startsWith("audio/") || SPECIALIST_FILE_SUFFIXES.has(suffix);
+      return needsSmallInput && file.size > 512_000;
+    });
+    if (oversizedSpecialistFile) {
+      setNotice(oversizedSpecialistFile.name + " exceeds the 512 KB limit for image, audio, code and CSV specialist inputs.");
+      return;
+    }
     if (combined.length > MAX_FILES) {
       setNotice("Attach up to four files per message.");
       return;
