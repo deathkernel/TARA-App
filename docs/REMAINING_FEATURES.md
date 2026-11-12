@@ -39,9 +39,9 @@ This table replaces the informal “all pending” list. It does **not** claim t
 | 19 | P0 | Security | No model-driven host shell | Blocked | |
 | 20 | P1 | Code Workflow | Sandboxed test execution | Blocked | |
 | 21 | P1 | Audit | Complete action audit logging | Foundation / partial | MCP approval and tool-dispatch lifecycle audited; broader action coverage remains pending |
-| 22 | P2 | Frontend | React + TypeScript migration | In progress | |
-| 23 | P2 | UI | Accessibility and keyboard navigation | Pending | |
-| 24 | P2 | UI | Loading, error and empty states | Foundation / partial | |
+| 22 | P2 | Frontend | React + TypeScript migration | In progress | Premium three-pane workspace is active; feature parity and browser QA remain in progress |
+| 23 | P2 | UI | Accessibility and keyboard navigation | Foundation / partial | Visible focus states, semantic controls and reduced-motion support added; full keyboard/screen-reader audit pending |
+| 24 | P2 | UI | Loading, error and empty states | Implemented (code) | Workspace health, request, approval, empty-session, activity and attachment error states added; browser QA pending |
 | 25 | P2 | Voice | Local transcription testing | Pending verification | |
 | 26 | P2 | Vision | Image analysis and remote gateway testing | Pending verification | |
 | 27 | P2 | Study | Scanned PDF OCR | Pending | |
@@ -62,8 +62,9 @@ This table replaces the informal “all pending” list. It does **not** claim t
 | 42 | P3 | Computer use | Computer-use / toolset only inside real OS sandbox | Blocked | |
 | 43 | P1 | MCP Manager | Read-only free-first integration catalogue and local UI | Verified (CI) | PR #103 merged as 1d4f63d; run #1878 passed all four jobs |
 | 44 | P1 | MCP Manager | Bounded catalogue fetch timeout and recoverable UI error | Verified (CI) | PR #103 merged as 1d4f63d; 10-second browser abort and recoverable refresh path included |
-| 45 | P1 | MCP Audit | Consolidate competing audit implementations | In progress | Branch: codex/mcp-audit-security-bulk; reuse JsonlAuditLog; PRs #95/#96 remain unmerged |
-| 46 | P0 | Verification | Current-main baseline and target-machine smoke tests | Pending verification | Historical CI evidence is not current-commit evidence |
+| 45 | P1 | MCP Audit | Consolidate competing audit implementations | Verified (CI) | PR #104 merged as 5dd92f1; run #1911 passed 441 tests, frontend build, Windows and Ubuntu native Handler jobs |
+| 46 | P0 | Verification | Current-main baseline and target-machine smoke tests | Pending verification | PR #104 CI passed all four jobs; target-machine launch and browser QA remain open |
+| 47 | P1 | UI | Claude Code-inspired premium developer workspace | In progress | Branch: codex/premium-workspace-ui-bulk; React shell, session navigation, inspector, activity, approvals, attachments, skills and local read-aloud; browser QA pending |
 
 ## Related
 
