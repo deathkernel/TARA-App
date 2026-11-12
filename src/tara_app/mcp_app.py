@@ -23,6 +23,7 @@ class McpOrchestratorMixin:
     _mcp_approval_tokens: OrderedDict[str, tuple[float, str, str, str, str]]
     _mcp_token_lock: RLock
     _mcp_audit: JsonlAuditLog
+    _mcp_audit_degraded: bool
 
     def _init_mcp_state(
         self, mcp_gateway: Any = None, *, audit_log: JsonlAuditLog | None = None,
@@ -30,7 +31,7 @@ class McpOrchestratorMixin:
         self.mcp_gateway = mcp_gateway
         self._mcp_approval_tokens = OrderedDict()
         self._mcp_token_lock = RLock()
-        self._mcp_audit = audit_log or JsonlAuditLog(
+        self._mcp_audit = audit_log if audit_log is not None else JsonlAuditLog(
             Path.home() / ".tara" / "audit" / "mcp.jsonl",
             max_bytes=1_048_576,
         )
@@ -42,13 +43,14 @@ class McpOrchestratorMixin:
 
     def _audit_mcp(
         self, event: str, *, server: str = "", tool: str = "", session_id: str = "",
-        arguments_digest: str = "", reason: str = "",
+        arguments_digest: str = "", reason: str = "", expires_at: float | None = None,
     ) -> None:
         self._mcp_audit.record(event, {
             "server": server,
             "tool": tool,
             "session_digest": self._mcp_session_digest(session_id) if session_id else "",
             "arguments_digest": arguments_digest,
+            "expires_at": expires_at,
             "reason": reason,
         })
 
@@ -113,7 +115,7 @@ class McpOrchestratorMixin:
         try:
             self._audit_mcp(
                 "approval_issued", server=server, tool=tool,
-                session_id=session_id, arguments_digest=digest,
+                session_id=session_id, arguments_digest=digest, expires_at=expires,
             )
         except AuditLogError:
             with self._mcp_token_lock:
