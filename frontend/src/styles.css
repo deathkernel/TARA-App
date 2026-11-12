@@ -1262,15 +1262,55 @@ select:focus-visible {
   .nav-item:hover { transform: translateX(2px); }
 }
 
+.drawer-backdrop,
+.inspector-backdrop {
+  display: none;
+}
+
 @media (max-width: 1120px) {
   .inspector {
+    position: absolute;
+    z-index: 10;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(340px, 90vw);
     border-left: 1px solid #454b55;
     background: rgb(19 23 28 / 98%);
+    box-shadow: -22px 0 60px rgb(0 0 0 / 38%);
     backdrop-filter: blur(20px);
+  }
+
+  .inspector-backdrop {
+    position: fixed;
+    z-index: 8;
+    inset: 0;
+    display: block;
+    border: 0;
+    border-radius: 0;
+    background: rgb(3 5 8 / 48%);
+    backdrop-filter: blur(2px);
+    animation: tara-backdrop-in .2s ease-out both;
   }
 }
 
 @media (max-width: 700px) {
+  .drawer-backdrop {
+    position: fixed;
+    z-index: 25;
+    inset: 0;
+    display: block;
+    border: 0;
+    border-radius: 0;
+    background: rgb(3 5 8 / 56%);
+    backdrop-filter: blur(2px);
+    animation: tara-backdrop-in .2s ease-out both;
+  }
+
+  .app-shell.sidebar-open .sidebar {
+    z-index: 30;
+  }
+
   .topbar-actions { gap: 2px; }
   .session-management button { width: 27px; height: 27px; }
   .welcome { padding-top: 32px; }
@@ -1301,4 +1341,9 @@ select:focus-visible {
     scroll-behavior: auto !important;
     transition-duration: .01ms !important;
   }
+}
+
+@keyframes tara-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
