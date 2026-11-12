@@ -1,4 +1,4 @@
-import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from "react";
+import { DragEvent, FormEvent, KeyboardEvent, useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -248,6 +248,7 @@ export default function App() {
   const [activityOpen, setActivityOpen] = useState(false);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [viewMode, setViewMode] = useState<"normal" | "compact">("normal");
+  const [dragActive, setDragActive] = useState(false);
 
   const active = useMemo(
     () => conversations.find((item) => item.id === sessionId) ?? conversations[0],
@@ -328,6 +329,46 @@ export default function App() {
     if (active.id !== sessionId) setSessionId(active.id);
     localStorage.setItem(SESSION_KEY, active.id);
   }, [active, sessionId]);
+
+  function exportActiveConversation() {
+    if (!active) return;
+    const payload = {
+      format: "tara-conversation",
+      version: 1,
+      exported_at: new Date().toISOString(),
+      conversation: active,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = (active.title || "tara-session")
+      .replace(/[^a-z0-9-_]+/gi, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 48) + ".json";
+    anchor.click();
+    URL.revokeObjectURL(url);
+    logActivity("Session exported", "Conversation saved as a portable JSON file.", "success");
+  }
+
+  function deleteActiveConversation() {
+    if (!active || !window.confirm("Delete this conversation from this browser? This cannot be undone.")) return;
+    const remaining = conversations.filter((item) => item.id !== active.id);
+    const next = remaining[0] ?? newConversation();
+    setConversations(remaining.length ? remaining : [next]);
+    setSessionId(next.id);
+    setDraft("");
+    setSelectedFiles([]);
+    setEditingIndex(null);
+    setNotice("");
+    logActivity("Session deleted", "The selected conversation was removed from local browser storage.", "warning");
+  }
+
+  function handleDrop(event: DragEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setDragActive(false);
+    handleFiles(event.dataTransfer.files);
+  }
 
   function startNewSession() {
     const item = newConversation();
@@ -621,7 +662,13 @@ export default function App() {
         </div>
 
         <div className="session-heading">
-          <div className="section-heading"><span>SESSIONS</span><span className="section-count">{visibleConversations.length.toString().padStart(2, "0")}</span></div>
+          <div className="session-heading-row">
+            <div className="section-heading"><span>SESSIONS</span><span className="section-count">{visibleConversations.length.toString().padStart(2, "0")}</span></div>
+            <div className="session-management">
+              <button type="button" onClick={exportActiveConversation} disabled={!active?.messages.length} aria-label="Export active session" title="Export session">↓</button>
+              <button type="button" onClick={deleteActiveConversation} disabled={!active} aria-label="Delete active session" title="Delete session">×</button>
+            </div>
+          </div>
           <label className="session-search">
             <span>⌕</span>
             <input id="session-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Find a session" aria-label="Find a session" />
@@ -682,7 +729,7 @@ export default function App() {
 
         {notice && <div className="notice" role="status"><span>{notice}</span><button type="button" onClick={() => setNotice("")} aria-label="Dismiss notice">×</button></div>}
 
-        <section className={"chat-area" + (viewMode === "compact" ? " compact-view" : "")} aria-label="Conversation">
+        <section className={"chat-area" + (viewMode === "compact" ? " compact-view" : "")} aria-label="Conversation" aria-live="polite" aria-relevant="additions text">
           {!active?.messages.length && (
             <div className="welcome">
               <div className="welcome-eyebrow"><span className="welcome-spark">✳</span> YOUR LOCAL AI WORKSPACE</div>
@@ -762,7 +809,16 @@ export default function App() {
           </section>
         )}
 
-        <form className="composer" onSubmit={submit}>
+        <form
+          className={"composer" + (dragActive ? " drag-active" : "")}
+          onSubmit={submit}
+          onDragOver={(event) => { event.preventDefault(); setDragActive(true); }}
+          onDragLeave={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragActive(false);
+          }}
+          onDrop={handleDrop}
+        >
+          {dragActive && <div className="drop-overlay"><span>＋</span><strong>Drop files to attach</strong><small>Up to four files · 10 MB total</small></div>}
           {editingIndex !== null && (
             <div className="edit-banner"><span>Editing your message</span><button type="button" onClick={() => { setEditingIndex(null); setDraft(""); }}>Cancel edit</button></div>
           )}
