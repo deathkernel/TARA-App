@@ -2,12 +2,39 @@
 
 > **Purpose:** This is the handover document and working source of truth for anyone joining TARA-App—including a new developer, a reviewer, or the daily scheduled development task.
 >
-> **Last reviewed:** 2026-11-04  
+> **Last reviewed:** 2026-11-12  
 > **Repository:** [deathkernel/TARA-App](https://github.com/deathkernel/TARA-App)  
 > **Default branch:** `main`  
 > **Status rule:** “Implemented in code/docs” is not the same as “verified on a real machine.” Do not claim tests, runtime checks, UI QA, or integrations passed unless there is current evidence for the exact commit.
 >
 > **Feature status table:** See [REMAINING_FEATURES.md](REMAINING_FEATURES.md) for the numbered remaining-features list with accurate Implemented / Foundation / Pending verification / Pending / Blocked labels against current `main`.
+
+## 0. Current stabilization batch (2026-11-12)
+
+The active engineering batch is tracked on `codex/core-stabilization-bulk`.
+Its first implementation slice ports the free-first MCP integration catalogue
+onto the current `main` base, exposes it through a same-origin read-only API,
+and adds a local Integrations panel. Catalogue discovery does not install,
+launch, enable, or execute integrations and does not enable writable tools.
+
+The catalogue request is bounded to 10 seconds in the browser. A timeout is
+reported as a recoverable UI error and can be retried with Refresh.
+
+**Verification state:** implementation is in progress. Do not mark this slice
+verified until the branch's Python suite, frontend build, native Handler jobs,
+and targeted loopback HTTP tests complete on its exact commit. The previous
+open MCP catalogue/audit PRs remain separate until their changes are reviewed
+and reconciled; no PR has been merged as part of this batch.
+
+Next bulk items, in dependency order:
+1. Reconcile MCP audit implementations and retain one privacy-preserving,
+   bounded audit design with fail-closed behavior.
+2. Add timeout/cancellation and bounded-output tests to all external adapter
+   and gateway boundaries.
+3. Trace and consolidate runtime, orchestrator, application-service and
+   facade ownership without deleting live paths prematurely.
+4. Add specialist integration and UI smoke tests, then refresh architecture
+   and remaining-feature status using exact CI evidence.
 
 ## 1. Start here
 
