@@ -24,8 +24,8 @@ _MAX_REQUEST_BYTES = 14_000_000
 
 
 def _react_ui_enabled() -> bool:
-    """Keep the feature-complete static UI as default until React parity is verified."""
-    return os.environ.get("TARA_ENABLE_REACT_UI", "").strip() == "1"
+    """Prefer the React workspace; set TARA_ENABLE_REACT_UI=0 for the static fallback."""
+    return os.environ.get("TARA_ENABLE_REACT_UI", "1").strip() != "0"
 
 
 class _Server(ThreadingHTTPServer):
