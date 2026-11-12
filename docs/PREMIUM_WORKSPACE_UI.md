@@ -78,10 +78,11 @@ The React workspace currently connects to these existing same-origin APIs:
 - `GET /api/mcp/status` and `GET /api/mcp/catalogue`
 - `POST /api/chat`, `POST /api/approve`, and `POST /api/cancel`
 
-It supports local session history, up to four attachments with a combined
-10 MB limit, selected skill metadata, Markdown responses, one-time approval
-actions, message editing/regeneration for text-only prompts, and local browser
-read-aloud voices. Image, audio, source-code and CSV inputs retain their
+It supports local session history with search, JSON export and confirmed
+deletion; up to four attachments with a combined 10 MB limit; drag-and-drop
+and picker uploads; selected skill metadata; Markdown responses; one-time
+approval actions; message copy and editing/regeneration for text-only prompts;
+and local browser read-aloud voices. Image, audio, source-code and CSV inputs retain their
 specialist-specific 512 KB limits; Study documents can use the larger
 attachment allowance. Audio attachments default to a transcription request.
 Conversation history and message text are stored in browser local storage;
