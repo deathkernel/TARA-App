@@ -11,6 +11,12 @@
   const AUDIO_MEDIA_TYPES = new Set(["audio/mpeg", "audio/wav", "audio/mp4", "audio/webm", "audio/ogg", "audio/flac", "audio/aac"]);
   const AUDIO_SUFFIX_TYPES = { ".mp3": "audio/mpeg", ".wav": "audio/wav", ".m4a": "audio/mp4", ".mp4": "audio/mp4", ".webm": "audio/webm", ".ogg": "audio/ogg", ".flac": "audio/flac", ".aac": "audio/aac" };
   const modelPanel = document.querySelector("#model-panel");
+  const mcpPanel = document.querySelector("#mcp-panel");
+  const mcpToggle = document.querySelector("#mcp-toggle");
+  const mcpRefresh = document.querySelector("#mcp-refresh");
+  const mcpList = document.querySelector("#mcp-list");
+  const mcpSummary = document.querySelector("#mcp-summary");
+  const mcpServiceStatus = document.querySelector("#mcp-service-status");
   const modelsToggle = document.querySelector("#models-toggle");
   const modelsRefresh = document.querySelector("#models-refresh");
   const modelServiceStatus = document.querySelector("#model-service-status");
@@ -981,6 +987,63 @@
       modelServiceStatus.textContent = error.message || "Model lifecycle is managed by OmniRoute.";
     }
   }
+
+  async function refreshMcpCatalogue() {
+    if (!mcpList || !mcpSummary || !mcpServiceStatus) return;
+    mcpServiceStatus.textContent = "Loading integration catalogue...";
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 10_000);
+    try {
+      const response = await fetch("/api/mcp/catalogue", {
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      const payload = await response.json();
+      if (!response.ok || !Array.isArray(payload.integrations)) {
+        throw new Error("Catalogue unavailable");
+      }
+      mcpList.replaceChildren();
+      const summary = payload.summary || {};
+      mcpSummary.textContent = (summary.implemented || 0) + " implemented locally · "
+        + (summary.catalogue_only || 0) + " connection candidates · "
+        + (summary.total || 0) + " total";
+      payload.integrations.forEach(item => {
+        const card = document.createElement("article");
+        card.className = "mcp-card";
+        const heading = document.createElement("div");
+        heading.className = "mcp-card-heading";
+        const name = document.createElement("strong");
+        name.textContent = item.name;
+        const state = document.createElement("span");
+        state.className = "mcp-state " + (item.status === "implemented" ? "implemented" : "planned");
+        state.textContent = item.status === "implemented" ? "Built-in" : "Catalogue";
+        heading.append(name, state);
+        const description = document.createElement("p");
+        description.textContent = item.description;
+        const meta = document.createElement("p");
+        meta.className = "mcp-meta";
+        meta.textContent = item.cost + " · " + item.access;
+        const requirements = document.createElement("small");
+        requirements.textContent = "Requires: " + (item.requirements || []).join(", ");
+        card.append(heading, description, meta, requirements);
+        mcpList.append(card);
+      });
+      mcpServiceStatus.textContent = "Free-first catalogue · no automatic installation or server execution.";
+    } catch {
+      mcpServiceStatus.textContent = "Could not load the local MCP integration catalogue. Retry with Refresh.";
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  }
+
+  mcpToggle?.addEventListener("click", () => {
+    if (!mcpPanel) return;
+    const opening = mcpPanel.hidden;
+    mcpPanel.hidden = !opening;
+    mcpToggle.setAttribute("aria-expanded", String(opening));
+    if (opening) refreshMcpCatalogue();
+  });
+  mcpRefresh?.addEventListener("click", refreshMcpCatalogue);
 
   modelsToggle.addEventListener("click", () => {
     const opening = modelPanel.hidden;

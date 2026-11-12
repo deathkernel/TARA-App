@@ -55,6 +55,12 @@ class _Handler(BaseHTTPRequestHandler):
                 return
             self._json(200, self.server.app.health_status())
             return
+        if endpoint == "/api/mcp/catalogue":
+            if not self._local_origin():
+                self._json(403, {"status": "permission_denied", "error": "request origin is not allowed"})
+                return
+            self._json(200, self.server.app.mcp_catalogue())
+            return
         if endpoint in {"/api/mcp/status", "/api/mcp/tools"}:
             if not self._local_origin():
                 self._json(403, {"status": "permission_denied", "error": "request origin is not allowed"})

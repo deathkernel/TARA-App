@@ -1,7 +1,7 @@
 # TARA — Remaining Features Status
 
 > **Source of truth for status labels:** inspect current `main` code and CI evidence.
-> **Last reviewed:** 2026-11-04
+> **Last reviewed:** 2026-11-12
 >
 > Status meanings:
 > - **Implemented (code)** — present in repository; still needs target-machine verification where noted
@@ -60,6 +60,10 @@ This table replaces the informal “all pending” list. It does **not** claim t
 | 40 | P2 | Skills | Agent Skills pack loader (Study/Code/Planner templates) | Foundation / partial | Loader + sample packs; Chat/Code UI integration pending |
 | 41 | P2 | Ecosystem | Optional anthropic-sdk-python helpers via OmniRoute Claude path | Pending | |
 | 42 | P3 | Computer use | Computer-use / toolset only inside real OS sandbox | Blocked | |
+| 43 | P1 | MCP Manager | Read-only free-first integration catalogue and local UI | In progress | Branch: codex/core-stabilization-bulk; CI pending |
+| 44 | P1 | MCP Manager | Bounded catalogue fetch timeout and recoverable UI error | In progress | 10-second browser-side abort added; tests pending |
+| 45 | P1 | MCP Audit | Consolidate competing audit implementations | Pending | Review PR #95 and #96 before choosing durable or in-memory policy |
+| 46 | P0 | Verification | Current-main baseline and target-machine smoke tests | Pending verification | Historical CI evidence is not current-commit evidence |
 
 ## Related
 

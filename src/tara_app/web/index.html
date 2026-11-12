@@ -25,8 +25,14 @@
           <p>Your assistant, routed to the right specialist</p>
         </div>
         <span class="local-badge"><span></span> Local app</span>
+        <button id="mcp-toggle" class="models-button" type="button" aria-expanded="false" aria-controls="mcp-panel">Integrations</button>
         <button id="models-toggle" class="models-button" type="button" aria-expanded="false" aria-controls="model-panel">Models</button>
       </header>
+
+      <section id="mcp-panel" class="model-panel" hidden aria-live="polite" aria-label="MCP integration manager">
+        <div class="model-panel-header"><div><h2>MCP integrations</h2><p id="mcp-service-status">Free-first catalogue. Servers are not installed or enabled automatically.</p></div><button id="mcp-refresh" type="button">Refresh</button></div>
+        <div id="mcp-summary" class="mcp-summary"></div><div id="mcp-list" class="mcp-list"></div>
+      </section>
 
       <section id="model-panel" class="model-panel" hidden aria-live="polite" aria-label="OmniRoute model catalogue">
         <div class="model-panel-header">
