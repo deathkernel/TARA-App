@@ -449,10 +449,15 @@ export default function App() {
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : "Local server unavailable.";
+      const failureMessage: Message = {
+        role: "assistant",
+        text: message,
+        status: "unavailable",
+      };
       updateActive((item) => ({
         ...item,
         updatedAt: Date.now(),
-        messages: [...item.messages, { role: "assistant", text: message, status: "unavailable" }].slice(-60),
+        messages: [...item.messages, failureMessage].slice(-60),
       }));
       setNotice(message);
       logActivity("Request failed", message, "danger");
