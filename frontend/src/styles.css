@@ -210,7 +210,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   background: #14171b;
 }
 .session-tabs, .session-tools { display: flex; align-items: center; gap: 14px; }
-.session-tab { display: inline-flex; height: 43px; align-items: center; gap: 7px; border-bottom: 2px solid transparent; color: #8f96a0; font-size: 10px; }
+.session-tab { display: inline-flex; height: 43px; align-items: center; gap: 7px; padding: 0 3px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #8f96a0; font-size: 10px; cursor: pointer; }
+.session-tab:hover { color: #d5c0a9; }
 .session-tab.active { border-color: var(--accent); color: #e3d0bc; }
 .session-tab.muted-tab { color: #69717c; }
 .session-tab small { padding: 2px 4px; border: 1px solid #3b4149; border-radius: 4px; font-size: 7px; letter-spacing: .06em; }
