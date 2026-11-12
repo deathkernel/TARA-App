@@ -46,14 +46,18 @@ class McpOrchestratorMixin:
         self, event: str, *, server: str = "", tool: str = "", session_id: str = "",
         arguments_digest: str = "", reason: str = "", expires_at: float | None = None,
     ) -> None:
-        self._mcp_audit.record(event, {
-            "server": server,
-            "tool": tool,
-            "session_digest": self._mcp_session_digest(session_id) if session_id else "",
-            "arguments_digest": arguments_digest,
-            "expires_at": expires_at,
-            "reason": reason,
-        })
+        try:
+            self._mcp_audit.record(event, {
+                "server": server,
+                "tool": tool,
+                "session_digest": self._mcp_session_digest(session_id) if session_id else "",
+                "arguments_digest": arguments_digest,
+                "expires_at": expires_at,
+                "reason": reason,
+            })
+        except AuditLogError:
+            self._mcp_audit_degraded = True
+            raise
 
     def mcp_status(self) -> dict[str, Any]:
         if self.mcp_gateway is None:
