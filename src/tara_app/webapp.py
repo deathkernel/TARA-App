@@ -100,7 +100,9 @@ class _Handler(BaseHTTPRequestHandler):
         react_file: Path | None = None
         if _react_ui_enabled() and react_root.is_dir():
             if endpoint == "/":
-                react_file = react_root / "index.html"
+                candidate = react_root / "index.html"
+                if candidate.is_file():
+                    react_file = candidate
             elif endpoint.startswith("/assets/"):
                 candidate = (react_root / endpoint.lstrip("/")).resolve()
                 if candidate.is_relative_to(react_root) and candidate.is_file():
