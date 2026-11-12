@@ -102,6 +102,7 @@ class McpApprovalTests(unittest.TestCase):
             self.assertNotIn("Asia/Kolkata", serialized)
             self.assertEqual(len(records[0]["fields"]["session_digest"]), 64)
             self.assertEqual(len(records[0]["fields"]["arguments_digest"]), 64)
+            self.assertIsInstance(records[0]["fields"]["expires_at"], float)
 
     def test_replayed_approval_is_rejected_and_audited(self):
         app = _App()
