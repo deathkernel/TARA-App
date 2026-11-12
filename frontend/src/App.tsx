@@ -346,8 +346,10 @@ export default function App() {
       .replace(/[^a-z0-9-_]+/gi, "-")
       .replace(/^-|-$/g, "")
       .slice(0, 48) + ".json";
+    document.body.appendChild(anchor);
     anchor.click();
-    URL.revokeObjectURL(url);
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     logActivity("Session exported", "Conversation saved as a portable JSON file.", "success");
   }
 
@@ -570,6 +572,16 @@ export default function App() {
     logActivity("Local read-aloud started", "Using an installed browser voice; no audio was sent to OmniRoute.");
   }
 
+  async function copyMessage(text: string) {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard access is unavailable in this browser.");
+      await navigator.clipboard.writeText(text);
+      setNotice("Message copied to clipboard.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Could not copy this message.");
+    }
+  }
+
   function startEditing(index: number, message: Message) {
     if (message.role !== "user" || message.hasAttachments) return;
     setEditingIndex(index);
@@ -766,7 +778,7 @@ export default function App() {
                       {message.role === "user" && !message.hasAttachments && <button type="button" onClick={() => startEditing(index, message)} disabled={sending}>Edit</button>}
                       {message.role === "assistant" && index > 0 && <button type="button" onClick={() => regenerateAnswer(index)} disabled={sending}>Regenerate</button>}
                       {message.role === "assistant" && <button type="button" onClick={() => readAloud(message.text)}>Read aloud</button>}
-                      <button type="button" onClick={() => void navigator.clipboard?.writeText(message.text)} aria-label="Copy message">Copy</button>
+                      <button type="button" onClick={() => void copyMessage(message.text)} aria-label="Copy message">Copy</button>
                     </div>
                   </div>
                   <div className={message.role === "assistant" ? "message-body markdown-body" : "message-body user-body"}>
