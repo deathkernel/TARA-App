@@ -669,8 +669,8 @@ export default function App() {
 
         <div className="session-toolbar">
           <div className="session-tabs">
-            <span className="session-tab active"><span>◉</span> Conversation</span>
-            <span className="session-tab muted-tab"><span>⌘</span> Code review <small>SAFE MODE</small></span>
+            <button type="button" className={activityOpen ? "session-tab" : "session-tab active"} onClick={() => setActivityOpen(false)}><span>◉</span> Conversation</button>
+            <button type="button" className={activityOpen ? "session-tab active" : "session-tab"} onClick={() => setActivityOpen(true)}><span>▤</span> Activity</button>
           </div>
           <div className="session-tools">
             <span className="mode-indicator"><i /> Review-first</span>
