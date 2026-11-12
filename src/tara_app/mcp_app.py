@@ -34,6 +34,7 @@ class McpOrchestratorMixin:
         self._mcp_audit = audit_log if audit_log is not None else JsonlAuditLog(
             Path.home() / ".tara" / "audit" / "mcp.jsonl",
             max_bytes=1_048_576,
+            max_record_bytes=4096,
         )
         self._mcp_audit_degraded = False
 
