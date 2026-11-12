@@ -190,6 +190,12 @@ function mediaTypeForFile(file: File): string {
   return known[extension] ?? "application/octet-stream";
 }
 
+function needsSmallSpecialistInput(file: File): boolean {
+  const suffix = file.name.toLowerCase().split(".").pop() ?? "";
+  return file.type.startsWith("image/") || file.type.startsWith("audio/") ||
+    SPECIALIST_FILE_SUFFIXES.has(suffix);
+}
+
 function fileToAttachment(file: File): Promise<Attachment> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -346,14 +352,19 @@ export default function App() {
     const incoming = Array.from(fileList);
     const combined = [...selectedFiles, ...incoming];
     const totalBytes = combined.reduce((sum, file) => sum + file.size, 0);
-    const oversizedSpecialistFile = incoming.find((file) => {
-      const suffix = file.name.toLowerCase().split(".").pop() ?? "";
-      const needsSmallInput = file.type.startsWith("image/") ||
-        file.type.startsWith("audio/") || SPECIALIST_FILE_SUFFIXES.has(suffix);
-      return needsSmallInput && file.size > 512_000;
-    });
-    if (oversizedSpecialistFile) {
-      setNotice(oversizedSpecialistFile.name + " exceeds the 512 KB limit for image, audio, code and CSV specialist inputs.");
+    const oversizedSpecialistFile = incoming.find((file) =>
+      needsSmallSpecialistInput(file) && file.size > 512_000
+    );
+    const smallInputBytes = combined
+      .filter(needsSmallSpecialistInput)
+      .reduce((sum, file) => sum + file.size, 0);
+    const audioFileCount = combined.filter((file) => mediaTypeForFile(file).startsWith("audio/")).length;
+    if (oversizedSpecialistFile || smallInputBytes > 512_000) {
+      setNotice("Combined image, audio, source-code and CSV specialist inputs must stay within 512 KB.");
+      return;
+    }
+    if (audioFileCount > 1) {
+      setNotice("Attach one audio file per transcription request.");
       return;
     }
     if (combined.length > MAX_FILES) {
