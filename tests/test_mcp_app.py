@@ -1,9 +1,13 @@
 """Tests for operation-bound, one-shot MCP approvals."""
 from __future__ import annotations
 
+import json
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
+from tara_app.audit import AuditLogError, JsonlAuditLog
 from tara_app.mcp_app import McpOrchestratorMixin
 from tara_app.mcp_registry import parse_mcp_config
 
@@ -25,10 +29,22 @@ class _Gateway:
         return "ok"
 
 
+class _MemoryAuditLog:
+    def __init__(self, fail_on=None):
+        self.events = []
+        self.fail_on = fail_on
+
+    def record(self, event_type, fields=None):
+        if event_type == self.fail_on:
+            raise AuditLogError("audit unavailable")
+        self.events.append({"event_type": event_type, "fields": dict(fields or {})})
+
+
 class _App(McpOrchestratorMixin):
-    def __init__(self):
+    def __init__(self, audit_log=None):
         self.gateway = _Gateway()
-        self._init_mcp_state(self.gateway)
+        self.audit_log = audit_log or _MemoryAuditLog()
+        self._init_mcp_state(self.gateway, audit_log=self.audit_log)
 
 
 class McpApprovalTests(unittest.TestCase):
@@ -58,6 +74,77 @@ class McpApprovalTests(unittest.TestCase):
                     approval_token=token, session_id="session-1",
                 )
         self.assertEqual(app.gateway.calls, [])
+
+
+    def test_durable_audit_records_only_digests_and_lifecycle_events(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "mcp.jsonl"
+            app = _App(JsonlAuditLog(path, max_bytes=4096))
+            arguments = {"timezone": "Asia/Kolkata", "private_value": "do-not-log"}
+            token = app.issue_mcp_approval_token(
+                "time", "get_time", arguments, session_id="session-secret",
+            )
+            self.assertEqual(app.call_mcp_tool(
+                "time", "get_time", arguments,
+                approval_token=token, session_id="session-secret",
+            ), "ok")
+            records = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+            self.assertEqual(
+                [item["event_type"] for item in records],
+                ["approval_issued", "tool_call_started", "tool_call_succeeded"],
+            )
+            serialized = path.read_text(encoding="utf-8")
+            self.assertNotIn("do-not-log", serialized)
+            self.assertNotIn("session-secret", serialized)
+            self.assertNotIn(token, serialized)
+            self.assertNotIn("Asia/Kolkata", serialized)
+            self.assertEqual(len(records[0]["fields"]["session_digest"]), 64)
+            self.assertEqual(len(records[0]["fields"]["arguments_digest"]), 64)
+
+    def test_replayed_approval_is_rejected_and_audited(self):
+        app = _App()
+        arguments = {"timezone": "UTC"}
+        token = app.issue_mcp_approval_token("time", "get_time", arguments, session_id="session-1")
+        app.call_mcp_tool("time", "get_time", arguments, approval_token=token, session_id="session-1")
+        with self.assertRaisesRegex(ValueError, "invalid or expired"):
+            app.call_mcp_tool("time", "get_time", arguments, approval_token=token, session_id="session-1")
+        self.assertEqual(
+            [item["event_type"] for item in app.audit_log.events],
+            ["approval_issued", "tool_call_started", "tool_call_succeeded", "approval_rejected"],
+        )
+
+    def test_audit_failure_revokes_approval_and_blocks_tool_dispatch(self):
+        issue_app = _App(_MemoryAuditLog(fail_on="approval_issued"))
+        with self.assertRaises(AuditLogError):
+            issue_app.issue_mcp_approval_token("time", "get_time", {}, session_id="session-1")
+        self.assertEqual(issue_app._mcp_approval_tokens, {})
+
+        dispatch_app = _App(_MemoryAuditLog(fail_on="tool_call_started"))
+        token = dispatch_app.issue_mcp_approval_token("time", "get_time", {}, session_id="session-1")
+        with self.assertRaises(AuditLogError):
+            dispatch_app.call_mcp_tool(
+                "time", "get_time", {}, approval_token=token, session_id="session-1",
+            )
+        self.assertEqual(dispatch_app.gateway.calls, [])
+        self.assertEqual(dispatch_app._mcp_approval_tokens, {})
+
+    def test_post_dispatch_audit_failure_marks_health_degraded_without_retrying(self):
+        audit = _MemoryAuditLog(fail_on="tool_call_succeeded")
+        app = _App(audit)
+        token = app.issue_mcp_approval_token("time", "get_time", {}, session_id="session-1")
+        self.assertEqual(
+            app.call_mcp_tool("time", "get_time", {}, approval_token=token, session_id="session-1"),
+            "ok",
+        )
+        self.assertEqual(len(app.gateway.calls), 1)
+        self.assertEqual(app.mcp_status()["audit_status"], "degraded")
+
+    def test_approval_arguments_are_size_bounded(self):
+        app = _App()
+        with self.assertRaisesRegex(ValueError, "64 KiB"):
+            app.issue_mcp_approval_token(
+                "time", "get_time", {"value": "x" * 65_536}, session_id="session-1",
+            )
 
     def test_approval_rejects_unlisted_read_only_tool(self):
         app = _App()
