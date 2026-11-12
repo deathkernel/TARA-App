@@ -121,6 +121,7 @@ class McpApprovalTests(unittest.TestCase):
         with self.assertRaises(AuditLogError):
             issue_app.issue_mcp_approval_token("time", "get_time", {}, session_id="session-1")
         self.assertEqual(issue_app._mcp_approval_tokens, {})
+        self.assertEqual(issue_app.mcp_status()["audit_status"], "degraded")
 
         dispatch_app = _App(_MemoryAuditLog(fail_on="tool_call_started"))
         token = dispatch_app.issue_mcp_approval_token("time", "get_time", {}, session_id="session-1")
@@ -130,6 +131,7 @@ class McpApprovalTests(unittest.TestCase):
             )
         self.assertEqual(dispatch_app.gateway.calls, [])
         self.assertEqual(dispatch_app._mcp_approval_tokens, {})
+        self.assertEqual(dispatch_app.mcp_status()["audit_status"], "degraded")
 
     def test_post_dispatch_audit_failure_marks_health_degraded_without_retrying(self):
         audit = _MemoryAuditLog(fail_on="tool_call_succeeded")
