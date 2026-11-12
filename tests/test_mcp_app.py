@@ -26,6 +26,8 @@ class _Gateway:
 
     def call_tool(self, server, tool, arguments, *, approval_grant):
         self.calls.append((server, tool, dict(arguments or {}), approval_grant))
+        if getattr(self, "fail_call", False):
+            raise RuntimeError("gateway failed")
         return "ok"
 
 
@@ -138,6 +140,17 @@ class McpApprovalTests(unittest.TestCase):
         )
         self.assertEqual(len(app.gateway.calls), 1)
         self.assertEqual(app.mcp_status()["audit_status"], "degraded")
+
+    def test_gateway_failure_is_recorded_without_masking_the_error(self):
+        app = _App()
+        token = app.issue_mcp_approval_token("time", "get_time", {}, session_id="session-1")
+        app.gateway.fail_call = True
+        with self.assertRaisesRegex(RuntimeError, "gateway failed"):
+            app.call_mcp_tool("time", "get_time", {}, approval_token=token, session_id="session-1")
+        self.assertEqual(
+            [item["event_type"] for item in app.audit_log.events],
+            ["approval_issued", "tool_call_started", "tool_call_failed"],
+        )
 
     def test_approval_arguments_are_size_bounded(self):
         app = _App()
