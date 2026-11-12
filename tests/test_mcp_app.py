@@ -42,6 +42,17 @@ class _MemoryAuditLog:
         self.events.append({"event_type": event_type, "fields": dict(fields or {})})
 
 
+class _MutatingAuditLog(_MemoryAuditLog):
+    def __init__(self, arguments):
+        super().__init__()
+        self.arguments = arguments
+
+    def record(self, event_type, fields=None):
+        if event_type == "tool_call_started":
+            self.arguments["timezone"] = "Asia/Kolkata"
+        super().record(event_type, fields)
+
+
 class _App(McpOrchestratorMixin):
     def __init__(self, audit_log=None):
         self.gateway = _Gateway()
@@ -103,6 +114,16 @@ class McpApprovalTests(unittest.TestCase):
             self.assertEqual(len(records[0]["fields"]["session_digest"]), 64)
             self.assertEqual(len(records[0]["fields"]["arguments_digest"]), 64)
             self.assertIsInstance(records[0]["fields"]["expires_at"], float)
+
+    def test_gateway_receives_the_exact_approved_argument_snapshot(self):
+        arguments = {"timezone": "UTC"}
+        app = _App(_MutatingAuditLog(arguments))
+        token = app.issue_mcp_approval_token("time", "get_time", arguments, session_id="session-1")
+        app.call_mcp_tool(
+            "time", "get_time", arguments, approval_token=token, session_id="session-1",
+        )
+        self.assertEqual(arguments["timezone"], "Asia/Kolkata")
+        self.assertEqual(app.gateway.calls[0][2], {"timezone": "UTC"})
 
     def test_replayed_approval_is_rejected_and_audited(self):
         app = _App()
