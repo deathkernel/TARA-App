@@ -19,43 +19,75 @@ read-only integration catalogue, a same-origin metadata endpoint, and the
 local Integrations panel. Discovery does not install, launch, enable, or
 execute integrations and does not enable writable tools.
 
-The browser catalogue request is bounded to 10 seconds and exposes a
-recoverable error with manual refresh.
-
 **Verification:** PR head `b22694b`, merged as `1d4f63d`, passed workflow
 run [#1878](https://github.com/deathkernel/TARA-App/actions/runs/43191279337):
-Python tests (431 passed), source compilation, frontend type-check/build,
-and Ubuntu + Windows native Handler build/risk-test jobs. Target-machine
-launch and browser visual smoke tests remain pending.
+Python tests, source compilation, frontend type-check/build, and Ubuntu +
+Windows native Handler build/risk-test jobs.
 
-### Batch 2 — MCP audit and approval security (active)
+### Batch 2 — MCP audit and approval security (merged)
 
-The active branch is `codex/mcp-audit-security-bulk`. It consolidates MCP
-auditing onto the existing redacting `JsonlAuditLog`; adds bounded 1 MiB
-rotation for the MCP log; records approval issuance/rejection and tool
-dispatch lifecycle using digests instead of raw sessions, tokens or
-arguments; and requires a durable pre-dispatch audit event before a tool
-call.
+PR [#104](https://github.com/deathkernel/TARA-App/pull/104) merged as
+`5dd92f12080776174fbc8444aff595863876191f`. It consolidates MCP audit
+events onto the existing redacting `JsonlAuditLog`, adds a 1 MiB active log
+with one rotated backup and a 4 KiB event bound, and records approval and
+tool-dispatch lifecycle metadata using digests rather than raw tokens,
+sessions or arguments.
 
-If approval issuance cannot be audited, its token is revoked. If the
-pre-dispatch audit write fails, the one-shot approval is consumed and the
-gateway is not called. If the post-dispatch outcome write fails after a
-successful tool call, TARA returns the completed result and marks MCP audit
-health degraded rather than inviting a duplicate retry.
+The exact canonical JSON argument snapshot that was approved is the one sent
+to the gateway. Approval issuance and pre-dispatch audit failures fail closed;
+audit health is marked degraded on sink failure. No HTTP MCP execution
+endpoint was introduced, and writable tools remain blocked.
 
-No HTTP approval or tool-execution endpoint is added. MCP remains opt-in,
-and writable tools remain blocked.
+**Verification:** workflow
+[#1911](https://github.com/deathkernel/TARA-App/actions/runs/43192869106)
+passed 441 Python tests, frontend build, Windows native Handler and Ubuntu
+native Handler.
+
+### Batch 3 — Premium developer workspace (active)
+
+The active branch is `codex/premium-workspace-ui-bulk`. It replaces the
+minimal React chat prototype with a premium three-pane developer workspace
+inspired by modern coding-agent desktop layouts:
+
+- Left session sidebar with search, recent sessions and specialist task starters.
+- Main conversation workspace with Markdown/code rendering, attachment chips,
+  drag-and-drop uploads, selected skills, edit/regenerate/copy, approval cards
+  and local read-aloud.
+- Session search plus explicit JSON export and confirmed local deletion.
+- Right inspector for specialist health, OmniRoute routes and read-only MCP
+  integration metadata.
+- Session activity panel and a visibly locked terminal state.
+- Premium graphite/champagne visual system, animated primary buttons, subtle
+  hover elevation, status breathing, message/panel entry motion, and a
+  reduced-motion override.
+- Responsive layout, keyboard shortcuts, focus styling and polite live updates.
+
+The React workspace is selected by default when compiled assets exist. The
+Windows and Unix launchers attempt to build it when Node.js/npm is available;
+the static UI remains a fallback and can be forced with
+`TARA_ENABLE_REACT_UI=0`.
+
+**Safety boundary:** the terminal is not an executable shell. No file editor,
+diff apply, Git mutation, live preview or parallel worktree controls are
+exposed until their backend contracts and security prerequisites exist. Code
+execution remains blocked pending a real OS/container sandbox.
+
+**Verification still required:** latest branch CI, Windows target-machine
+launch, and desktop/mobile browser visual and accessibility QA. Motion has
+been limited to transform/opacity and short transitions, but real-device
+performance and screen-reader behavior still require browser validation.
 
 ### Next dependency-ordered work
 
-1. Complete audit and approval regression tests, review the diff, and require
-   all CI jobs to pass before merge.
-2. Add bounded cancellation/output tests at external adapter and gateway
+1. Finish the React workspace regression checks and confirm all CI jobs pass.
+2. Run browser QA at desktop and mobile widths; verify launchers build the React
+   assets and the static fallback still works without Node.js.
+3. Add a reviewed code-diff presentation contract before building any editor,
+   patch-apply or Git controls.
+4. Trace runtime, orchestrator, application-service and facade ownership before
+   consolidating live paths.
+5. Add bounded cancellation/output tests at external adapter and gateway
    boundaries.
-3. Trace runtime, orchestrator, application-service and facade ownership
-   before consolidating any live paths.
-4. Add specialist end-to-end and UI smoke tests, then update status using
-   exact CI and target-machine evidence.
 
 ## 1. Start here
 

@@ -20,12 +20,12 @@ _ASSETS = {
     "/app.css": ("app.css", "text/css; charset=utf-8"),
     "/app.js": ("app.js", "text/javascript; charset=utf-8"),
 }
-_MAX_REQUEST_BYTES = 1_000_000
+_MAX_REQUEST_BYTES = 14_000_000
 
 
 def _react_ui_enabled() -> bool:
-    """Keep the feature-complete static UI as default until React parity is verified."""
-    return os.environ.get("TARA_ENABLE_REACT_UI", "").strip() == "1"
+    """Prefer the React workspace; set TARA_ENABLE_REACT_UI=0 for the static fallback."""
+    return os.environ.get("TARA_ENABLE_REACT_UI", "1").strip() != "0"
 
 
 class _Server(ThreadingHTTPServer):
@@ -100,7 +100,9 @@ class _Handler(BaseHTTPRequestHandler):
         react_file: Path | None = None
         if _react_ui_enabled() and react_root.is_dir():
             if endpoint == "/":
-                react_file = react_root / "index.html"
+                candidate = react_root / "index.html"
+                if candidate.is_file():
+                    react_file = candidate
             elif endpoint.startswith("/assets/"):
                 candidate = (react_root / endpoint.lstrip("/")).resolve()
                 if candidate.is_relative_to(react_root) and candidate.is_file():
@@ -153,7 +155,7 @@ class _Handler(BaseHTTPRequestHandler):
             self._json(411, {"status": "invalid_request", "error": "request length is invalid"})
             return
         if not 1 <= length <= _MAX_REQUEST_BYTES:
-            self._json(413, {"status": "invalid_request", "error": "request exceeds the 1 MB limit"})
+            self._json(413, {"status": "invalid_request", "error": "request exceeds the 14 MB limit"})
             return
         try:
             payload = json.loads(self.rfile.read(length).decode("utf-8"))

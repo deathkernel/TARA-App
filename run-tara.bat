@@ -45,6 +45,23 @@ if errorlevel 1 (
   )
 )
 
+rem Build the premium React workspace when Node.js is available.
+rem The Python app retains its static UI fallback if the optional build cannot run.
+if exist "frontend\package.json" (
+  where npm >nul 2>nul
+  if errorlevel 1 (
+    echo Node.js/npm is unavailable; TARA will use the bundled static UI fallback.
+  ) else (
+    pushd frontend
+    if not exist "node_modules\vite\bin\vite.js" (
+      call npm install --no-audit --no-fund
+    )
+    if not errorlevel 1 call npm run build
+    if errorlevel 1 echo React workspace build failed; TARA will use the static UI fallback when no compiled build exists.
+    popd
+  )
+)
+
 if not exist "tara-app.toml" (
   copy "tara-app.example.toml" "tara-app.toml" >nul
 )
