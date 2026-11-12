@@ -725,7 +725,7 @@ export default function App() {
 
         {activityOpen && (
           <section className="activity-panel">
-            <div className="activity-header"><div><strong>Session activity</strong><span>Local request lifecycle · no shell commands are run here</span></div><button type="button" onClick={() => setActivityOpen(false)} aria-label="Close activity">×</button></div>
+            <div className="activity-header"><div><strong>Workspace activity</strong><span>Local request lifecycle · no shell commands are run here</span></div><button type="button" onClick={() => setActivityOpen(false)} aria-label="Close activity">×</button></div>
             <div className="activity-list">
               {activity.slice().reverse().map((item) => (
                 <div className="activity-row" key={item.id}>
