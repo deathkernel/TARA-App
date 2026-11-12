@@ -51,11 +51,16 @@ inspired by modern coding-agent desktop layouts:
 
 - Left session sidebar with search, recent sessions and specialist task starters.
 - Main conversation workspace with Markdown/code rendering, attachment chips,
-  selected skills, edit/regenerate, approval cards and local read-aloud.
+  drag-and-drop uploads, selected skills, edit/regenerate/copy, approval cards
+  and local read-aloud.
+- Session search plus explicit JSON export and confirmed local deletion.
 - Right inspector for specialist health, OmniRoute routes and read-only MCP
   integration metadata.
 - Session activity panel and a visibly locked terminal state.
-- Responsive layout, keyboard focus styling and reduced-motion support.
+- Premium graphite/champagne visual system, animated primary buttons, subtle
+  hover elevation, status breathing, message/panel entry motion, and a
+  reduced-motion override.
+- Responsive layout, keyboard shortcuts, focus styling and polite live updates.
 
 The React workspace is selected by default when compiled assets exist. The
 Windows and Unix launchers attempt to build it when Node.js/npm is available;
@@ -68,7 +73,9 @@ exposed until their backend contracts and security prerequisites exist. Code
 execution remains blocked pending a real OS/container sandbox.
 
 **Verification still required:** latest branch CI, Windows target-machine
-launch, and desktop/mobile browser visual and accessibility QA.
+launch, and desktop/mobile browser visual and accessibility QA. Motion has
+been limited to transform/opacity and short transitions, but real-device
+performance and screen-reader behavior still require browser validation.
 
 ### Next dependency-ordered work
 
