@@ -44,6 +44,11 @@ class _App(McpOrchestratorMixin):
     def __init__(self):
         self._init_mcp_state(_Gateway())
 
+    def mcp_catalogue(self):
+        from tara_app.mcp_catalogue import list_mcp_integrations
+
+        return list_mcp_integrations()
+
 
 class McpHttpApiTests(unittest.TestCase):
     def setUp(self):
@@ -83,6 +88,20 @@ class McpHttpApiTests(unittest.TestCase):
         self.assertEqual(status["status"], "enabled")
         self.assertEqual(status["enabled_server_count"], 1)
         self.assertEqual(tools["tools"][0]["name"], "get_current_time")
+
+    def test_catalogue_endpoint_is_read_only_and_does_not_enable_integrations(self):
+        with urlopen(self.base_url + "/api/mcp/catalogue", timeout=2) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        self.assertEqual(payload["policy"], "free_first")
+        self.assertFalse(payload["automatic_install"])
+        self.assertFalse(payload["write_tools_enabled"])
+        self.assertGreaterEqual(payload["summary"]["total"], 10)
+
+    def test_catalogue_endpoint_rejects_untrusted_origin(self):
+        request = Request(self.base_url + "/api/mcp/catalogue", headers={"Origin": "http://evil.example"})
+        with self.assertRaises(HTTPError) as caught:
+            urlopen(request, timeout=2)
+        self.assertEqual(caught.exception.code, 403)
 
     def test_mcp_mutation_endpoints_are_not_exposed_without_approval_ui(self):
         payload = {
