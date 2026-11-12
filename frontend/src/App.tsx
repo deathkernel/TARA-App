@@ -111,7 +111,7 @@ const SOURCE_FILE_SUFFIXES = new Set([
 ]);
 const SPECIALIST_FILE_SUFFIXES = new Set([
   ...SOURCE_FILE_SUFFIXES, "csv", "png", "jpg", "jpeg", "gif", "webp", "bmp",
-  "svg", "mp3", "wav", "m4a", "mp4", "webm", "ogg", "flac", "aac",
+  "mp3", "wav", "m4a", "mp4", "webm", "ogg", "flac", "aac",
 ]);
 const FREE_MODELS_PROMPT = "List all available models";
 
@@ -185,7 +185,7 @@ function mediaTypeForFile(file: File): string {
   const known: Record<string, string> = {
     csv: "text/csv", txt: "text/plain", md: "text/markdown", pdf: "application/pdf",
     png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif",
-    webp: "image/webp", bmp: "image/bmp", svg: "image/svg+xml",
+    webp: "image/webp",
     mp3: "audio/mpeg", wav: "audio/wav", m4a: "audio/mp4", mp4: "audio/mp4",
     webm: "audio/webm", ogg: "audio/ogg", flac: "audio/flac", aac: "audio/aac",
   };
@@ -775,7 +775,7 @@ export default function App() {
           )}
           <div className="composer-main">
             <label className="attach-button" title="Attach files">
-              <input type="file" multiple hidden accept="image/*,audio/*,.txt,.md,.markdown,.rst,.pdf,.csv,.py,.pyi,.js,.mjs,.cjs,.ts,.tsx,.jsx,.java,.go,.rs,.c,.h,.cc,.hh,.hpp,.cpp,.cxx,.cs,.rb,.php,.sh,.bash,.zsh,.ps1,.sql,.swift,.kt,.kts,.dart,.scala,.lua,.pl,.r" onChange={(event) => { handleFiles(event.target.files); event.target.value = ""; }} />
+              <input type="file" multiple hidden accept="image/png,image/jpeg,image/webp,image/gif,audio/mpeg,audio/wav,audio/mp4,audio/webm,audio/ogg,audio/flac,audio/aac,.txt,.md,.markdown,.rst,.pdf,.csv,.py,.pyi,.js,.mjs,.cjs,.ts,.tsx,.jsx,.java,.go,.rs,.c,.h,.cc,.hh,.hpp,.cpp,.cxx,.cs,.rb,.php,.sh,.bash,.zsh,.ps1,.sql,.swift,.kt,.kts,.dart,.scala,.lua,.pl,.r" onChange={(event) => { handleFiles(event.target.files); event.target.value = ""; }} />
               ＋
             </label>
             <textarea
