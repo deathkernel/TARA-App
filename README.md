@@ -134,7 +134,11 @@ See [OmniRoute integration setup](docs/OMNIROUTE_INTEGRATION.md) for Windows con
 
 ### Web UI selection
 
-The feature-complete static web UI remains the default. The React frontend is built into `src/tara_app/web/react-dist` for integration testing and can be enabled explicitly with `TARA_ENABLE_REACT_UI=1`; it must not become the default until attachment, approval, voice, and conversation-management feature parity has been verified. The React UI sends language-model prompts through OmniRoute and must describe remote data handling accurately.
+The premium React + TypeScript workspace is the primary UI when compiled assets are available. The Windows and Unix launchers build `frontend/` when Node.js/npm is installed; without a successful build, TARA safely falls back to the bundled static UI. Set `TARA_ENABLE_REACT_UI=0` to force the static fallback.
+
+The React workspace includes session navigation, specialist task starters, attachments, selected skill packs, approval cards, message edit/regenerate, local read-aloud, runtime/model status, and the read-only MCP integration catalogue. Its multi-pane layout is inspired by modern coding-agent workspaces; it does not pretend to provide shell execution, arbitrary file editing, diff application, or preview panes. Those remain unavailable until their backend and security boundaries exist.
+
+See [Premium Developer Workspace](docs/PREMIUM_WORKSPACE_UI.md) for layout, feature boundaries, build behavior, and acceptance requirements. Language-model prompts and supported attachments still travel through OmniRoute and may reach the providers configured there; local browser read-aloud uses installed local voices.
 
 ### Chat experience
 
