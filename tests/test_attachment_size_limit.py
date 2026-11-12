@@ -4,6 +4,7 @@ import base64
 import unittest
 
 from tara_app.orchestrator import Orchestrator
+from tara_app.webapp import _MAX_REQUEST_BYTES
 
 
 def attachment(size: int, name: str = "document.txt") -> dict[str, str]:
@@ -16,6 +17,10 @@ def attachment(size: int, name: str = "document.txt") -> dict[str, str]:
 
 
 class AttachmentSizeLimitTests(unittest.TestCase):
+    def test_http_request_limit_allows_base64_overhead_for_10_mb_attachments(self):
+        # A 10 MB binary attachment expands to about 13.34 MB in base64.
+        self.assertGreaterEqual(_MAX_REQUEST_BYTES, 13_500_000)
+
     def test_attachment_at_10_mb_is_accepted(self):
         result = Orchestrator._validate_attachments([attachment(10_000_000)])
         self.assertEqual(len(base64.b64decode(result[0]["content_base64"])), 10_000_000)
