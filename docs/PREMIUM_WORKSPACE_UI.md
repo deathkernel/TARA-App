@@ -24,8 +24,8 @@ Reference: [Claude's April 14, 2026 desktop redesign](https://claude.com/blog/cl
 
 The layout collapses the inspector and session navigation on narrow screens.
 It uses keyboard-accessible controls, visible focus states, reduced-motion
-support, `Ctrl/Cmd+N` for a new session, and `Ctrl/Cmd+K` to focus session
-search.
+support, `Ctrl/Cmd+N` for a new session, `Ctrl/Cmd+K` to focus session
+search, and `Escape` to close responsive drawers and the inspector.
 
 ## Visual system and interaction design
 
