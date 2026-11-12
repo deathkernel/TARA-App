@@ -27,6 +27,49 @@ It uses keyboard-accessible controls, visible focus states, reduced-motion
 support, `Ctrl/Cmd+N` for a new session, and `Ctrl/Cmd+K` to focus session
 search.
 
+## Visual system and interaction design
+
+The visual language is a restrained graphite workspace with warm champagne
+accents, cool slate surfaces, fine borders, and high-contrast text. It avoids
+neon gradients and decorative dashboard clutter. The interface uses the local
+system font stack and ships no remote font, icon, animation, or analytics
+dependency.
+
+### Motion principles
+
+- Use short opacity/transform transitions for hover, focus, panel and message
+  entry; avoid layout-shifting or continuously moving large surfaces.
+- Give primary actions a subtle light-sweep and elevation response on hover.
+- Use restrained breathing/pulse feedback only for live status and active work.
+- Keep animations on transform and opacity where possible to avoid expensive
+  repaints on integrated GPUs.
+- Honour `prefers-reduced-motion`; all nonessential motion is reduced to
+  near-instant transitions when the operating system requests it.
+- Keep approval and destructive actions visually distinct; animation never
+  replaces a clear label, confirmation or security boundary.
+
+### Session and attachment ergonomics
+
+- Export the active conversation as portable JSON.
+- Delete the active local conversation only after an explicit confirmation.
+- Drag and drop files onto the composer, with the same file count and size
+  validation as the attachment picker.
+- Show attachment chips and allow removing an item before sending.
+- Preserve keyboard shortcuts for new sessions and session search.
+- Use clear disabled, loading, error, empty and approval states instead of
+  presenting decorative controls that do not work.
+
+### Responsive and accessibility rules
+
+- Desktop uses a three-pane workspace; medium widths keep the inspector as an
+  overlay; mobile exposes the session drawer and inspector without horizontal
+  overflow.
+- Interactive targets expose accessible names and visible keyboard focus.
+- Message updates use a polite live region; forms retain explicit labels.
+- Text and status do not rely on colour alone.
+- The reduced-motion override applies to every new animation added to the
+  workspace.
+
 ## Working capabilities
 
 The React workspace currently connects to these existing same-origin APIs:
