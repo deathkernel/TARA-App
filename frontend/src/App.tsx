@@ -242,7 +242,7 @@ export default function App() {
   const [skills, setSkills] = useState<SkillPack[]>([]);
   const [catalogue, setCatalogue] = useState<IntegrationCatalogue | null>(null);
   const [mcpStatus, setMcpStatus] = useState<McpStatus | null>(null);
-  const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [inspectorOpen, setInspectorOpen] = useState(() => window.matchMedia("(min-width: 1121px)").matches);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [inspectorTab, setInspectorTab] = useState<"status" | "models" | "integrations">("status");
   const [activityOpen, setActivityOpen] = useState(false);
@@ -645,7 +645,7 @@ export default function App() {
   const chatStatus = health?.specialists?.chat?.status ?? "checking";
 
   return (
-    <div className={"app-shell" + (mobileSidebarOpen ? " sidebar-open" : "")}>
+    <div className={"app-shell" + (mobileSidebarOpen ? " sidebar-open" : "") + (inspectorOpen ? " inspector-open" : "")}>
       <aside className="sidebar">
         <div className="sidebar-brand">
           <span className="brand-mark">T</span>
@@ -711,6 +711,14 @@ export default function App() {
           <div className="profile-row"><span className="profile-avatar">T</span><div><strong>TARA Local</strong><span>Personal workspace</span></div><span className="profile-menu">•••</span></div>
         </div>
       </aside>
+      {mobileSidebarOpen && (
+        <button
+          className="drawer-backdrop"
+          type="button"
+          onClick={() => setMobileSidebarOpen(false)}
+          aria-label="Close session navigation"
+        />
+      )}
 
       <main className="workspace">
         <header className="topbar">
@@ -874,6 +882,14 @@ export default function App() {
         <footer className="workspace-footer"><span>●</span> TARA is in review-first mode <span className="footer-divider">·</span> Code execution is disabled until a real OS sandbox is available</footer>
       </main>
 
+      {inspectorOpen && (
+        <button
+          className="inspector-backdrop"
+          type="button"
+          onClick={() => setInspectorOpen(false)}
+          aria-label="Close inspector"
+        />
+      )}
       {inspectorOpen && (
         <aside className="inspector">
           <div className="inspector-header"><div><span className="inspector-kicker">SESSION CONTEXT</span><strong>Inspector</strong></div><button type="button" onClick={() => setInspectorOpen(false)} aria-label="Close inspector">×</button></div>
