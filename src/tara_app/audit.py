@@ -66,7 +66,7 @@ class JsonlAuditLog:
             "fields": _redact(fields or {}),
         }
         try:
-            encoded = (json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\\n").encode("utf-8")
+            encoded = (json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
             if len(encoded) > self.max_record_bytes or (
                 self.max_bytes is not None and len(encoded) > self.max_bytes
             ):
