@@ -40,13 +40,13 @@ class JsonlAuditLog:
         path: Path,
         *,
         max_bytes: int | None = None,
-        max_record_bytes: int = 65_536,
+        max_record_bytes: int | None = None,
     ) -> None:
         if max_bytes is not None and (
             isinstance(max_bytes, bool) or not isinstance(max_bytes, int) or max_bytes < 4096
         ):
             raise ValueError("max_bytes must be at least 4096")
-        if (
+        if max_record_bytes is not None and (
             isinstance(max_record_bytes, bool)
             or not isinstance(max_record_bytes, int)
             or max_record_bytes < 256
@@ -67,9 +67,9 @@ class JsonlAuditLog:
         }
         try:
             encoded = (json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
-            if len(encoded) > self.max_record_bytes or (
-                self.max_bytes is not None and len(encoded) > self.max_bytes
-            ):
+            if (
+                self.max_record_bytes is not None and len(encoded) > self.max_record_bytes
+            ) or (self.max_bytes is not None and len(encoded) > self.max_bytes):
                 raise AuditLogError("audit record exceeds the configured size limit")
             self.path.parent.mkdir(parents=True, exist_ok=True)
             with _LOCK:
