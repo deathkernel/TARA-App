@@ -110,7 +110,7 @@ const SOURCE_FILE_SUFFIXES = new Set([
   "bash", "zsh", "ps1", "sql", "swift", "kt", "kts", "dart", "scala", "lua", "pl", "r",
 ]);
 const SPECIALIST_FILE_SUFFIXES = new Set([
-  ...SOURCE_FILE_SUFFIXES, "csv", "png", "jpg", "jpeg", "gif", "webp", "bmp",
+  ...SOURCE_FILE_SUFFIXES, "csv", "png", "jpg", "jpeg", "gif", "webp",
   "mp3", "wav", "m4a", "mp4", "webm", "ogg", "flac", "aac",
 ]);
 const FREE_MODELS_PROMPT = "List all available models";
