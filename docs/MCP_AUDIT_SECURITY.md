@@ -25,9 +25,10 @@ fsyncs each record, and rotates the MCP log at a 1 MiB limit.
 ## Failure semantics
 
 - If approval issuance cannot be audited, the newly created in-memory approval
-  is revoked and no token is returned.
+  is revoked, no token is returned, and MCP audit health is marked degraded.
 - If the pre-dispatch `tool_call_started` event cannot be persisted, the
-  one-shot approval remains consumed and the gateway is not called.
+  one-shot approval remains consumed, the gateway is not called, and MCP
+  audit health is marked degraded.
 - If the gateway fails, TARA attempts to persist a failure event and preserves
   the original gateway exception.
 - If a successful tool call cannot have its outcome event persisted, TARA
