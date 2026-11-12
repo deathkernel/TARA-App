@@ -11,7 +11,8 @@ MCP remains opt-in and disabled by default.
 The local JSONL log records:
 
 - `approval_issued` after the approval is bound to one session, server, tool,
-  canonical-JSON argument digest and expiry.
+  canonical-JSON argument digest and expiry. The gateway receives a detached
+  JSON snapshot of the approved arguments, not the caller's mutable mapping.
 - `approval_rejected` for invalid, expired or mismatched approvals.
 - `tool_call_started` after a valid one-shot approval is consumed and before
   the gateway is invoked.
