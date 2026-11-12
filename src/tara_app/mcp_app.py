@@ -7,9 +7,11 @@ import math
 import secrets
 import time
 from collections import OrderedDict
+from pathlib import Path
 from threading import RLock
 from typing import Any, Mapping
 
+from tara_app.audit import AuditLogError, JsonlAuditLog
 from tara_app.mcp_client import _APPROVAL_GRANT_SEAL, _McpApprovalGrant
 from tara_app.mcp_registry import describe_registry, mcp_package_available
 
@@ -20,11 +22,42 @@ class McpOrchestratorMixin:
     mcp_gateway: Any
     _mcp_approval_tokens: OrderedDict[str, tuple[float, str, str, str, str]]
     _mcp_token_lock: RLock
+    _mcp_audit: JsonlAuditLog
+    _mcp_audit_degraded: bool
 
-    def _init_mcp_state(self, mcp_gateway: Any = None) -> None:
+    def _init_mcp_state(
+        self, mcp_gateway: Any = None, *, audit_log: JsonlAuditLog | None = None,
+    ) -> None:
         self.mcp_gateway = mcp_gateway
         self._mcp_approval_tokens = OrderedDict()
         self._mcp_token_lock = RLock()
+        self._mcp_audit = audit_log if audit_log is not None else JsonlAuditLog(
+            Path.home() / ".tara" / "audit" / "mcp.jsonl",
+            max_bytes=1_048_576,
+            max_record_bytes=4096,
+        )
+        self._mcp_audit_degraded = False
+
+    @staticmethod
+    def _mcp_session_digest(session_id: str) -> str:
+        return hashlib.sha256(session_id.encode("utf-8")).hexdigest()
+
+    def _audit_mcp(
+        self, event: str, *, server: str = "", tool: str = "", session_id: str = "",
+        arguments_digest: str = "", reason: str = "", expires_at: float | None = None,
+    ) -> None:
+        try:
+            self._mcp_audit.record(event, {
+                "server": server,
+                "tool": tool,
+                "session_digest": self._mcp_session_digest(session_id) if session_id else "",
+                "arguments_digest": arguments_digest,
+                "expires_at": expires_at,
+                "reason": reason,
+            })
+        except AuditLogError:
+            self._mcp_audit_degraded = True
+            raise
 
     def mcp_status(self) -> dict[str, Any]:
         if self.mcp_gateway is None:
@@ -34,15 +67,17 @@ class McpOrchestratorMixin:
                 "package_available": mcp_package_available(),
                 "enabled_server_count": 0,
                 "servers": [],
+                "audit_status": "degraded" if self._mcp_audit_degraded else "available",
             }
         summary = describe_registry(self.mcp_gateway.config)
         summary["status"] = "enabled" if self.mcp_gateway.config.enable else "disabled"
         if self.mcp_gateway.config.enable and not mcp_package_available():
             summary["status"] = "package_missing"
+        summary["audit_status"] = "degraded" if self._mcp_audit_degraded else "available"
         return summary
 
     @staticmethod
-    def _mcp_arguments_digest(arguments: Mapping[str, Any] | None) -> str:
+    def _mcp_arguments_snapshot(arguments: Mapping[str, Any] | None) -> tuple[dict[str, Any], str]:
         normalized = {} if arguments is None else dict(arguments) if isinstance(arguments, Mapping) else None
         if normalized is None or any(not isinstance(key, str) for key in normalized):
             raise ValueError("arguments must be a JSON object with string keys")
@@ -51,7 +86,14 @@ class McpOrchestratorMixin:
                                  ensure_ascii=False, allow_nan=False)
         except (TypeError, ValueError) as exc:
             raise ValueError("arguments must contain only JSON values") from exc
-        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+        if len(payload.encode("utf-8")) > 65_536:
+            raise ValueError("arguments exceed the 64 KiB approval limit")
+        snapshot = json.loads(payload)
+        return snapshot, hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _mcp_arguments_digest(arguments: Mapping[str, Any] | None) -> str:
+        return McpOrchestratorMixin._mcp_arguments_snapshot(arguments)[1]
 
     def issue_mcp_approval_token(
         self, server_name: str, tool_name: str, arguments: Mapping[str, Any] | None,
@@ -80,6 +122,15 @@ class McpOrchestratorMixin:
             self._mcp_approval_tokens[token] = (expires, session_id, server, tool, digest)
             while len(self._mcp_approval_tokens) > 64:
                 self._mcp_approval_tokens.popitem(last=False)
+        try:
+            self._audit_mcp(
+                "approval_issued", server=server, tool=tool,
+                session_id=session_id, arguments_digest=digest, expires_at=expires,
+            )
+        except AuditLogError:
+            with self._mcp_token_lock:
+                self._mcp_approval_tokens.pop(token, None)
+            raise
         return token
 
     def list_mcp_tools(self, server_name: str | None = None) -> list[dict[str, Any]]:
@@ -109,8 +160,9 @@ class McpOrchestratorMixin:
         if not isinstance(server_name, str) or not isinstance(tool_name, str):
             raise ValueError("MCP tool target is invalid")
         server, tool = server_name.strip(), tool_name.strip()
-        digest = self._mcp_arguments_digest(arguments)
+        safe_arguments, digest = self._mcp_arguments_snapshot(arguments)
         token, now = approval_token.strip(), time.time()
+        rejection_reason = ""
         with self._mcp_token_lock:
             entry = self._mcp_approval_tokens.get(token)
             expired = [key for key, value in self._mcp_approval_tokens.items() if value[0] <= now]
@@ -118,9 +170,46 @@ class McpOrchestratorMixin:
                 self._mcp_approval_tokens.pop(key, None)
             if entry is None or entry[0] <= now:
                 self._mcp_approval_tokens.pop(token, None)
+                rejection_reason = "invalid_or_expired"
+            elif entry[1:] != (session_id, server, tool, digest):
+                rejection_reason = "call_binding_mismatch"
+            else:
+                self._mcp_approval_tokens.pop(token, None)
+
+        if rejection_reason:
+            self._audit_mcp(
+                "approval_rejected", server=server, tool=tool, session_id=session_id,
+                arguments_digest=digest, reason=rejection_reason,
+            )
+            if rejection_reason == "invalid_or_expired":
                 raise ValueError("approval_token is invalid or expired")
-            if entry[1:] != (session_id, server, tool, digest):
-                raise ValueError("approval_token does not match this session and tool call")
-            self._mcp_approval_tokens.pop(token, None)
+            raise ValueError("approval_token does not match this session and tool call")
+
+        # Persist the dispatch intent before crossing the external tool boundary.
+        # If this write fails, the one-shot approval stays consumed and no tool runs.
+        self._audit_mcp(
+            "tool_call_started", server=server, tool=tool,
+            session_id=session_id, arguments_digest=digest,
+        )
         grant = _McpApprovalGrant(_APPROVAL_GRANT_SEAL)
-        return self.mcp_gateway.call_tool(server, tool, arguments, approval_grant=grant)
+        try:
+            result = self.mcp_gateway.call_tool(server, tool, safe_arguments, approval_grant=grant)
+        except Exception:
+            try:
+                self._audit_mcp(
+                    "tool_call_failed", server=server, tool=tool,
+                    session_id=session_id, arguments_digest=digest, reason="gateway_error",
+                )
+            except AuditLogError:
+                self._mcp_audit_degraded = True
+            raise
+        try:
+            self._audit_mcp(
+                "tool_call_succeeded", server=server, tool=tool,
+                session_id=session_id, arguments_digest=digest,
+            )
+        except AuditLogError:
+            # The pre-dispatch record is durable. Do not invite a duplicate
+            # external action by turning a completed call into a retry signal.
+            self._mcp_audit_degraded = True
+        return result

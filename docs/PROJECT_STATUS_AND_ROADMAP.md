@@ -9,32 +9,53 @@
 >
 > **Feature status table:** See [REMAINING_FEATURES.md](REMAINING_FEATURES.md) for the numbered remaining-features list with accurate Implemented / Foundation / Pending verification / Pending / Blocked labels against current `main`.
 
-## 0. Current stabilization batch (2026-11-12)
+## 0. Current stabilization batches (2026-11-12)
 
-The active engineering batch is tracked on `codex/core-stabilization-bulk`.
-Its first implementation slice ports the free-first MCP integration catalogue
-onto the current `main` base, exposes it through a same-origin read-only API,
-and adds a local Integrations panel. Catalogue discovery does not install,
-launch, enable, or execute integrations and does not enable writable tools.
+### Batch 1 — MCP integration catalogue (merged)
 
-The catalogue request is bounded to 10 seconds in the browser. A timeout is
-reported as a recoverable UI error and can be retried with Refresh.
+PR [#103](https://github.com/deathkernel/TARA-App/pull/103) merged as
+`1d4f63d24ba3082789bafa6e8a58fa264dcafdf5`. It adds the free-first,
+read-only integration catalogue, a same-origin metadata endpoint, and the
+local Integrations panel. Discovery does not install, launch, enable, or
+execute integrations and does not enable writable tools.
 
-**Verification state:** implementation is in progress. Do not mark this slice
-verified until the branch's Python suite, frontend build, native Handler jobs,
-and targeted loopback HTTP tests complete on its exact commit. The previous
-open MCP catalogue/audit PRs remain separate until their changes are reviewed
-and reconciled; no PR has been merged as part of this batch.
+The browser catalogue request is bounded to 10 seconds and exposes a
+recoverable error with manual refresh.
 
-Next bulk items, in dependency order:
-1. Reconcile MCP audit implementations and retain one privacy-preserving,
-   bounded audit design with fail-closed behavior.
-2. Add timeout/cancellation and bounded-output tests to all external adapter
-   and gateway boundaries.
-3. Trace and consolidate runtime, orchestrator, application-service and
-   facade ownership without deleting live paths prematurely.
-4. Add specialist integration and UI smoke tests, then refresh architecture
-   and remaining-feature status using exact CI evidence.
+**Verification:** PR head `b22694b`, merged as `1d4f63d`, passed workflow
+run [#1878](https://github.com/deathkernel/TARA-App/actions/runs/43191279337):
+Python tests (431 passed), source compilation, frontend type-check/build,
+and Ubuntu + Windows native Handler build/risk-test jobs. Target-machine
+launch and browser visual smoke tests remain pending.
+
+### Batch 2 — MCP audit and approval security (active)
+
+The active branch is `codex/mcp-audit-security-bulk`. It consolidates MCP
+auditing onto the existing redacting `JsonlAuditLog`; adds bounded 1 MiB
+rotation for the MCP log; records approval issuance/rejection and tool
+dispatch lifecycle using digests instead of raw sessions, tokens or
+arguments; and requires a durable pre-dispatch audit event before a tool
+call.
+
+If approval issuance cannot be audited, its token is revoked. If the
+pre-dispatch audit write fails, the one-shot approval is consumed and the
+gateway is not called. If the post-dispatch outcome write fails after a
+successful tool call, TARA returns the completed result and marks MCP audit
+health degraded rather than inviting a duplicate retry.
+
+No HTTP approval or tool-execution endpoint is added. MCP remains opt-in,
+and writable tools remain blocked.
+
+### Next dependency-ordered work
+
+1. Complete audit and approval regression tests, review the diff, and require
+   all CI jobs to pass before merge.
+2. Add bounded cancellation/output tests at external adapter and gateway
+   boundaries.
+3. Trace runtime, orchestrator, application-service and facade ownership
+   before consolidating any live paths.
+4. Add specialist end-to-end and UI smoke tests, then update status using
+   exact CI and target-machine evidence.
 
 ## 1. Start here
 

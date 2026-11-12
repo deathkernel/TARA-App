@@ -26,7 +26,7 @@ This table replaces the informal “all pending” list. It does **not** claim t
 | 6 | P0 | Documentation | README and implementation reconciliation | Pending | |
 | 7 | P1 | Application | Connect application service to stable UI/API | Foundation / partial | |
 | 8 | P1 | Testing | Expand adapter and specialist contract tests | Foundation / partial | |
-| 9 | P1 | Security | Approval UX polish and audit trail completeness | Foundation / partial | |
+| 9 | P1 | Security | Approval UX polish and audit trail completeness | Foundation / partial | MCP lifecycle audit is durable; visible approval UX remains pending |
 | 10 | P1 | Memory | Session retention policy machine verification | Foundation / partial | |
 | 11 | P1 | Chat | Longer answers and style guidance verification | Foundation / partial | |
 | 12 | P1 | Code | Diff preview for proposed changes | Foundation / partial | |
@@ -38,7 +38,7 @@ This table replaces the informal “all pending” list. It does **not** claim t
 | 18 | P1 | GitHub | Issue creation allowlist + credentials flow | Foundation / partial | |
 | 19 | P0 | Security | No model-driven host shell | Blocked | |
 | 20 | P1 | Code Workflow | Sandboxed test execution | Blocked | |
-| 21 | P1 | Audit | Complete action audit logging | Foundation / partial | |
+| 21 | P1 | Audit | Complete action audit logging | Foundation / partial | MCP approval and tool-dispatch lifecycle audited; broader action coverage remains pending |
 | 22 | P2 | Frontend | React + TypeScript migration | In progress | |
 | 23 | P2 | UI | Accessibility and keyboard navigation | Pending | |
 | 24 | P2 | UI | Loading, error and empty states | Foundation / partial | |
@@ -60,9 +60,9 @@ This table replaces the informal “all pending” list. It does **not** claim t
 | 40 | P2 | Skills | Agent Skills pack loader (Study/Code/Planner templates) | Foundation / partial | Loader + sample packs; Chat/Code UI integration pending |
 | 41 | P2 | Ecosystem | Optional anthropic-sdk-python helpers via OmniRoute Claude path | Pending | |
 | 42 | P3 | Computer use | Computer-use / toolset only inside real OS sandbox | Blocked | |
-| 43 | P1 | MCP Manager | Read-only free-first integration catalogue and local UI | In progress | Branch: codex/core-stabilization-bulk; CI pending |
-| 44 | P1 | MCP Manager | Bounded catalogue fetch timeout and recoverable UI error | In progress | 10-second browser-side abort added; tests pending |
-| 45 | P1 | MCP Audit | Consolidate competing audit implementations | Pending | Review PR #95 and #96 before choosing durable or in-memory policy |
+| 43 | P1 | MCP Manager | Read-only free-first integration catalogue and local UI | Verified (CI) | PR #103 merged as 1d4f63d; run #1878 passed all four jobs |
+| 44 | P1 | MCP Manager | Bounded catalogue fetch timeout and recoverable UI error | Verified (CI) | PR #103 merged as 1d4f63d; 10-second browser abort and recoverable refresh path included |
+| 45 | P1 | MCP Audit | Consolidate competing audit implementations | In progress | Branch: codex/mcp-audit-security-bulk; reuse JsonlAuditLog; PRs #95/#96 remain unmerged |
 | 46 | P0 | Verification | Current-main baseline and target-machine smoke tests | Pending verification | Historical CI evidence is not current-commit evidence |
 
 ## Related

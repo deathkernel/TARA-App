@@ -33,10 +33,28 @@ class AuditLogError(RuntimeError):
 
 
 class JsonlAuditLog:
-    """Append one structured event per line; failures are surfaced to the caller."""
+    """Append structured JSONL events with optional bounded single-backup rotation."""
 
-    def __init__(self, path: Path) -> None:
+    def __init__(
+        self,
+        path: Path,
+        *,
+        max_bytes: int | None = None,
+        max_record_bytes: int | None = None,
+    ) -> None:
+        if max_bytes is not None and (
+            isinstance(max_bytes, bool) or not isinstance(max_bytes, int) or max_bytes < 4096
+        ):
+            raise ValueError("max_bytes must be at least 4096")
+        if max_record_bytes is not None and (
+            isinstance(max_record_bytes, bool)
+            or not isinstance(max_record_bytes, int)
+            or max_record_bytes < 256
+        ):
+            raise ValueError("max_record_bytes must be at least 256")
         self.path = Path(path)
+        self.max_bytes = max_bytes
+        self.max_record_bytes = max_record_bytes
 
     def record(self, event_type: str, fields: Mapping[str, Any] | None = None) -> dict[str, Any]:
         if not isinstance(event_type, str) or not event_type.strip():
@@ -48,13 +66,32 @@ class JsonlAuditLog:
             "fields": _redact(fields or {}),
         }
         try:
+            encoded = (json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
+            if (
+                self.max_record_bytes is not None and len(encoded) > self.max_record_bytes
+            ) or (self.max_bytes is not None and len(encoded) > self.max_bytes):
+                raise AuditLogError("audit record exceeds the configured size limit")
             self.path.parent.mkdir(parents=True, exist_ok=True)
-            encoded = json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n"
             with _LOCK:
-                with self.path.open("a", encoding="utf-8", newline="") as handle:
-                    handle.write(encoded)
-                    handle.flush()
-                    os.fsync(handle.fileno())
+                if self.max_bytes is not None and self.path.exists():
+                    if self.path.stat().st_size + len(encoded) > self.max_bytes:
+                        backup = self.path.with_suffix(self.path.suffix + ".1")
+                        backup.unlink(missing_ok=True)
+                        self.path.replace(backup)
+                flags = os.O_APPEND | os.O_CREAT | os.O_WRONLY
+                descriptor = os.open(self.path, flags, 0o600)
+                try:
+                    remaining = memoryview(encoded)
+                    while remaining:
+                        written = os.write(descriptor, remaining)
+                        if written <= 0:
+                            raise OSError("audit write did not make progress")
+                        remaining = remaining[written:]
+                    os.fsync(descriptor)
+                finally:
+                    os.close(descriptor)
+        except AuditLogError:
+            raise
         except (OSError, TypeError, ValueError):
             raise AuditLogError("audit event could not be persisted") from None
         return record
