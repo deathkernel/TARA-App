@@ -23,8 +23,9 @@ Reference: [Claude's April 14, 2026 desktop redesign](https://claude.com/blog/cl
   does not accept or execute commands.
 
 The layout collapses the inspector and session navigation on narrow screens.
-It uses keyboard-accessible controls, visible focus states, and reduced-motion
-support.
+It uses keyboard-accessible controls, visible focus states, reduced-motion
+support, `Ctrl/Cmd+N` for a new session, and `Ctrl/Cmd+K` to focus session
+search.
 
 ## Working capabilities
 
