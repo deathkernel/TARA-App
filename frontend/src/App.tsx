@@ -307,6 +307,10 @@ export default function App() {
         event.preventDefault();
         document.getElementById("session-search")?.focus();
       }
+      if (event.key === "Escape") {
+        setMobileSidebarOpen(false);
+        if (window.innerWidth <= 1120) setInspectorOpen(false);
+      }
     };
     window.addEventListener("keydown", handleGlobalKeyDown);
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
