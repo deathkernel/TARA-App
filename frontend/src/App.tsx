@@ -280,6 +280,21 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const handleGlobalKeyDown = (event: globalThis.KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "n") {
+        event.preventDefault();
+        startNewSession();
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        document.getElementById("session-search")?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, []);
+
+  useEffect(() => {
     if (!conversations.length) return;
     try {
       localStorage.setItem(
@@ -568,7 +583,7 @@ export default function App() {
           <div className="section-heading"><span>SESSIONS</span><span className="section-count">{visibleConversations.length.toString().padStart(2, "0")}</span></div>
           <label className="session-search">
             <span>⌕</span>
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Find a session" aria-label="Find a session" />
+            <input id="session-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Find a session" aria-label="Find a session" />
           </label>
         </div>
         <nav className="conversation-list" aria-label="Recent sessions">
