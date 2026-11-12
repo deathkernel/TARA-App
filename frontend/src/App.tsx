@@ -170,18 +170,26 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   return payload as T;
 }
 
+function mediaTypeForFile(file: File): string {
+  if (file.type) return file.type;
+  const extension = file.name.toLowerCase().split(".").pop() ?? "";
+  const known: Record<string, string> = {
+    csv: "text/csv", txt: "text/plain", md: "text/markdown", pdf: "application/pdf",
+    mp3: "audio/mpeg", wav: "audio/wav", m4a: "audio/mp4", mp4: "audio/mp4",
+    webm: "audio/webm", ogg: "audio/ogg", flac: "audio/flac", aac: "audio/aac",
+  };
+  return known[extension] ?? "application/octet-stream";
+}
+
 function fileToAttachment(file: File): Promise<Attachment> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error("Could not read " + file.name));
     reader.onload = () => {
       const encoded = String(reader.result).split(",", 2)[1] ?? "";
-      const fallbackType = file.name.toLowerCase().endsWith(".csv")
-        ? "text/csv"
-        : "application/octet-stream";
       resolve({
         name: file.name,
-        media_type: file.type || fallbackType,
+        media_type: mediaTypeForFile(file),
         content_base64: encoded,
       });
     };
@@ -439,6 +447,25 @@ export default function App() {
     }
   }
 
+  function readAloud(text: string) {
+    if (typeof window.speechSynthesis === "undefined") {
+      setNotice("Local read-aloud is not available in this browser.");
+      return;
+    }
+    const voices = window.speechSynthesis.getVoices().filter((voice) => voice.localService);
+    if (!voices.length) {
+      setNotice("No installed local speech voice is available on this device.");
+      return;
+    }
+    const utterance = new SpeechSynthesisUtterance(text.slice(0, 5000));
+    const language = navigator.language.toLowerCase();
+    utterance.voice = voices.find((voice) => voice.lang.toLowerCase().startsWith(language)) ?? voices[0];
+    utterance.lang = utterance.voice.lang;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+    logActivity("Local read-aloud started", "Using an installed browser voice; no audio was sent to OmniRoute.");
+  }
+
   function startEditing(index: number, message: Message) {
     if (message.role !== "user" || message.hasAttachments) return;
     setEditingIndex(index);
@@ -628,6 +655,7 @@ export default function App() {
                     <div className="message-actions">
                       {message.role === "user" && !message.hasAttachments && <button type="button" onClick={() => startEditing(index, message)} disabled={sending}>Edit</button>}
                       {message.role === "assistant" && index > 0 && <button type="button" onClick={() => regenerateAnswer(index)} disabled={sending}>Regenerate</button>}
+                      {message.role === "assistant" && <button type="button" onClick={() => readAloud(message.text)}>Read aloud</button>}
                       <button type="button" onClick={() => void navigator.clipboard?.writeText(message.text)} aria-label="Copy message">Copy</button>
                     </div>
                   </div>
