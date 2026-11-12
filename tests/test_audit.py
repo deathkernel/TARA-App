@@ -39,6 +39,13 @@ class AuditLogTests(unittest.TestCase):
             audit.record("second")
             self.assertEqual(len(path.read_text(encoding="utf-8").splitlines()), 2)
 
+    def test_default_log_preserves_existing_unbounded_record_behavior(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "audit.jsonl"
+            JsonlAuditLog(path).record("large", {"detail": "x" * 70_000})
+            record = json.loads(path.read_text(encoding="utf-8").splitlines()[0])
+            self.assertEqual(len(record["fields"]["detail"]), 70_000)
+
     def test_bounded_log_rotates_one_backup(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "audit.jsonl"
