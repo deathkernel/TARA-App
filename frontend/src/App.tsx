@@ -281,10 +281,14 @@ export default function App() {
 
   useEffect(() => {
     if (!conversations.length) return;
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify([...conversations].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 30)),
-    );
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify([...conversations].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 30)),
+      );
+    } catch {
+      setNotice("Local session storage is full. Export or clear older sessions before continuing.");
+    }
   }, [conversations]);
 
   useEffect(() => {
@@ -336,10 +340,13 @@ export default function App() {
     fileOverride?: File[],
     options: SendOptions = {},
   ) {
-    const question = (textOverride ?? draft).trim() || (fileOverride?.length || selectedFiles.length
-      ? "Please inspect and help me with the attached files."
-      : "");
     const files = fileOverride ?? selectedFiles;
+    const defaultQuestion = files.some((file) => mediaTypeForFile(file).startsWith("audio/"))
+      ? "Transcribe the attached audio and provide a clean transcript."
+      : files.some((file) => mediaTypeForFile(file).startsWith("image/"))
+        ? "Analyze the attached image and describe the important details."
+        : "Please inspect and help me with the attached files.";
+    const question = (textOverride ?? draft).trim() || (files.length ? defaultQuestion : "");
     if ((!question && files.length === 0) || sending || !active) return;
 
     const historyMessages = options.history ?? (
@@ -712,7 +719,7 @@ export default function App() {
           )}
           <div className="composer-main">
             <label className="attach-button" title="Attach files">
-              <input type="file" multiple hidden onChange={(event) => { handleFiles(event.target.files); event.target.value = ""; }} />
+              <input type="file" multiple hidden accept="image/*,audio/*,.txt,.md,.markdown,.rst,.pdf,.csv,.py,.pyi,.js,.mjs,.cjs,.ts,.tsx,.jsx,.java,.go,.rs,.c,.h,.cc,.hh,.hpp,.cpp,.cxx,.cs,.rb,.php,.sh,.bash,.zsh,.ps1,.sql,.swift,.kt,.kts,.dart,.scala,.lua,.pl,.r" onChange={(event) => { handleFiles(event.target.files); event.target.value = ""; }} />
               ＋
             </label>
             <textarea
@@ -798,13 +805,13 @@ export default function App() {
                 <div className="card-title"><strong>MCP integrations</strong><button type="button" className="text-button" onClick={() => void refreshIntegrations()}>Refresh</button></div>
                 <p>Free-first catalogue. Discovery never installs or enables a server.</p>
                 <div className="integration-summary">
-                  <div><strong>{catalogue?.summary?.implemented ?? 0}</strong><span>Available</span></div>
-                  <div><strong>{catalogue?.summary?.catalogue_only ?? 0}</strong><span>Catalogue</span></div>
+                  <div><strong>{catalogue?.summary?.implemented ?? 0}</strong><span>Built-in</span></div>
+                  <div><strong>{catalogue?.summary?.catalogue_only ?? 0}</strong><span>Catalogue only</span></div>
                   <div><strong>{mcpStatus?.enabled_server_count ?? 0}</strong><span>Enabled</span></div>
                 </div>
                 {(catalogue?.integrations ?? []).map((integration) => (
                   <div className="integration-row" key={integration.id}>
-                    <div className="integration-row-top"><strong>{integration.name}</strong><span className={integration.status === "implemented" ? "integration-state ready" : "integration-state"}>{integration.status === "implemented" ? "Available" : "Planned"}</span></div>
+                    <div className="integration-row-top"><strong>{integration.name}</strong><span className={integration.status === "implemented" ? "integration-state ready" : "integration-state"}>{integration.status === "implemented" ? "Built-in" : "Catalogue only"}</span></div>
                     <p>{integration.description}</p>
                     <small>{integration.access} · {integration.cost}</small>
                   </div>
