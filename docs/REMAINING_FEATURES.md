@@ -40,7 +40,7 @@ This table replaces the informal “all pending” list. It does **not** claim t
 | 20 | P1 | Code Workflow | Sandboxed test execution | Blocked | |
 | 21 | P1 | Audit | Complete action audit logging | Foundation / partial | MCP approval and tool-dispatch lifecycle audited; broader action coverage remains pending |
 | 22 | P2 | Frontend | React + TypeScript migration | In progress | Premium three-pane workspace is active; feature parity and browser QA remain in progress |
-| 23 | P2 | UI | Accessibility and keyboard navigation | Foundation / partial | Visible focus states, semantic controls and reduced-motion support added; full keyboard/screen-reader audit pending |
+| 23 | P2 | UI | Accessibility and keyboard navigation | Foundation / partial | Visible focus states, keyboard shortcuts, polite live region and reduced-motion support; full keyboard/screen-reader audit pending |
 | 24 | P2 | UI | Loading, error and empty states | Implemented (code) | Workspace health, request, approval, empty-session, activity and attachment error states added; browser QA pending |
 | 25 | P2 | Voice | Local transcription testing | Pending verification | |
 | 26 | P2 | Vision | Image analysis and remote gateway testing | Pending verification | |
@@ -64,7 +64,7 @@ This table replaces the informal “all pending” list. It does **not** claim t
 | 44 | P1 | MCP Manager | Bounded catalogue fetch timeout and recoverable UI error | Verified (CI) | PR #103 merged as 1d4f63d; 10-second browser abort and recoverable refresh path included |
 | 45 | P1 | MCP Audit | Consolidate competing audit implementations | Verified (CI) | PR #104 merged as 5dd92f1; run #1911 passed 441 tests, frontend build, Windows and Ubuntu native Handler jobs |
 | 46 | P0 | Verification | Current-main baseline and target-machine smoke tests | Pending verification | PR #104 CI passed all four jobs; target-machine launch and browser QA remain open |
-| 47 | P1 | UI | Claude Code-inspired premium developer workspace | In progress | Branch: codex/premium-workspace-ui-bulk; React shell, session navigation, inspector, activity, approvals, attachments, skills and local read-aloud; browser QA pending |
+| 47 | P1 | UI | Claude Code-inspired premium developer workspace | In progress | Branch: codex/premium-workspace-ui-bulk; three-pane React shell, session search/export/delete, drag-drop attachments, inspector, activity, approvals, skills, local read-aloud, animated controls and reduced-motion support; CI/browser QA pending |
 
 ## Related
 
