@@ -77,7 +77,7 @@ class McpOrchestratorMixin:
         return summary
 
     @staticmethod
-    def _mcp_arguments_digest(arguments: Mapping[str, Any] | None) -> str:
+    def _mcp_arguments_snapshot(arguments: Mapping[str, Any] | None) -> tuple[dict[str, Any], str]:
         normalized = {} if arguments is None else dict(arguments) if isinstance(arguments, Mapping) else None
         if normalized is None or any(not isinstance(key, str) for key in normalized):
             raise ValueError("arguments must be a JSON object with string keys")
@@ -88,7 +88,12 @@ class McpOrchestratorMixin:
             raise ValueError("arguments must contain only JSON values") from exc
         if len(payload.encode("utf-8")) > 65_536:
             raise ValueError("arguments exceed the 64 KiB approval limit")
-        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+        snapshot = json.loads(payload)
+        return snapshot, hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _mcp_arguments_digest(arguments: Mapping[str, Any] | None) -> str:
+        return McpOrchestratorMixin._mcp_arguments_snapshot(arguments)[1]
 
     def issue_mcp_approval_token(
         self, server_name: str, tool_name: str, arguments: Mapping[str, Any] | None,
@@ -155,7 +160,7 @@ class McpOrchestratorMixin:
         if not isinstance(server_name, str) or not isinstance(tool_name, str):
             raise ValueError("MCP tool target is invalid")
         server, tool = server_name.strip(), tool_name.strip()
-        digest = self._mcp_arguments_digest(arguments)
+        safe_arguments, digest = self._mcp_arguments_snapshot(arguments)
         token, now = approval_token.strip(), time.time()
         rejection_reason = ""
         with self._mcp_token_lock:
@@ -188,7 +193,7 @@ class McpOrchestratorMixin:
         )
         grant = _McpApprovalGrant(_APPROVAL_GRANT_SEAL)
         try:
-            result = self.mcp_gateway.call_tool(server, tool, arguments, approval_grant=grant)
+            result = self.mcp_gateway.call_tool(server, tool, safe_arguments, approval_grant=grant)
         except Exception:
             try:
                 self._audit_mcp(
