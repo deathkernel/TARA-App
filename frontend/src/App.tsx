@@ -830,8 +830,8 @@ export default function App() {
                 {!health?.specialists && <p className="empty-state">Checking specialist health…</p>}
               </section>
               <section className="inspector-card">
-                <div className="card-title"><strong>Security posture</strong><span className="health-pill healthy">Protected</span></div>
-                <ul className="security-list"><li>Review-first code workflow</li><li>One-time scoped approvals</li><li>Durable MCP audit trail</li><li>No host-shell execution</li></ul>
+                <div className="card-title"><strong>Security posture</strong><span className="health-pill healthy">Guarded</span></div>
+                <ul className="security-list"><li>Review-first code workflow</li><li>One-time scoped approvals</li><li>MCP audit: {statusLabel(mcpStatus?.audit_status ?? "checking")}</li><li>No host-shell execution</li></ul>
               </section>
               <section className="inspector-card terminal-locked">
                 <div className="card-title"><strong>Terminal</strong><span className="health-pill locked">Locked</span></div>
