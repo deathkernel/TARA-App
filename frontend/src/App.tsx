@@ -104,12 +104,14 @@ const STORAGE_KEY = "tara-react-conversations";
 const SESSION_KEY = "tara-react-session";
 const MAX_FILES = 4;
 const MAX_ATTACHMENT_BYTES = 10_000_000;
-const SPECIALIST_FILE_SUFFIXES = new Set([
+const SOURCE_FILE_SUFFIXES = new Set([
   "py", "pyi", "js", "mjs", "cjs", "ts", "tsx", "jsx", "java", "go", "rs",
   "c", "h", "cc", "hh", "hpp", "cpp", "cxx", "cs", "rb", "php", "sh",
-  "bash", "zsh", "ps1", "sql", "swift", "kt", "kts", "dart", "scala", "lua", "pl", "r", "csv",
-  "png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "mp3", "wav", "m4a",
-  "mp4", "webm", "ogg", "flac", "aac",
+  "bash", "zsh", "ps1", "sql", "swift", "kt", "kts", "dart", "scala", "lua", "pl", "r",
+]);
+const SPECIALIST_FILE_SUFFIXES = new Set([
+  ...SOURCE_FILE_SUFFIXES, "csv", "png", "jpg", "jpeg", "gif", "webp", "bmp",
+  "svg", "mp3", "wav", "m4a", "mp4", "webm", "ogg", "flac", "aac",
 ]);
 const FREE_MODELS_PROMPT = "List all available models";
 
@@ -390,7 +392,11 @@ export default function App() {
       ? "Transcribe the attached audio and provide a clean transcript."
       : files.some((file) => mediaTypeForFile(file).startsWith("image/"))
         ? "Analyze the attached image and describe the important details."
-        : "Please inspect and help me with the attached files.";
+        : files.some((file) => SOURCE_FILE_SUFFIXES.has(file.name.toLowerCase().split(".").pop() ?? ""))
+          ? "Review the attached source code, identify issues, and propose safe fixes. Do not execute code."
+          : files.some((file) => file.name.toLowerCase().endsWith(".csv"))
+            ? "Analyze the attached CSV data and summarize its structure, quality and key findings."
+            : "Read the attached documents and create concise, source-grounded notes.";
     const question = (textOverride ?? draft).trim() || (files.length ? defaultQuestion : "");
     if ((!question && files.length === 0) || sending || !active) return;
 
