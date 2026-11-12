@@ -37,7 +37,9 @@ The React workspace currently connects to these existing same-origin APIs:
 It supports local session history, up to four attachments with a combined
 10 MB limit, selected skill metadata, Markdown responses, one-time approval
 actions, message editing/regeneration for text-only prompts, and local browser
-read-aloud voices. Audio attachments default to a transcription request.
+read-aloud voices. Image, audio, source-code and CSV inputs retain their
+specialist-specific 512 KB limits; Study documents can use the larger
+attachment allowance. Audio attachments default to a transcription request.
 Conversation history and message text are stored in browser local storage;
 attachment bytes are not persisted there.
 
