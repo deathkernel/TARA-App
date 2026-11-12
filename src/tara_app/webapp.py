@@ -20,7 +20,7 @@ _ASSETS = {
     "/app.css": ("app.css", "text/css; charset=utf-8"),
     "/app.js": ("app.js", "text/javascript; charset=utf-8"),
 }
-_MAX_REQUEST_BYTES = 1_000_000
+_MAX_REQUEST_BYTES = 14_000_000
 
 
 def _react_ui_enabled() -> bool:
@@ -153,7 +153,7 @@ class _Handler(BaseHTTPRequestHandler):
             self._json(411, {"status": "invalid_request", "error": "request length is invalid"})
             return
         if not 1 <= length <= _MAX_REQUEST_BYTES:
-            self._json(413, {"status": "invalid_request", "error": "request exceeds the 1 MB limit"})
+            self._json(413, {"status": "invalid_request", "error": "request exceeds the 14 MB limit"})
             return
         try:
             payload = json.loads(self.rfile.read(length).decode("utf-8"))
