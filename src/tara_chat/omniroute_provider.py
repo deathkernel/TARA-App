@@ -12,6 +12,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import ProxyHandler, Request, build_opener
 from typing import Any
+from threading import local
 
 from tara_app.http import NoRedirectHandler
 from tara_app.omniroute_health import diagnose_gateway
@@ -89,7 +90,13 @@ class OmniRouteProvider:
         self.model = model.strip()
         self.timeout = float(timeout)
         self._transport = transport or _request_json
-        self.last_usage: dict[str, int] | None = None
+        self._usage_state = local()
+
+    @property
+    def last_usage(self) -> dict[str, int] | None:
+        """Usage metadata for the current request thread, if the gateway reported it."""
+        value = getattr(self._usage_state, "value", None)
+        return dict(value) if isinstance(value, dict) else None
 
     @classmethod
     def from_env(cls) -> "OmniRouteProvider":
@@ -139,7 +146,7 @@ class OmniRouteProvider:
             "max_tokens": max_completion_tokens,
             "temperature": float(temperature),
         }
-        self.last_usage = None
+        self._usage_state.value = None
         result = self._transport(
             f"{self.base_url}/chat/completions", payload, self.api_key, self.timeout
         )
@@ -154,7 +161,7 @@ class OmniRouteProvider:
                 value = usage.get(source)
                 if type(value) is int and value >= 0:
                     normalized[target] = value
-            self.last_usage = normalized or None
+            self._usage_state.value = normalized or None
 
         choices = result.get("choices")
         if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):

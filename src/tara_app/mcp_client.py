@@ -134,9 +134,20 @@ def _tool_result_text(result: Any) -> str:
     if bool(getattr(result, "isError", False) or getattr(result, "is_error", False)):
         raise McpClientError("MCP server reported tool execution failure")
     parts: list[str] = []
+    remaining = _MAX_RESULT_CHARS
     for block in getattr(result, "content", []) or []:
         text = getattr(block, "text", None)
-        parts.append(text if isinstance(text, str) else str(block))
+        chunk = text if isinstance(text, str) else str(block)
+        if not chunk:
+            continue
+        if len(chunk) > remaining:
+            parts.append(chunk[:remaining] + "\\n…[truncated]")
+            break
+        parts.append(chunk)
+        remaining -= len(chunk)
+        if remaining <= 0:
+            parts.append("…[truncated]")
+            break
     return "\n".join(parts) if parts else ""
 
 
