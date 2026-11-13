@@ -131,7 +131,7 @@ class McpClientTests(unittest.TestCase):
         result = gateway.call_tool(
             "time", "ping", {}, approval_grant=_McpApprovalGrant(_APPROVAL_GRANT_SEAL)
         )
-        self.assertEqual(len(result), _MAX_RESULT_CHARS + len("\\n…[truncated]"))
+        self.assertEqual(len(result), _MAX_RESULT_CHARS + 13)
         self.assertTrue(result.endswith("[truncated]"))
 
     def test_tool_error_is_not_returned_as_success_text(self) -> None:
