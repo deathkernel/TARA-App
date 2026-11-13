@@ -11,10 +11,10 @@ import os
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import ProxyHandler, Request, build_opener
+from typing import Any
+from threading import local
 
 from tara_app.http import NoRedirectHandler
-from typing import Any
-
 from tara_app.omniroute_health import diagnose_gateway
 
 MAX_RESPONSE_BYTES = 8 * 1024 * 1024
@@ -39,9 +39,8 @@ def _request_json(url: str, payload: dict[str, Any], api_key: str, timeout: floa
             raise RuntimeError("OmniRoute response exceeded the 8 MiB safety limit")
         result = json.loads(raw.decode("utf-8"))
     except HTTPError as exc:
-        # Never include provider response bodies: they may contain request details.
         raise RuntimeError(f"OmniRoute returned HTTP {exc.code}") from None
-    except (URLError, TimeoutError, OSError) as exc:
+    except (URLError, TimeoutError, OSError):
         raise RuntimeError("Could not reach the configured OmniRoute endpoint") from None
     except (UnicodeDecodeError, json.JSONDecodeError):
         raise RuntimeError("OmniRoute returned malformed JSON") from None
@@ -91,6 +90,13 @@ class OmniRouteProvider:
         self.model = model.strip()
         self.timeout = float(timeout)
         self._transport = transport or _request_json
+        self._usage_state = local()
+
+    @property
+    def last_usage(self) -> dict[str, int] | None:
+        """Usage metadata for the current request thread, if the gateway reported it."""
+        value = getattr(self._usage_state, "value", None)
+        return dict(value) if isinstance(value, dict) else None
 
     @classmethod
     def from_env(cls) -> "OmniRouteProvider":
@@ -107,11 +113,9 @@ class OmniRouteProvider:
         )
 
     def health_diagnostic(self) -> str | None:
-        """Return a safe explanation when the authenticated model catalogue is unavailable."""
         return diagnose_gateway(self.base_url, self.api_key, timeout=min(self.timeout, 5.0))
 
     def health(self) -> bool:
-        """Check that the authenticated OmniRoute model catalogue is reachable."""
         return self.health_diagnostic() is None
 
     def complete(
@@ -142,9 +146,23 @@ class OmniRouteProvider:
             "max_tokens": max_completion_tokens,
             "temperature": float(temperature),
         }
+        self._usage_state.value = None
         result = self._transport(
             f"{self.base_url}/chat/completions", payload, self.api_key, self.timeout
         )
+        usage = result.get("usage")
+        if isinstance(usage, dict):
+            normalized = {}
+            for source, target in (
+                ("prompt_tokens", "prompt_tokens"),
+                ("completion_tokens", "completion_tokens"),
+                ("total_tokens", "total_tokens"),
+            ):
+                value = usage.get(source)
+                if type(value) is int and value >= 0:
+                    normalized[target] = value
+            self._usage_state.value = normalized or None
+
         choices = result.get("choices")
         if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
             raise RuntimeError("OmniRoute response did not contain a chat completion")
