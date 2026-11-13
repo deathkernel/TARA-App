@@ -141,7 +141,7 @@ def _tool_result_text(result: Any) -> str:
         if not chunk:
             continue
         if len(chunk) > remaining:
-            parts.append(chunk[:remaining] + "\\n…[truncated]")
+            parts.append(chunk[:remaining] + "\n…[truncated]")
             break
         parts.append(chunk)
         remaining -= len(chunk)
