@@ -74,8 +74,19 @@ class TARABrain:
     ):
         if max_history_turns < 1:
             raise ValueError("max_history_turns must be positive")
-        if max_input_tokens < 1 or memory_token_budget < 0 or recent_history_turns < 0:
-            raise ValueError("context budgets must be non-negative and input budget positive")
+        if (
+            isinstance(max_input_tokens, bool)
+            or not isinstance(max_input_tokens, int)
+            or max_input_tokens < 1
+            or isinstance(memory_token_budget, bool)
+            or not isinstance(memory_token_budget, int)
+            or memory_token_budget < 0
+            or isinstance(recent_history_turns, bool)
+            or not isinstance(recent_history_turns, int)
+            or recent_history_turns < 0
+            or not callable(token_estimator)
+        ):
+            raise ValueError("context budgets and token estimator are invalid")
         self.model = model
         self.tokenizer = tokenizer
         self.memory = LongTermMemory() if memory is None else memory

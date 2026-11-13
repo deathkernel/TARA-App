@@ -95,6 +95,45 @@ class McpClientTests(unittest.TestCase):
         self.assertEqual([tool.name for tool in tools], ["first", "second"])
         self.assertEqual(calls, [None, "next"])
 
+    def test_tool_page_bounds_descriptions_and_rejects_oversized_schemas(self) -> None:
+        description = "d" * 3000
+        result = SimpleNamespace(
+            tools=[SimpleNamespace(name="ping", description=description, inputSchema={"type": "object"})],
+            nextCursor=None,
+        )
+        tools, _ = _extract_tool_page(result, "time")
+        self.assertEqual(len(tools[0].description), 2000)
+
+        oversized = SimpleNamespace(
+            tools=[SimpleNamespace(
+                name="ping", description="", inputSchema={"value": "x" * 40_000}
+            )],
+            nextCursor=None,
+        )
+        with self.assertRaisesRegex(McpClientError, "32 KiB"):
+            _extract_tool_page(oversized, "time")
+
+    def test_tool_result_is_bounded(self) -> None:
+        from tara_app.mcp_client import _MAX_RESULT_CHARS
+        config = _enabled_config()
+        gateway = McpToolGateway(
+            config,
+            session_factory=lambda spec: type(
+                "LargeResultSession",
+                (),
+                {
+                    "call_tool": lambda self, name, arguments: "x" * (_MAX_RESULT_CHARS + 10),
+                    "list_tools": lambda self: [],
+                    "close": lambda self: None,
+                },
+            )(),
+        )
+        result = gateway.call_tool(
+            "time", "ping", {}, approval_grant=_McpApprovalGrant(_APPROVAL_GRANT_SEAL)
+        )
+        self.assertEqual(len(result), _MAX_RESULT_CHARS + len("\\n…[truncated]"))
+        self.assertTrue(result.endswith("[truncated]"))
+
     def test_tool_error_is_not_returned_as_success_text(self) -> None:
         result = SimpleNamespace(isError=True, content=[SimpleNamespace(text="denied")])
         with self.assertRaises(McpClientError):
