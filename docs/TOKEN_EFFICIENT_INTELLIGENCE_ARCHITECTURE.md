@@ -80,13 +80,24 @@ Prefer one specialist over default fan-out. Fetch only schemas needed for the se
 
 Use task-aware output budgets. Remove repeated preambles, duplicated conclusions, and irrelevant details, but retain all necessary explanation, code, citations, and safety instructions. A second model call to critique/rewrite is disabled by default; consider only when measured quality gain justifies the added cost.
 
-## 4. Local usage ledger
+## 4. Initial implementation status
+
+The first implementation slice now exists in the runtime:
+
+- `tara_chat.token_budget` provides deterministic UTF-8 token estimation and priority-based context packing. The estimate is explicitly approximate and is not reported as provider usage.
+- `TARABrain` preserves the current user request and system prompt, budgets relevant saved memories, and includes a bounded recent-turn window only when it fits. It reports omitted context and estimated input tokens in `BrainResponse`.
+- `OmniRouteProvider` captures provider-reported prompt/completion/total usage when present; missing usage remains unknown.
+- `McpToolGateway` caches read-only tool metadata briefly per server configuration, exposes explicit invalidation, and bounds descriptions, schemas, and tool result text. Tool calls and approvals are never cached.
+
+Not yet implemented: model-specific tokenizer integration, persistent incremental conversation summaries, model-tier routing, response caching, and a persistent usage dashboard/ledger. These remain separate phases and must not be described as shipped.
+
+## 5. Local usage ledger
 
 Record request ID, time, capability/task class, route/model when available, estimated input/output tokens, provider-reported usage when available, cache/compaction outcomes, latency, status, and retry count. Calculate cost only from verified configured rates. If the gateway omits usage, actual usage is unknown; never present an estimate as actual.
 
 Do not store raw prompts or secrets in the ledger. Track cost per useful task, median input/output tokens, cache hit rate, context trimming, latency, task success, and quality regressions. Token savings alone are not success.
 
-## 5. Configuration
+## 6. Configuration
 
 Introduce typed validated settings such as:
 
@@ -105,11 +116,11 @@ Introduce typed validated settings such as:
 
 Choose defaults from verified route capabilities and tests, not guesses. Invalid configuration must not enable remote transfer or new capabilities.
 
-## 6. Privacy and security
+## 7. Privacy and security
 
 Conversation history, summaries, memory, cache, and usage ledger remain under TARA's local data controls. Send only minimum required context through OmniRoute and preserve existing remote-transfer opt-in. Resolve session/workspace scope before retrieval or cache lookup. Model, cache, memory, file, and tool outputs remain untrusted. Cache never approves or executes actions. Apply redaction before persistence and remote inference where supported. Deletion/retention must include summaries, caches, embeddings, and usage records.
 
-## 7. Implementation phases
+## 8. Implementation phases
 
 1. **Baseline:** measure current payload size, provider usage when available, latency, and answer quality. No behavior changes.
 2. **Context foundation:** typed context sections, token estimator interface, budget planner, bounded relevant history, tests.
@@ -118,7 +129,7 @@ Conversation history, summaries, memory, cache, and usage ledger remain under TA
 5. **Cache and ledger:** deterministic cache first, then narrow allowlisted inference cache; separate estimated and actual usage.
 6. **Evaluation/rollout:** offline regression tests and opt-in shadow comparisons; measure quality, factuality, completion, latency, and provider-reported tokens; feature flags and independent kill switches.
 
-## 8. Acceptance criteria
+## 9. Acceptance criteria
 
 - Deterministic tasks avoid model calls.
 - Current request and mandatory policy instructions are never dropped.
@@ -133,6 +144,6 @@ Conversation history, summaries, memory, cache, and usage ledger remain under TA
 - Token reduction is measured against a baseline with an agreed quality tolerance.
 - Every optimization can be independently disabled.
 
-## 9. Non-goals
+## 10. Non-goals
 
 No zero-token AI, free inference guarantee, unlimited context, perfect semantic cache, or guaranteed provider prompt-cache discount. No direct provider integrations, hidden remote transfer, autonomous permissions, or always-on LLM critic.

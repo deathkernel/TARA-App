@@ -2,13 +2,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Callable
 
 from .memory import LongTermMemory
+from .token_budget import ContextBudgetError, ContextSection, estimate_tokens, pack_context
 
 
-# Answer-style guidance draws on standard instruction-tuning practice:
-# lead with the answer, compress reasoning, prefer clarity over length,
-# and separate verified claims from uncertainty (no invented sources).
 DEFAULT_SYSTEM_PROMPT = (
     "You are TARA, a precise conversational assistant. "
     "Goal: answers that are simple, polished, and correct—not long or showy.\n\n"
@@ -40,18 +39,23 @@ DEFAULT_SYSTEM_PROMPT = (
     "Use the user’s language when practical. Stay helpful, calm, and specific."
 )
 
-# Default completion budget: 128 was too low and produced truncated replies.
 DEFAULT_MAX_NEW_TOKENS = 1536
+DEFAULT_MAX_INPUT_TOKENS = 12_000
+DEFAULT_MEMORY_TOKEN_BUDGET = 1_200
+DEFAULT_RECENT_HISTORY_TURNS = 6
 
 
 @dataclass(frozen=True)
 class BrainResponse:
     text: str
     recalled: tuple = ()
+    estimated_input_tokens: int = 0
+    omitted_context: tuple[str, ...] = ()
+    provider_usage: dict | None = None
 
 
 class TARABrain:
-    """Keep the chat boundary small: provider, session context, and explicit memory."""
+    """Bounded conversation context, selective memory, and one inference call."""
 
     def __init__(
         self,
@@ -62,22 +66,71 @@ class TARABrain:
         llm_provider=None,
         system_prompt: str = DEFAULT_SYSTEM_PROMPT,
         max_history_turns: int = 12,
+        max_input_tokens: int = DEFAULT_MAX_INPUT_TOKENS,
+        memory_token_budget: int = DEFAULT_MEMORY_TOKEN_BUDGET,
+        recent_history_turns: int = DEFAULT_RECENT_HISTORY_TURNS,
+        token_estimator: Callable[[str], int] = estimate_tokens,
         **_unused,
     ):
         if max_history_turns < 1:
             raise ValueError("max_history_turns must be positive")
+        if max_input_tokens < 1 or memory_token_budget < 0 or recent_history_turns < 0:
+            raise ValueError("context budgets must be non-negative and input budget positive")
         self.model = model
         self.tokenizer = tokenizer
         self.memory = LongTermMemory() if memory is None else memory
         self.llm_provider = llm_provider
         self.system_prompt = system_prompt
         self.max_history_turns = max_history_turns
+        self.max_input_tokens = max_input_tokens
+        self.memory_token_budget = memory_token_budget
+        self.recent_history_turns = min(recent_history_turns, max_history_turns)
+        self.token_estimator = token_estimator
         self.conversation_history: list[tuple[str, str]] = []
         self.last_emotion = "neutral"
 
     def clear_context(self) -> None:
         """Clear only the active session context; saved memories are preserved."""
         self.conversation_history.clear()
+
+    def _build_context(self, prompt: str, recalled: tuple, max_new_tokens: int):
+        sections = [
+            ContextSection("User request", prompt.strip(), priority=10_000, required=True)
+        ]
+        memory_parts: list[str] = []
+        memory_used = 0
+        for item in recalled:
+            if not isinstance(item, dict) or "key" not in item or "value" not in item:
+                continue
+            line = f"- {item['key']}: {item['value']}"
+            cost = self.token_estimator(line)
+            if memory_used + cost > self.memory_token_budget:
+                continue
+            memory_parts.append(line)
+            memory_used += cost
+        if memory_parts:
+            sections.append(ContextSection(
+                "Relevant saved memories (user-managed; use only when relevant)",
+                "\n".join(memory_parts), priority=300,
+            ))
+
+        history = self.conversation_history[-self.recent_history_turns * 2:] if self.recent_history_turns else []
+        if history:
+            history_lines = [f"{role}: {content}" for role, content in history]
+            sections.append(ContextSection(
+                "Recent conversation", "\n".join(history_lines), priority=200,
+            ))
+
+        # System instructions are a separate provider message, but count against
+        # the same context budget so the planner cannot silently overfill it.
+        system_tokens = self.token_estimator(self.system_prompt)
+        plan = pack_context(
+            sections,
+            max_tokens=self.max_input_tokens,
+            reserve_tokens=max_new_tokens + system_tokens,
+            estimator=self.token_estimator,
+        )
+        return plan
 
     def respond(
         self,
@@ -99,30 +152,17 @@ class TARABrain:
         if isinstance(max_new_tokens, bool) or not isinstance(max_new_tokens, int) or max_new_tokens <= 0:
             raise ValueError("max_new_tokens must be a positive integer")
 
-        recalled = tuple(self.memory.retrieve(prompt, limit=5))
-        sections = []
-        if recalled:
-            memory_lines = [
-                f"- {item['key']}: {item['value']}"
-                for item in recalled
-                if isinstance(item, dict) and "key" in item and "value" in item
-            ]
-            if memory_lines:
-                sections.append(
-                    "Relevant saved memories (user-managed; use only when relevant):\n"
-                    + "\n".join(memory_lines)
-                )
+        recalled = tuple(self.memory.retrieve(prompt, limit=8))
+        try:
+            plan = self._build_context(prompt, recalled, max_new_tokens)
+        except ContextBudgetError as exc:
+            raise ValueError(
+                "The current request and system instructions exceed TARA's configured context budget; "
+                "increase the budget or shorten the request."
+            ) from exc
 
-        if self.conversation_history:
-            history_lines = []
-            for role, content in self.conversation_history[-self.max_history_turns * 2:]:
-                history_lines.append(f"{role}: {content}")
-            sections.append("Recent conversation:\n" + "\n".join(history_lines))
-
-        sections.append("User: " + prompt.strip())
-        context = "\n\n".join(sections)
         text = self.llm_provider.complete(
-            context,
+            plan.text,
             system=self.system_prompt,
             max_completion_tokens=max_new_tokens,
             temperature=temperature,
@@ -135,4 +175,12 @@ class TARABrain:
         if remember_key is not None:
             self.memory.remember(remember_key, prompt.strip(), importance=importance)
             self.memory.save()
-        return BrainResponse(text=text.strip(), recalled=recalled)
+
+        provider_usage = getattr(self.llm_provider, "last_usage", None)
+        return BrainResponse(
+            text=text.strip(),
+            recalled=recalled,
+            estimated_input_tokens=plan.estimated_tokens + self.token_estimator(self.system_prompt),
+            omitted_context=plan.omitted_sections,
+            provider_usage=dict(provider_usage) if isinstance(provider_usage, dict) else None,
+        )

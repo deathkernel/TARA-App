@@ -14,7 +14,10 @@ servers that are not already listed in config.
 from __future__ import annotations
 
 import asyncio
-from threading import Lock
+import copy
+import json
+import time
+from threading import Lock, RLock
 from dataclasses import dataclass
 from typing import Any, Callable, Mapping, Protocol
 
@@ -27,9 +30,12 @@ from tara_app.mcp_registry import (
 )
 
 _MAX_TOOL_NAME = 128
-_MAX_RESULT_CHARS = 200_000
+_MAX_RESULT_CHARS = 50_000
+_MAX_TOOL_DESCRIPTION_CHARS = 2_000
+_MAX_TOOL_SCHEMA_BYTES = 32_768
 _MAX_TOOLS_RETURNED = 128
 _MAX_TOOL_PAGES = 16
+_DEFAULT_TOOL_CACHE_TTL_SECONDS = 20.0
 
 
 class McpClientError(RuntimeError):
@@ -92,11 +98,29 @@ def _extract_tool_page(result: Any, server_name: str) -> tuple[list[McpToolInfo]
         raise McpClientError("MCP server returned an error while listing tools")
     tools: list[McpToolInfo] = []
     for tool in getattr(result, "tools", []) or []:
+        name = getattr(tool, "name", None)
+        description = getattr(tool, "description", "") or ""
         schema = getattr(tool, "inputSchema", None) or getattr(tool, "input_schema", None) or {}
+        if not isinstance(name, str) or not name.strip() or len(name) > _MAX_TOOL_NAME:
+            raise McpClientError("MCP server returned an invalid tool name")
+        if not isinstance(description, str):
+            description = str(description)
         if not isinstance(schema, dict):
-            schema = {}
-        tools.append(McpToolInfo(server=server_name, name=str(getattr(tool, "name", "") or ""),
-            description=str(getattr(tool, "description", "") or ""), input_schema=schema))
+            raise McpClientError("MCP server returned an invalid tool input schema")
+        try:
+            schema_size = len(json.dumps(
+                schema, separators=(",", ":"), ensure_ascii=False, allow_nan=False
+            ).encode("utf-8"))
+        except (TypeError, ValueError):
+            raise McpClientError("MCP server returned a non-JSON tool input schema") from None
+        if schema_size > _MAX_TOOL_SCHEMA_BYTES:
+            raise McpClientError("MCP tool input schema exceeds the 32 KiB limit")
+        tools.append(McpToolInfo(
+            server=server_name,
+            name=name.strip(),
+            description=description[:_MAX_TOOL_DESCRIPTION_CHARS],
+            input_schema=copy.deepcopy(schema),
+        ))
     cursor = getattr(result, "nextCursor", None)
     if cursor is None:
         cursor = getattr(result, "next_cursor", None)
@@ -149,10 +173,16 @@ class McpToolGateway:
         config: McpRegistryConfig,
         *,
         session_factory: SessionFactory | None = None,
+        tool_cache_ttl_seconds: float = _DEFAULT_TOOL_CACHE_TTL_SECONDS,
     ) -> None:
+        if isinstance(tool_cache_ttl_seconds, bool) or not isinstance(tool_cache_ttl_seconds, (int, float)) or not 0 <= float(tool_cache_ttl_seconds) <= 300:
+            raise ValueError("tool_cache_ttl_seconds must be between 0 and 300")
         self._config = config
         self._using_default_factory = session_factory is None
         self._session_factory = session_factory or default_stdio_session_factory()
+        self._tool_cache_ttl_seconds = float(tool_cache_ttl_seconds)
+        self._tool_cache: dict[str, tuple[float, str, tuple[McpToolInfo, ...]]] = {}
+        self._tool_cache_lock = RLock()
 
     @property
     def config(self) -> McpRegistryConfig:
@@ -167,20 +197,61 @@ class McpToolGateway:
         targets = self._select_servers(server_name)
         tools: list[McpToolInfo] = []
         for spec in targets:
-            session = self._session_factory(spec)
-            try:
-                listed = session.list_tools()
-            finally:
-                session.close()
-            for tool in listed:
-                if not isinstance(tool, McpToolInfo):
-                    raise McpClientError("session returned invalid tool info")
-                if tool.server != spec.name:
-                    raise McpClientError("tool server name mismatch")
-                tools.append(tool)
-                if len(tools) >= _MAX_TOOLS_RETURNED:
-                    return tools
-        return tools
+            fingerprint = repr(spec)
+            now = time.monotonic()
+            with self._tool_cache_lock:
+                cached = self._tool_cache.get(spec.name)
+                if (
+                    self._tool_cache_ttl_seconds > 0
+                    and cached is not None
+                    and cached[0] > now
+                    and cached[1] == fingerprint
+                ):
+                    listed = copy.deepcopy(cached[2])
+                else:
+                    listed = None
+            if listed is None:
+                session = self._session_factory(spec)
+                try:
+                    listed = session.list_tools()
+                finally:
+                    session.close()
+                if not isinstance(listed, list):
+                    raise McpClientError("session returned invalid tool metadata")
+                for tool in listed:
+                    if not isinstance(tool, McpToolInfo):
+                        raise McpClientError("session returned invalid tool info")
+                    if tool.server != spec.name:
+                        raise McpClientError("tool server name mismatch")
+                    if (
+                        not isinstance(tool.name, str)
+                        or not tool.name.strip()
+                        or len(tool.name) > _MAX_TOOL_NAME
+                        or not isinstance(tool.description, str)
+                        or len(tool.description) > _MAX_TOOL_DESCRIPTION_CHARS
+                        or not isinstance(tool.input_schema, dict)
+                    ):
+                        raise McpClientError("session returned invalid or oversized tool metadata")
+                listed = listed[:_MAX_TOOLS_RETURNED]
+                if self._tool_cache_ttl_seconds > 0:
+                    with self._tool_cache_lock:
+                        self._tool_cache[spec.name] = (
+                            time.monotonic() + self._tool_cache_ttl_seconds,
+                            fingerprint,
+                            tuple(copy.deepcopy(listed)),
+                        )
+            tools.extend(listed[:_MAX_TOOLS_RETURNED - len(tools)])
+            if len(tools) >= _MAX_TOOLS_RETURNED:
+                break
+        return copy.deepcopy(tools)
+
+    def invalidate_tool_cache(self, server_name: str | None = None) -> None:
+        """Invalidate cached tool metadata after server/config changes."""
+        with self._tool_cache_lock:
+            if server_name is None:
+                self._tool_cache.clear()
+            else:
+                self._tool_cache.pop(server_name, None)
 
     def call_tool(
         self,

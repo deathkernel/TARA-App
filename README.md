@@ -516,3 +516,10 @@ flowchart TD
 For the full feature-by-feature architecture reference—including specialist workflows, Chat and memory, Code safety boundary, Research, Planner, security and approvals, Handler, MCP and Skills, Windows floating pet, Voice, Vision, Study, Data, Weather, Model Hub, deployment, failure handling, and conceptual Transformer neural-network diagrams—see **[Feature & Neural-Network Diagrams](docs/FEATURE_AND_NEURAL_NETWORK_DIAGRAMS.md)**.
 
 > Neural-network diagrams are generic Transformer illustrations for the provider-hosted model behind OmniRoute. TARA-App does not claim to implement or train a neural network or own model weights. Feature status and verification gaps remain tracked in [Remaining Features](docs/REMAINING_FEATURES.md).
+
+
+## Token-efficient context and MCP metadata
+
+TARA-Chat now builds a bounded request context using a dependency-free UTF-8 token estimate. The current user request and system instructions are reserved first; recent history and relevant saved memories are optional, priority-ranked sections that are omitted whole when they do not fit. The estimate is exposed separately from actual provider usage. When OmniRoute returns usage metadata, TARA captures the reported prompt, completion and total token counts; missing usage remains unknown. The default completion budget remains 1,536 tokens and the initial input-context budget is configurable in the chat runtime constructor (12,000 estimated tokens by default).
+
+MCP tool discovery caches read-only tool metadata for 20 seconds by default to avoid repeatedly starting stdio servers for the same catalogue. Cache entries are scoped to each server configuration and can be explicitly invalidated. MCP tool descriptions, JSON schemas and returned text have bounded sizes to prevent oversized metadata/results from flooding model context. Tool calls are not cached; approval grants remain one-shot and audit-gated. Set the gateway's `tool_cache_ttl_seconds=0` to disable metadata caching.

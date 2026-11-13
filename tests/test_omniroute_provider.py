@@ -36,6 +36,28 @@ class OmniRouteProviderTests(unittest.TestCase):
         self.assertEqual(key, "test-key")
         self.assertEqual(timeout, 180.0)
 
+    def test_captures_provider_reported_usage_without_inventing_missing_fields(self):
+        provider = OmniRouteProvider(
+            api_key="test-key",
+            transport=lambda *args: {
+                "choices": [{"message": {"content": "answer"}}],
+                "usage": {"prompt_tokens": 120, "completion_tokens": 35, "total_tokens": 155},
+            },
+        )
+        self.assertEqual(provider.complete("hello"), "answer")
+        self.assertEqual(
+            provider.last_usage,
+            {"prompt_tokens": 120, "completion_tokens": 35, "total_tokens": 155},
+        )
+
+    def test_missing_provider_usage_remains_unknown(self):
+        provider = OmniRouteProvider(
+            api_key="test-key",
+            transport=lambda *args: {"choices": [{"message": {"content": "answer"}}]},
+        )
+        provider.complete("hello")
+        self.assertIsNone(provider.last_usage)
+
     def test_supports_specialized_auto_route_alias(self):
         provider = OmniRouteProvider(api_key="test-key", model="auto/coding")
         self.assertEqual(provider.model, "auto/coding")
