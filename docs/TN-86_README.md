@@ -197,3 +197,121 @@ The existing project documentation remains authoritative for the current impleme
 ---
 
 **Guiding principle:** TARA owns the cognitive system. OmniRoute remains the single gateway for language-model inference. TN-86 should be scientifically grounded, resource-aware, testable, secure, and built incrementally.
+
+
+## 12. Scientific disciplines and methods TN-86 will draw from
+
+TN-86 should be developed using established, relevant science—not by borrowing scientific terminology without implementing the underlying mathematics. The disciplines below define the knowledge base for architecture decisions. They are not a promise to simulate every biological process.
+
+### 12.1 Neuroscience and computational neuroscience
+
+Use these fields to define biologically inspired neural mechanisms:
+
+- **Neurophysiology:** membrane potential, thresholding, action potentials, refractory periods, synaptic transmission, and the limits of simplified neuron models.
+- **Synaptic neuroscience:** excitatory/inhibitory connections, synaptic strength, plasticity, and signal integration.
+- **Neural coding:** rate coding, temporal coding, population coding, and sparse/event-driven representations.
+- **Computational neuroscience:** integrate-and-fire and other justified neuron models, neural populations, network dynamics, and simulation methods.
+- **Neural plasticity:** Hebbian learning and STDP where their assumptions are appropriate and testable.
+- **Systems neuroscience:** functional specialization, recurrent circuits, feedback loops, and coordination between subsystems.
+
+**Engineering requirement:** select the simplest neuron and synapse model that satisfies a measurable use case. Document which biological details are omitted. Do not claim biological realism from superficial resemblance.
+
+### 12.2 Cognitive science and psychology
+
+Use these fields to guide functional cognitive architecture:
+
+- Attention and selective processing.
+- Working-memory limits and context management.
+- Long-term memory, including episodic and semantic distinctions.
+- Learning, recall, interference, and memory consolidation.
+- Executive functions, task switching, planning, and cognitive control.
+- Decision-making under uncertainty and metacognition.
+- Multimodal perception and integration.
+
+These concepts should become explicit software mechanisms with operational definitions and tests. They must not be used to imply that software has human consciousness, feelings, or subjective experience.
+
+### 12.3 Mathematics
+
+Mathematics is the formal foundation for neural models, learning, reasoning support, and performance analysis:
+
+- **Linear algebra:** vectors, matrices, tensor operations, projections, eigenvalues, and dimensionality reduction.
+- **Calculus:** derivatives, gradients, partial derivatives, chain rule, and numerical integration.
+- **Differential equations:** continuous-time neuron and dynamical-system models where required.
+- **Discrete mathematics:** graphs, trees, state machines, combinatorics, and formal logic.
+- **Probability:** conditional probability, Bayesian inference, random variables, and uncertainty estimation.
+- **Statistics:** estimation, hypothesis testing, confidence intervals, calibration, and experimental design.
+- **Optimization:** gradient-based and gradient-free methods, constrained optimization, and numerical stability.
+- **Information theory:** entropy, mutual information, coding efficiency, and information bottlenecks.
+- **Numerical analysis:** floating-point error, convergence, stability, approximation, and reproducibility.
+
+All numerical functionality must have reference cases, tolerances, edge-case tests, and documented units where applicable.
+
+### 12.4 Physics
+
+Physics should be used selectively where it gives TN-86 useful, mathematically grounded models:
+
+- **Dynamical systems:** state, time evolution, stability, attractors, oscillations, and feedback.
+- **Statistical mechanics:** population-level behavior and statistical descriptions of large interacting systems, only where the analogy is mathematically justified.
+- **Thermodynamics and energy accounting:** resource and energy-cost awareness; software measurements should use actual CPU/GPU power or energy telemetry when available rather than biological metaphors.
+- **Electromagnetism and biophysics:** background for understanding real neuronal electrical behavior; simplified software models must state which physical effects they omit.
+- **Signal processing:** filtering, sampling, noise, frequency/time-domain analysis, and event detection.
+- **Control theory:** feedback, stability, state estimation, and adaptive control for runtime regulation.
+
+Physics-inspired equations must not be inserted merely to make the architecture appear advanced. Every model must have a defined variable set, units, assumptions, and validation method.
+
+### 12.5 Computer science and software engineering
+
+These disciplines turn the scientific models into a reliable runtime:
+
+- Algorithms and data structures for efficient memory, graphs, queues, and retrieval.
+- Parallel and event-driven computing for bounded neural workloads.
+- Operating-systems concepts for scheduling, concurrency, cancellation, and resource isolation.
+- Distributed-systems principles for reliable gateway communication, retries, timeouts, and failure handling.
+- Compilers and numerical computing libraries where they provide measurable benefits.
+- Type systems, modular interfaces, reproducible builds, profiling, testing, and observability.
+- Security engineering, privacy-by-design, auditability, and explicit authorization.
+
+### 12.6 Machine learning and artificial intelligence
+
+Use established methods with explicit evaluation:
+
+- Artificial neural networks and representation learning.
+- Spiking neural networks and event-driven learning, if justified by workload.
+- Supervised, self-supervised, and reinforcement-learning concepts where appropriate.
+- Continual and online learning with safeguards against catastrophic forgetting.
+- Retrieval and memory-augmented methods.
+- Calibration, uncertainty estimation, and out-of-distribution detection.
+- Hybrid systems combining deterministic algorithms with OmniRoute-mediated LLM inference.
+
+TARA must distinguish its own implemented learning mechanisms from the capabilities of the external model selected by OmniRoute.
+
+### 12.7 Biology and evolution — limited, evidence-based inspiration
+
+Biology may inform robust adaptation, specialization, redundancy, and learning. Evolutionary algorithms or population-based optimization may be evaluated for specific optimization tasks, but should not be treated as a literal reproduction of biological evolution or as a default learning mechanism.
+
+### 12.8 Evidence and validation rules
+
+For every scientific technique considered, record:
+
+1. The problem it is intended to solve.
+2. The original scientific or mathematical concept and a credible reference.
+3. The equations, variables, units, assumptions, and simplifications.
+4. Why the technique is preferable to a simpler baseline.
+5. The expected compute and memory cost.
+6. Unit tests, numerical reference tests, and failure cases.
+7. A benchmark comparing it with the baseline.
+8. Known limitations and conditions where it should not be used.
+
+Prefer peer-reviewed research, textbooks, standards, and primary technical documentation. Separate established findings from hypotheses, engineering analogies, and speculative claims.
+
+### 12.9 Explicit non-goals
+
+Unless future evidence and a concrete requirement justify reconsideration, TN-86 will not:
+
+- claim to reproduce the complete human brain or its 86-billion-neuron scale;
+- claim consciousness, sentience, or human-like subjective experience;
+- use quantum consciousness or other speculative theories as an engineering foundation;
+- equate a large number of software nodes with biological intelligence;
+- add complex physics or neuroscience models without a measurable engineering benefit;
+- claim learning, reasoning, or speed improvements without controlled evaluation.
+
