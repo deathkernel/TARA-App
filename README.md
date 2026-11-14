@@ -1,10 +1,10 @@
 # SITA
 
-## TN-86B — TARA Neural – 86 Billion Cognitive Architecture
+## SN-86B — SITA Neural – 86 Billion Cognitive Architecture
 
-**Brand identity:** [SITA — Smart Intelligence & Thinking Assistant](docs/BRAND_IDENTITY.md). The source repository is still named `SITA`; internal Python namespaces and legacy config/environment names remain unchanged for compatibility.
+**Brand identity:** [SITA — Smart Intelligence & Thinking Assistant](docs/BRAND_IDENTITY.md). The product brand is SITA; the GitHub repository URL/name is managed separately. Internal Python namespaces and legacy config/environment names remain unchanged for compatibility.
 
-TN-86B is the brain-inspired neural and cognitive runtime powering SITA. It is an engineering architecture—not a literal simulation of 86 billion biological neurons. Start with the [TN-86B project guide](docs/TN-86B_README.md), [implementation roadmap](docs/sn86b/IMPLEMENTATION_ROADMAP.md), and machine-readable [project specification](docs/sn86b/PROJECT_SPEC.toml).
+SN-86B is the brain-inspired neural and cognitive runtime powering SITA. It is an engineering architecture—not a literal simulation of 86 billion biological neurons. Start with the [SN-86B project guide](docs/SN-86B_README.md), [implementation roadmap](docs/sn86b/IMPLEMENTATION_ROADMAP.md), and machine-readable [project specification](docs/sn86b/PROJECT_SPEC.toml).
 
 **SITA (Smart Intelligence & Thinking Assistant) is the user-facing AI assistant/application, not an AI model.** SITA owns conversations, specialist capabilities, memory, permissions, and local desktop actions. OmniRoute is the only language-model gateway: it selects the underlying provider/model and returns inference results to SITA.
 
