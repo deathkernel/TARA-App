@@ -7,7 +7,7 @@
 ## Engineering objective
 Build a measurable, brain-inspired cognitive runtime inside TARA while preserving the existing Windows application, interfaces, security boundaries, approval workflow, specialist capabilities, and OmniRoute inference gateway.
 
-TN-86B is a project name inspired by the approximate 86-billion-neuron scale often cited for the human brain. It is not a claim that this application will simulate 86 billion biological neurons.
+TN-86B stands for TARA Neural – 86 Billion. The `B` means Billion, not Brain, and references the approximate 86-billion-neuron scale often cited for the human brain. This is not a claim that the application will simulate 86 billion biological neurons.
 
 ## Implementation phases
 | Phase | System | Completion evidence |

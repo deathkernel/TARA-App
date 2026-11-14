@@ -1,4 +1,4 @@
-# TN-86B — TARA Neural & Cognitive Architecture
+# TN-86B — TARA Neural-86 Billion Cognitive Architecture
 
 > **Status:** Vision and architecture proposal — not an implementation claim.  
 > **Repository:** [deathkernel/TARA-App](https://github.com/deathkernel/TARA-App)  
@@ -6,7 +6,7 @@
 
 TN-86B is the proposed brain-inspired intelligence architecture for TARA. Its goal is to make TARA more than a user interface that forwards prompts to an AI model: TARA should own a structured cognitive runtime for processing information, maintaining context, retrieving and consolidating memory, coordinating reasoning, learning from approved experience, and making decisions.
 
-The name **TN-86B** is inspired by the commonly cited estimate of roughly 86 billion neurons in the human brain. It is a design reference, not a claim that TARA will simulate 86 billion biological neurons.
+**TN-86B** stands for **TARA Neural – 86 Billion**. The `B` explicitly means **Billion**, not Brain. “86 Billion” references the commonly cited approximate number of neurons in the human brain. This is a design reference, not a claim that TARA will simulate 86 billion biological neurons.
 
 ---
 
