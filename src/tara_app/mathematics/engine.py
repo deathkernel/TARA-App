@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+from .autodiff import (
+    DualNumber,
+    automatic_derivative,
+    automatic_gradient,
+    value_and_gradient,
+)
 from .calculus import derivative, gradient, integrate_simpson, integrate_trapezoid
 from .linear_algebra import (
     dot,
@@ -57,9 +63,13 @@ class MathematicalEngine:
     bayes_update = staticmethod(bayes_update)
     derivative = staticmethod(derivative)
     gradient = staticmethod(gradient)
+    automatic_derivative = staticmethod(automatic_derivative)
+    automatic_gradient = staticmethod(automatic_gradient)
+    value_and_gradient = staticmethod(value_and_gradient)
     integrate_trapezoid = staticmethod(integrate_trapezoid)
     integrate_simpson = staticmethod(integrate_simpson)
     gradient_descent = staticmethod(gradient_descent)
+    DualNumber = DualNumber
     RunningStatistics = RunningStatistics
 
 

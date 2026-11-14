@@ -1,5 +1,17 @@
 """TN-86 deterministic mathematical intelligence primitives."""
 
+from .autodiff import (
+    DualNumber,
+    automatic_derivative,
+    automatic_gradient,
+    cos,
+    exp,
+    log,
+    sin,
+    sqrt,
+    tanh,
+    value_and_gradient,
+)
 from .calculus import derivative, gradient, integrate_simpson, integrate_trapezoid
 from .engine import MathematicalEngine
 from .linear_algebra import (
@@ -35,21 +47,27 @@ from .statistics import (
 )
 
 __all__ = [
+    "DualNumber",
     "MathematicalEngine",
     "OptimizationResult",
     "RunningStatistics",
+    "automatic_derivative",
+    "automatic_gradient",
     "bayes_update",
     "correlation",
+    "cos",
     "covariance",
     "derivative",
     "dot",
     "entropy",
+    "exp",
     "gaussian_log_pdf",
     "gaussian_pdf",
     "gradient",
     "gradient_descent",
     "integrate_simpson",
     "integrate_trapezoid",
+    "log",
     "logsumexp",
     "matrix_multiply",
     "matrix_transpose",
@@ -59,9 +77,13 @@ __all__ = [
     "normalize",
     "quantile",
     "sigmoid",
+    "sin",
     "softmax",
     "solve_linear_system",
+    "sqrt",
     "standard_deviation",
+    "tanh",
+    "value_and_gradient",
     "variance",
     "vector_add",
     "vector_scale",

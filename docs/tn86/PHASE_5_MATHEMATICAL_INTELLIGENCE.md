@@ -14,7 +14,7 @@ Provide a deterministic, dependency-free numerical foundation that can support l
 | Linear algebra | Vector operations, matrix transpose/multiply, Gaussian elimination with partial pivoting | Small dense matrices; no sparse tensor backend or condition-number estimator |
 | Statistics | Batch descriptive statistics plus constant-memory Welford running mean/variance and merge | No causal inference or hypothesis testing |
 | Probability | Stable sigmoid, max-shifted softmax/log-sum-exp, categorical entropy, Gaussian PDF/log-PDF, scalar Bayes update | Inputs must satisfy stated probability assumptions; no learned probabilistic model |
-| Calculus | Centered finite-difference derivative/gradient, trapezoid and composite Simpson integration | Approximation error depends on step size, smoothness and interval count |
+| Calculus | Centered finite-difference derivative/gradient, forward-mode automatic differentiation, trapezoid and composite Simpson integration | Finite differences are approximate; forward mode is most suitable for scalar outputs with modest input dimensions |
 | Optimization | Finite-difference gradient descent with backtracking and diagnostics | Local optimizer; no global-optimum guarantee |
 
 ## Numerical and API policy
@@ -26,6 +26,7 @@ Provide a deterministic, dependency-free numerical foundation that can support l
 - Linear systems use partial pivoting and an explicit absolute pivot threshold. This is not a full condition-number analysis.
 - Gradient descent has bounded iterations, bounded backtracking attempts, a gradient-norm stopping criterion and explicit termination reasons.
 - Online statistics use Welford's update and merge equations to avoid retaining the full observation stream.
+- Forward-mode automatic differentiation uses dual-number propagation; differentiable objectives must use the provided dual-aware operations for transcendental functions.
 - No random sampling, hidden state, network calls, model inference or automatic execution is performed.
 - No third-party numerical dependency is required in this phase.
 
@@ -43,7 +44,7 @@ Consensus research thread: https://consensus.app/search/prepare-a-focused-resear
 
 1. Unit-test known analytical solutions and limiting cases.
 2. Test invalid dimensions, singular systems, non-finite inputs and undefined statistics.
-3. Compare finite-difference and quadrature results against closed-form functions.
+3. Compare finite-difference, automatic differentiation and quadrature results against closed-form functions.
 4. Verify online statistics against batch statistics and merge behavior.
 5. Verify optimization convergence on convex quadratics and explicit failure/iteration-limit paths.
 6. Add property-based and cross-library comparisons only after the dependency and CI policy is agreed.
