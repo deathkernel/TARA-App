@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://tara-app.local/schemas/sn86b/multimodal_observation.schema.json",
+  "$id": "https://sita.local/schemas/sn86b/multimodal_observation.schema.json",
   "title": "SN-86B Multimodal Observation",
   "description": "Text-only normalized observation. Raw audio and image bytes are not represented.",
   "type": "object",
