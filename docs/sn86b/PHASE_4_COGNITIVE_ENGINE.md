@@ -57,7 +57,7 @@ execute actions, or bypass approval controls.
 - No mandatory runtime dependency is introduced.
 
 ## Tests
-tests/test_sn86b_cognition.py covers attention ranking, memory/context
+tests/test_sn86_cognition.py covers attention ranking, memory/context
 composition, recency half-life, decision selection and abstention, goal
 dependencies/deadlines/capacity, and coordinator behavior with/without an
 injected proposal provider. Tests are authored but have not yet been executed.
