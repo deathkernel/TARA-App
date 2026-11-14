@@ -1,4 +1,4 @@
-"""TN-86B multimodal input contracts and cognitive bridge."""
+"""SN-86B multimodal input contracts and cognitive bridge."""
 
 from .bridge import MultimodalCognitiveBridge
 from .models import Modality, MultimodalObservation

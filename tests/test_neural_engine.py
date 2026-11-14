@@ -1,4 +1,4 @@
-"""Tests for the first TN-86 spiking-neural processing primitives."""
+"""Tests for the first SN-86 spiking-neural processing primitives."""
 
 import pytest
 

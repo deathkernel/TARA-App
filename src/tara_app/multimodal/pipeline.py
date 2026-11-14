@@ -1,4 +1,4 @@
-"""Bounded adapters from existing TARA specialists to cognitive observations."""
+"""Bounded adapters from existing SITA specialists to cognitive observations."""
 from __future__ import annotations
 
 import math

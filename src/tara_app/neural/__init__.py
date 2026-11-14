@@ -1,4 +1,4 @@
-"""Small, deterministic spiking-neural primitives for the TN-86 runtime.
+"""Small, deterministic spiking-neural primitives for the SN-86 runtime.
 
 This package is a software-scale research foundation. It does not attempt to
 simulate the human brain's full neuron count or claim biological equivalence.

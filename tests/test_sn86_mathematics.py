@@ -1,4 +1,4 @@
-"""Correctness and boundary tests for TN-86 mathematical services."""
+"""Correctness and boundary tests for SN-86 mathematical services."""
 
 import math
 import unittest
@@ -37,7 +37,7 @@ from tara_app.mathematics import (
 )
 
 
-class TestTN86Mathematics(unittest.TestCase):
+class TestSN86Mathematics(unittest.TestCase):
     def assertTupleAlmostEqual(self, actual, expected, places=7):
         self.assertEqual(len(actual), len(expected))
         for left, right in zip(actual, expected):

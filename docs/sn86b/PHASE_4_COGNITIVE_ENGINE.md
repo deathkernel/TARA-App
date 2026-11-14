@@ -1,4 +1,4 @@
-# TN-86B Phase 4 — Cognitive Engine
+# SN-86B Phase 4 — Cognitive Engine
 
 **Status:** Initial implementation committed; empirical validation pending.
 
@@ -48,7 +48,7 @@ The coordinator does not replace OmniRoute, fabricate reasoning, invoke tools,
 execute actions, or bypass approval controls.
 
 ## Integration boundaries
-- Memory reads use the existing TN-86B MemoryEngine recall interface.
+- Memory reads use the existing SN-86B MemoryEngine recall interface.
 - Neural and learning primitives remain lower-level capabilities. No
   unvalidated neural-to-symbolic mapping or automatic conversation training
   is introduced.
@@ -57,7 +57,7 @@ execute actions, or bypass approval controls.
 - No mandatory runtime dependency is introduced.
 
 ## Tests
-tests/test_tn86b_cognition.py covers attention ranking, memory/context
+tests/test_sn86b_cognition.py covers attention ranking, memory/context
 composition, recency half-life, decision selection and abstention, goal
 dependencies/deadlines/capacity, and coordinator behavior with/without an
 injected proposal provider. Tests are authored but have not yet been executed.

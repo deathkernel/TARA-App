@@ -1,4 +1,4 @@
-"""Typed records and contracts shared by TN-86 memory subsystems."""
+"""Typed records and contracts shared by SN-86 memory subsystems."""
 
 from __future__ import annotations
 

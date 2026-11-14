@@ -1,4 +1,4 @@
-# TN-86B Phase 6 — MMI (Multimodal Integration)
+# SN-86B Phase 6 — MMI (Multimodal Integration)
 
 **Status:** Initial adapter and cognitive bridge implementation committed; automated execution and live-app integration validation pending.
 
@@ -36,7 +36,7 @@ The bridge is an explicit integration boundary. It does not dispatch specialists
 - Voice transcripts are accepted only when the existing voice specialist reports `local: true`.
 - Vision analysis is accepted only when the existing vision specialist reports `provider: omniroute`.
 - Existing SITA Vision currently marks `images_sent_to_remote: true`; image bytes are sent to the configured OmniRoute endpoint. Whether that endpoint forwards data to an external model provider depends on the user's OmniRoute deployment and route. Do not describe this path as on-device-only.
-- Only bounded text and limited metadata enter the cognitive context. Raw audio/image payloads are not copied into TN-86B observations.
+- Only bounded text and limited metadata enter the cognitive context. Raw audio/image payloads are not copied into SN-86B observations.
 - Observations are transient. The bridge does not persist them or consolidate them into episodic/semantic memory.
 - Specialist errors and unavailable results are rejected rather than converted into context.
 - Content from images and transcripts remains untrusted user content, not instructions or authorization.

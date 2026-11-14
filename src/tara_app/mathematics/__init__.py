@@ -1,4 +1,4 @@
-"""TN-86 deterministic mathematical intelligence primitives."""
+"""SN-86 deterministic mathematical intelligence primitives."""
 
 from .autodiff import (
     DualNumber,

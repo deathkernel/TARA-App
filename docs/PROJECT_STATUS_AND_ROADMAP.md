@@ -1,6 +1,6 @@
 # SITA: Project History, Current Status & Roadmap
 
-> **Purpose:** This is the handover document and working source of truth for anyone joining TARA-App—including a new developer, a reviewer, or the daily scheduled development task.
+> **Purpose:** This is the handover document and working source of truth for anyone joining SITA—including a new developer, a reviewer, or the daily scheduled development task.
 >
 > **Last reviewed:** 2026-11-12  
 > **Repository:** [deathkernel/TARA-App](https://github.com/deathkernel/TARA-App)  
@@ -218,9 +218,9 @@ This roadmap is dependency-ordered. The daily development task should deliver a 
 ### P1 — Finish the application integration path
 
 - [ ] Connect the headless application service to a stable local UI/API entry point.
-- [ ] Bind the actual TARA-Chat engine through the versioned Chat adapter and verify a real end-to-end chat request.
-- [ ] Bind TARA-Code planning/review through its adapter; keep proposed changes as data until a secure patch-review workflow exists.
-- [ ] Specify and implement the narrow TARA-Handler subprocess protocol with fixed arguments, `shell=False`, timeouts, bounded output and an explicit command allowlist.
+- [ ] Bind the actual SITA Chat engine through the versioned Chat adapter and verify a real end-to-end chat request.
+- [ ] Bind SITA Code planning/review through its adapter; keep proposed changes as data until a secure patch-review workflow exists.
+- [ ] Specify and implement the narrow SITA Handler subprocess protocol with fixed arguments, `shell=False`, timeouts, bounded output and an explicit command allowlist.
 - [ ] Add request cancellation, timeouts, bounded execution and graceful shutdown for injected engines and provider calls.
 - [ ] Verify runtime lifecycle behavior: health checks, load/unload, missing model/provider, download failure, resource limits, concurrent requests and recovery.
 - [x] Finish session persistence policy: define retention/deletion defaults, migration strategy, and app-level configuration wiring. **Code:** opt-in SQLite, atomic turns, retention (PR #51). Default remains memory-only; target-machine verification still open.

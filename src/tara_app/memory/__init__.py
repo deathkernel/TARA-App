@@ -1,4 +1,4 @@
-"""Typed memory architecture for the TN-86 cognitive runtime."""
+"""Typed memory architecture for the SN-86 cognitive runtime."""
 
 from .engine import MemoryEngine
 from .models import MemoryKind, MemoryRecord, MemorySearchResult

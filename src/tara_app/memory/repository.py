@@ -1,7 +1,7 @@
-"""SQLite persistence port for episodic and semantic TN-86 memories.
+"""SQLite persistence port for episodic and semantic SN-86B memories.
 
 Writes are denied unless the application injects an approval callback. The
-repository does not interpret or mint TARA approval tokens; the existing
+repository does not interpret or mint SITA approval tokens; the existing
 permission/approval layer remains responsible for authorizing the operation.
 """
 
@@ -69,6 +69,7 @@ class SQLiteMemoryRepository:
                 )
                 """
             )
+            # Keep historical TN-prefixed table/index names for existing database compatibility.
             db.execute(
                 "CREATE INDEX IF NOT EXISTS idx_tn86_memories_kind_time "
                 "ON tn86_memories(kind, created_at DESC)"
@@ -86,7 +87,7 @@ class SQLiteMemoryRepository:
 
     def _require_approval(self) -> None:
         if not self._authorize_write():
-            raise PermissionError("memory write requires TARA approval")
+            raise PermissionError("memory write requires SITA approval")
 
     def upsert(self, record: MemoryRecord) -> None:
         self._require_approval()

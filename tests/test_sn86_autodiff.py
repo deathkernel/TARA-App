@@ -17,7 +17,7 @@ from tara_app.mathematics import (
 )
 
 
-class TestTN86AutomaticDifferentiation(unittest.TestCase):
+class TestSN86AutomaticDifferentiation(unittest.TestCase):
     def test_arithmetic_chain_rule(self):
         value, derivatives = value_and_gradient(
             lambda x: x[0] * x[0] + 3 * x[0] * x[1] + x[1] ** 3,

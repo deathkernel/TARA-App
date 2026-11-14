@@ -2,13 +2,13 @@
 
 ## TN-86B — TARA Neural – 86 Billion Cognitive Architecture
 
-**Brand identity:** [SITA — Smart Intelligence & Thinking Assistant](docs/BRAND_IDENTITY.md). The source repository is still named `TARA-App`; internal Python namespaces and legacy config/environment names remain unchanged for compatibility.
+**Brand identity:** [SITA — Smart Intelligence & Thinking Assistant](docs/BRAND_IDENTITY.md). The source repository is still named `SITA`; internal Python namespaces and legacy config/environment names remain unchanged for compatibility.
 
-TN-86B is the brain-inspired neural and cognitive runtime powering SITA. It is an engineering architecture—not a literal simulation of 86 billion biological neurons. Start with the [TN-86B project guide](docs/TN-86B_README.md), [implementation roadmap](docs/tn86b/IMPLEMENTATION_ROADMAP.md), and machine-readable [project specification](docs/tn86b/PROJECT_SPEC.toml).
+TN-86B is the brain-inspired neural and cognitive runtime powering SITA. It is an engineering architecture—not a literal simulation of 86 billion biological neurons. Start with the [TN-86B project guide](docs/TN-86B_README.md), [implementation roadmap](docs/sn86b/IMPLEMENTATION_ROADMAP.md), and machine-readable [project specification](docs/sn86b/PROJECT_SPEC.toml).
 
 **SITA (Smart Intelligence & Thinking Assistant) is the user-facing AI assistant/application, not an AI model.** SITA owns conversations, specialist capabilities, memory, permissions, and local desktop actions. OmniRoute is the only language-model gateway: it selects the underlying provider/model and returns inference results to SITA.
 
-Chat, Code, Handler, Router, and the other specialist capabilities are maintained as components inside this `TARA-App` repository. The app must not depend on deleted sibling model repositories or private cross-repository imports. Chat is a conversation runtime, Code is a coding specialist, and Handler is a deterministic native developer-environment tool; these are not all individual AI models. Actual model inventory and runtime support must be discovered/configured explicitly.
+Chat, Code, Handler, Router, and the other specialist capabilities are maintained as components inside this repository. The app must not depend on deleted sibling model repositories or private cross-repository imports. Chat is a conversation runtime, Code is a coding specialist, and Handler is a deterministic native developer-environment tool; these are not all individual AI models. Actual model inventory and runtime support must be discovered/configured explicitly.
 
 > **Project handover & live roadmap:** New contributors and the daily development task should start with [Project History, Current Status & Roadmap](docs/PROJECT_STATUS_AND_ROADMAP.md). It tracks what happened, what is implemented versus unverified, the dependency-ordered remaining work, and the rules for updating progress.
 
@@ -43,7 +43,7 @@ SITA is maintained as a single Python monorepo in this repository. The current i
 - `tara_weather`: public Open-Meteo geocoding and weather forecasts, with attribution.
 - `tara_models`: an OmniRoute model catalogue and inference adapter.
 
-SITA Handler's C++17 source is included in TARA-App. The launchers explicitly prepare its optional native diagnostic before starting the app; only the environment-diagnosis command is exposed. If CMake or a C++ compiler is unavailable, the app uses read-only Python diagnostics. GitHub issue creation remains inactive until local credentials and a repository allowlist are configured.
+SITA Handler's C++17 source is included in SITA. The launchers explicitly prepare its optional native diagnostic before starting the app; only the environment-diagnosis command is exposed. If CMake or a C++ compiler is unavailable, the app uses read-only Python diagnostics. GitHub issue creation remains inactive until local credentials and a repository allowlist are configured.
 
 ### Personal desktop automation
 

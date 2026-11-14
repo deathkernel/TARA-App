@@ -1,4 +1,4 @@
-"""Neuron models used by the TN-86 neural processing engine."""
+"""Neuron models used by the SN-86 neural processing engine."""
 
 from .lif import LIFNeuron
 

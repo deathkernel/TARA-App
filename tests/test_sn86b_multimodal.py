@@ -1,4 +1,4 @@
-"""Tests for TN-86B multimodal normalization and cognitive bridging."""
+"""Tests for SN-86B multimodal normalization and cognitive bridging."""
 from __future__ import annotations
 
 import tempfile

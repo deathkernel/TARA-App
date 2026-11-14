@@ -1,4 +1,4 @@
-"""Tests for TN-86 working, episodic, semantic and consolidation behavior."""
+"""Tests for SN-86 working, episodic, semantic and consolidation behavior."""
 
 import pytest
 
@@ -40,7 +40,7 @@ def test_working_memory_rejects_long_term_records():
     record = MemoryRecord(
         memory_id="semantic-1",
         kind=MemoryKind.SEMANTIC,
-        content="TARA is a local-first assistant",
+        content="SITA is a local-first assistant",
         created_at=1.0,
     )
 

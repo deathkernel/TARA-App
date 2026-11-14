@@ -1,4 +1,4 @@
-"""Bounded, explicit synaptic learning mechanisms for TN-86."""
+"""Bounded, explicit synaptic learning mechanisms for SN-86."""
 
 from .engine import LearningEngine
 from .rules import HebbianRule, STDPConfig

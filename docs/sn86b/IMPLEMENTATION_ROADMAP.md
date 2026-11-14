@@ -1,13 +1,13 @@
-# TN-86B Implementation Roadmap
+# SN-86B Implementation Roadmap
 
 **Status:** Phase 5 initial implementation committed; execution and integration validation pending  
-**Repository:** TARA-App  
-**Working branch:** tn-86/architecture-alignment
+**Repository:** SITA  
+**Working branch:** sn-86/architecture-alignment
 
 ## Engineering objective
 Build a measurable, brain-inspired cognitive runtime inside SITA while preserving the existing Windows application, interfaces, security boundaries, approval workflow, specialist capabilities, and OmniRoute inference gateway.
 
-TN-86B stands for TARA Neural – 86 Billion. The `B` means Billion, not Brain, and references the approximate 86-billion-neuron scale often cited for the human brain. This is not a claim that the application will simulate 86 billion biological neurons.
+SN-86B stands for SITA Neural – 86 Billion. The `B` means Billion, not Brain, and references the approximate 86-billion-neuron scale often cited for the human brain. This is not a claim that the application will simulate 86 billion biological neurons.
 
 ## Implementation phases
 | Phase | System | Completion evidence |
@@ -30,9 +30,9 @@ TN-86B stands for TARA Neural – 86 Billion. The `B` means Billion, not Brain, 
 ## Phase 2 — Memory architecture
 - Added typed WORKING, EPISODIC and SEMANTIC memory.
 - Added bounded recency-based session-local working memory.
-- Added SQLite persistence for episodic and semantic records in a separate TN-86B table.
+- Added SQLite persistence for episodic and semantic records in a separate SN-86B table.
 - Added deterministic lexical retrieval and explicit consolidation.
-- Persistent writes and deletes are denied by default and require an injected authorization callback; TN-86B does not mint or validate approval tokens.
+- Persistent writes and deletes are denied by default and require an injected authorization callback; SN-86B does not mint or validate approval tokens.
 - Added focused tests. The engine is not yet wired into the live Orchestrator; automated test execution remains pending.
 
 ## Phase 3 — Learning mechanisms
@@ -52,7 +52,7 @@ TN-86B stands for TARA Neural – 86 Billion. The `B` means Billion, not Brain, 
 - Added a staged coordinator requiring an injected proposal provider. It can be adapted to the existing OmniRoute gateway; no second LLM gateway is introduced.
 - The coordinator does not execute tools or actions. Existing SITA approval and security controls remain authoritative.
 - Neural-to-symbolic activation mapping and automatic learning from conversation data are not claimed; they require validated mappings and controlled experiments.
-- Added focused tests in tests/test_tn86b_cognition.py. They have been authored but not executed in this environment.
+- Added focused tests in tests/test_sn86b_cognition.py. They have been authored but not executed in this environment.
 - Research review and original technical note are stored under research/literature_reviews and research/original_papers; BibTeX metadata is stored under research/references.
 
 ## Phase 5 — Mathematical intelligence
@@ -62,7 +62,7 @@ TN-86B stands for TARA Neural – 86 Billion. The `B` means Billion, not Brain, 
 - Added finite-difference derivatives/gradients and trapezoid/Simpson quadrature.
 - Added bounded gradient descent with backtracking, convergence diagnostics and explicit failure reasons.
 - Numerical APIs reject non-finite values and invalid dimensions; no heavy numerical dependency was added.
-- Added focused tests in tests/test_tn86b_mathematics.py. They are authored but not yet executed in this environment.
+- Added focused tests in tests/test_sn86b_mathematics.py. They are authored but not yet executed in this environment.
 - This layer is not yet wired into neural or cognitive runtime paths; no claims of mathematical reasoning or improved cognition are made.
 
 ## Research integrity

@@ -6,7 +6,7 @@ from dataclasses import replace
 from .models import Goal, GoalStatus
 
 class GoalScheduler:
-    """Prioritize goals without executing them or bypassing TARA permissions."""
+    """Prioritize goals without executing them or bypassing SITA permissions."""
     def __init__(self, *, capacity: int = 128) -> None:
         if isinstance(capacity, bool) or not isinstance(capacity, int) or not 1 <= capacity <= 4096:
             raise ValueError("capacity must be between 1 and 4096")

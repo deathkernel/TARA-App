@@ -1,4 +1,4 @@
-"""Immutable, metadata-only observations for TN-86B multimodal processing."""
+"""Immutable, metadata-only observations for SN-86B multimodal processing."""
 from __future__ import annotations
 
 import math

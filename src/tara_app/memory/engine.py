@@ -1,4 +1,4 @@
-"""Memory lifecycle orchestration for the TN-86 cognitive runtime."""
+"""Memory lifecycle orchestration for the SN-86 cognitive runtime."""
 
 from __future__ import annotations
 

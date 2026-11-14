@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "project": "TN-86B",
+  "project": "SN-86B",
   "modules": [
     {"id": "NPE", "name": "Neural Processing Engine", "path": "src/tara_app/neural", "status": "implemented-unvalidated"},
     {"id": "ME", "name": "Memory Engine", "path": "src/tara_app/memory", "status": "implemented-unvalidated"},
@@ -14,8 +14,8 @@
   "notes": [
     "Statuses describe repository implementation only; tests and live runtime integration remain to be verified.",
     "OmniRoute remains the single configured LLM gateway.",
-    "Voice transcripts are accepted from the local TARA Voice specialist only.",
-    "Vision analysis is accepted from the existing OmniRoute-backed TARA Vision specialist.",
-    "Existing TARA security and approval controls remain authoritative."
+    "Voice transcripts are accepted from the local SITA Voice specialist only.",
+    "Vision analysis is accepted from the existing OmniRoute-backed SITA Vision specialist.",
+    "Existing SITA security and approval controls remain authoritative."
   ]
 }

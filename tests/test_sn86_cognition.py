@@ -1,4 +1,4 @@
-"""Tests for TN-86 attention, context, goals and conservative decisions."""
+"""Tests for SN-86 attention, context, goals and conservative decisions."""
 import pytest
 from tara_app.cognition import ActionOption, AttentionFeatures, AttentionMechanism, CognitiveCoordinator, CognitiveRequest, ContextBuilder, ContextItem, DecisionEngine, DecisionPolicy, DecisionStatus, Goal, GoalScheduler, GoalStatus
 from tara_app.memory import MemoryEngine, SQLiteMemoryRepository, MemoryKind
@@ -16,7 +16,7 @@ def test_attention_ranks_by_weighted_features_with_stable_ties():
 
 def test_context_builder_combines_memory_and_transient_observations(tmp_path):
     memory = make_memory(tmp_path)
-    stored = memory.remember("TN-86 uses typed episodic memory", kind=MemoryKind.SEMANTIC, importance=0.9)
+    stored = memory.remember("SN-86 uses typed episodic memory", kind=MemoryKind.SEMANTIC, importance=0.9)
     builder = ContextBuilder(memory, recency_half_life_seconds=100.0)
     request = CognitiveRequest("r1", "episodic memory", max_context_items=4)
     observation = ContextItem("sensor-1", "Current screen observation", AttentionFeatures(0.2, 0.5, 1.0), source="vision")

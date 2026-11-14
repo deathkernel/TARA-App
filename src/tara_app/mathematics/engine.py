@@ -1,4 +1,4 @@
-"""High-level façade for TN-86 mathematical services."""
+"""High-level façade for SN-86 mathematical services."""
 
 from __future__ import annotations
 

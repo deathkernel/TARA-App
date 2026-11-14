@@ -1,7 +1,7 @@
-# TN-86B Phase 5 — Mathematical Intelligence Engine
+# SN-86B Phase 5 — Mathematical Intelligence Engine
 
 **Status:** Initial implementation authored; repository execution and integration validation pending  
-**Branch:** `tn-86b/architecture-alignment`
+**Branch:** `sn-86/architecture-alignment`
 
 ## Purpose
 
@@ -36,7 +36,7 @@ The package is exposed through `MathematicalEngine` and pure functions. Neural a
 
 ## Research basis
 
-The Phase 5 research synthesis is stored at `research/literature_reviews/Prepare a focused research synthesis for TN-86B Phase 5 Mathematical Intelligence.md`. It covers floating-point stability, numerical linear algebra, softmax/log-sum-exp, probabilistic numerics, optimization safeguards and the distinction between mathematical engineering and biological cognition.
+The Phase 5 research synthesis is stored at `research/literature_reviews/Prepare a focused research synthesis for SN-86B Phase 5 Mathematical Intelligence.md`. It covers floating-point stability, numerical linear algebra, softmax/log-sum-exp, probabilistic numerics, optimization safeguards and the distinction between mathematical engineering and biological cognition.
 
 Consensus research thread: https://consensus.app/search/prepare-a-focused-research-synthesis-for-tn-86b-pha/ZysbKETpT5SdSzpWOjnZNw/
 
@@ -52,4 +52,4 @@ Consensus research thread: https://consensus.app/search/prepare-a-focused-resear
 
 ## Scientific interpretation
 
-These methods are standard numerical tools. Their presence does not imply that TN-86B has acquired general mathematical reasoning, causal understanding, calibrated uncertainty or human-like cognition. Those capabilities require separately specified algorithms, datasets, experiments and evaluation protocols.
+These methods are standard numerical tools. Their presence does not imply that SN-86B has acquired general mathematical reasoning, causal understanding, calibrated uncertainty or human-like cognition. Those capabilities require separately specified algorithms, datasets, experiments and evaluation protocols.

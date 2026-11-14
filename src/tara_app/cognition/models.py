@@ -1,4 +1,4 @@
-"""Typed contracts for TN-86 cognitive processing."""
+"""Typed contracts for SN-86 cognitive processing."""
 from __future__ import annotations
 import math
 from dataclasses import dataclass, field

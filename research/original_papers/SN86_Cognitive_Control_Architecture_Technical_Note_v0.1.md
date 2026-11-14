@@ -1,16 +1,16 @@
-# TN-86: A Bounded Cognitive Control Architecture for a Local-First Agent
+# SN-86: A Bounded Cognitive Control Architecture for a Local-First Agent
 
 **Technical research note v0.1 — 14 November 2026**  
 **Status:** Proposed architecture and initial software realization; not peer-reviewed  
-**Authors:** TN-86 Project Contributors
+**Authors:** SN-86 Project Contributors
 
 ## Abstract
-This note specifies a small deterministic cognitive-control layer for a local-first agent. It combines bounded memory retrieval, transparent attention allocation, deadline- and dependency-aware goal scheduling, evidence-adjusted action scoring with abstention, and a staged coordinator. The design is informed by cognitive-architecture research, working-memory and attention theory, executive-control literature, and computational work on episodic/semantic integration. It does not claim biological equivalence, human-level cognition, calibrated probabilities, or autonomous action authority. Language-model inference remains behind TARA's existing OmniRoute gateway; tool execution and approval remain in existing security controls.
+This note specifies a small deterministic cognitive-control layer for a local-first agent. It combines bounded memory retrieval, transparent attention allocation, deadline- and dependency-aware goal scheduling, evidence-adjusted action scoring with abstention, and a staged coordinator. The design is informed by cognitive-architecture research, working-memory and attention theory, executive-control literature, and computational work on episodic/semantic integration. It does not claim biological equivalence, human-level cognition, calibrated probabilities, or autonomous action authority. Language-model inference remains behind SITA's existing OmniRoute gateway; tool execution and approval remain in existing security controls.
 
 **Keywords:** cognitive architecture, attention, working memory, episodic memory, semantic memory, executive control, abstention, local-first agents
 
 ## 1. Motivation
-Cognitive-architecture surveys describe cognition as coordinated capabilities including perception, attention, memory, learning, reasoning and action selection, rather than one undifferentiated component [1]. ACT-R provides a modular precedent: specialized modules communicate through buffers, and production rules select responses to the current state [2]. TN-86 Phase 4 translates a subset of these ideas into a bounded Python control layer; it is not a complete theory of mind.
+Cognitive-architecture surveys describe cognition as coordinated capabilities including perception, attention, memory, learning, reasoning and action selection, rather than one undifferentiated component [1]. ACT-R provides a modular precedent: specialized modules communicate through buffers, and production rules select responses to the current state [2]. SN-86 Phase 4 translates a subset of these ideas into a bounded Python control layer; it is not a complete theory of mind.
 
 ## 2. Evidence and design implications
 
@@ -28,7 +28,7 @@ Egner describes cognitive stability (protecting a task from distraction) and fle
 
 ### 2.4 Episodic and semantic integration
 The EGO framework models rapid episodic learning, slower semantic learning and recurrent task context that biases retrieval and processing [7]. Long-horizon agent research has also explored coupling memory retrieval with reasoning and policy generation [8].  
-**Implication:** keep event-specific memory distinct from generalized knowledge while allowing current context to influence retrieval. These papers motivate design choices; they do not prove TN-86 will generalize.
+**Implication:** keep event-specific memory distinct from generalized knowledge while allowing current context to influence retrieval. These papers motivate design choices; they do not prove SN-86 will generalize.
 
 ## 3. Proposed architecture
 1. Validate a typed request and explicit context budget.
@@ -39,7 +39,7 @@ The EGO framework models rapid episodic learning, slower semantic learning and r
 6. Score candidates and abstain when evidence or score separation is inadequate.
 7. Return a traceable result; do not execute the selected action.
 
-A provider adapter may delegate proposal generation to OmniRoute. TN-86 does not introduce a second model gateway.
+A provider adapter may delegate proposal generation to OmniRoute. SN-86 does not introduce a second model gateway.
 
 ## 4. Mathematical specification
 
@@ -79,9 +79,9 @@ The initial package adds:
 - cognition/goals.py: bounded goal registry, dependency gating and deadline-aware prioritization.
 - cognition/decision.py: evidence-adjusted ranking and explicit abstention.
 - cognition/coordinator.py: staged orchestration with an injected proposal provider.
-- tests/test_tn86_cognition.py: focused tests for ranking, context, recency, goals, decisions and coordinator behavior.
+- tests/test_sn86_cognition.py: focused tests for ranking, context, recency, goals, decisions and coordinator behavior.
 
-The coordinator does not call tools or execute actions. Persistent memory changes and sensitive operations remain subject to TARA's approval layer. Neural and plasticity primitives remain lower-level capabilities; this phase does not assert a validated mapping from spiking activity to symbolic attention or automatically train on conversations.
+The coordinator does not call tools or execute actions. Persistent memory changes and sensitive operations remain subject to SITA's approval layer. Neural and plasticity primitives remain lower-level capabilities; this phase does not assert a validated mapping from spiking activity to symbolic attention or automatically train on conversations.
 
 ## 6. Falsifiable hypotheses and evaluation
 These are hypotheses, not results:
@@ -102,7 +102,7 @@ Proposed experiments: build a versioned evaluation set; compare attention agains
 - Neural-to-symbolic integration remains an open research and engineering task.
 
 ## 8. Conclusion
-Phase 4 establishes an inspectable cognitive-control layer around the earlier memory, neural and learning foundations. Its contribution at this stage is a concrete, bounded and testable software architecture with explicit uncertainty handling and safety boundaries. Whether it improves TARA task performance remains an empirical question.
+Phase 4 establishes an inspectable cognitive-control layer around the earlier memory, neural and learning foundations. Its contribution at this stage is a concrete, bounded and testable software architecture with explicit uncertainty handling and safety boundaries. Whether it improves SITA task performance remains an empirical question.
 
 ## References
 [1] I. Kotseruba and J. K. Tsotsos, “40 years of cognitive architectures: core cognitive abilities and practical applications,” Artificial Intelligence Review, 2018. https://doi.org/10.1007/s10462-018-9646-y

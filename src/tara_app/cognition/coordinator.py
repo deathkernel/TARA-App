@@ -23,6 +23,6 @@ class CognitiveCoordinator:
             options = tuple(self.proposal_provider(request, attended_items))
             stages.extend(("candidate_actions_proposed", "decision_scored"))
             decision = self.decision_engine.decide(options)
-            notes = ("Decision output is advisory; action execution and approval remain in TARA's existing security layer.",)
+            notes = ("Decision output is advisory; action execution and approval remain in SITA's existing security layer.",)
         trace = ReasoningTrace(request.request_id, tuple(stages), tuple(item.item_id for item in attended_items), decision, notes)
         return decision, trace

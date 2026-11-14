@@ -37,4 +37,4 @@ class DecisionEngine:
             return DecisionResult(DecisionStatus.ABSTAINED, None, best_score, margin, "Best candidate did not meet the minimum evidence-adjusted score.", ranked_scores)
         if len(ranked) > 1 and margin < self.policy.minimum_margin:
             return DecisionResult(DecisionStatus.ABSTAINED, None, best_score, margin, "Candidate scores are too close for a confident selection.", ranked_scores)
-        return DecisionResult(DecisionStatus.SELECTED, best_option, best_score, margin, "Selected the highest-scoring candidate under policy; execution still requires TARA authorization.", ranked_scores)
+        return DecisionResult(DecisionStatus.SELECTED, best_option, best_score, margin, "Selected the highest-scoring candidate under policy; execution still requires SITA authorization.", ranked_scores)

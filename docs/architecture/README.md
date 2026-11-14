@@ -1,4 +1,4 @@
-# TARA Architecture Blueprint
+# SITA Architecture Blueprint
 
 **Status:** Proposed architecture for review. This folder documents the target design; it does not claim that source code has been migrated.
 

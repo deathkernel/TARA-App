@@ -1,4 +1,4 @@
-"""TN-86 cognitive attention, context, goal and decision primitives."""
+"""SN-86 cognitive attention, context, goal and decision primitives."""
 from .attention import AttentionMechanism, AttentionWeights
 from .context import ContextBuilder, MemoryRecallPort
 from .coordinator import CognitiveCoordinator
