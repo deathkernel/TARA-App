@@ -32,6 +32,12 @@ Provide a deterministic, dependency-free numerical foundation that can support l
 
 The package is exposed through `MathematicalEngine` and pure functions. Neural and cognitive components may call it through explicit dependency injection in a later integration phase. This commit does not silently alter the live Orchestrator, neural network dynamics, learning rules, memory persistence or approval system.
 
+## Research basis
+
+The Phase 5 research synthesis is stored at `research/literature_reviews/Prepare a focused research synthesis for TN-86 Phase 5 Mathematical Intelligence.md`. It covers floating-point stability, numerical linear algebra, softmax/log-sum-exp, probabilistic numerics, optimization safeguards and the distinction between mathematical engineering and biological cognition.
+
+Consensus research thread: https://consensus.app/search/prepare-a-focused-research-synthesis-for-tn-86-pha/ZysbKETpT5SdSzpWOjnZNw/
+
 ## Validation plan
 
 1. Unit-test known analytical solutions and limiting cases.

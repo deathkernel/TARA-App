@@ -3,7 +3,17 @@
 from __future__ import annotations
 
 from .calculus import derivative, gradient, integrate_simpson, integrate_trapezoid
-from .linear_algebra import dot, matrix_multiply, norm, solve_linear_system
+from .linear_algebra import (
+    dot,
+    matrix_multiply,
+    matrix_transpose,
+    norm,
+    normalize,
+    solve_linear_system,
+    vector_add,
+    vector_scale,
+    vector_subtract,
+)
 from .optimization import OptimizationResult, gradient_descent
 from .probability import bayes_update, entropy, sigmoid, softmax
 from .statistics import correlation, covariance, mean, median, quantile, variance
@@ -23,8 +33,13 @@ class MathematicalEngine:
     covariance = staticmethod(covariance)
     correlation = staticmethod(correlation)
     quantile = staticmethod(quantile)
+    vector_add = staticmethod(vector_add)
+    vector_subtract = staticmethod(vector_subtract)
+    vector_scale = staticmethod(vector_scale)
     dot = staticmethod(dot)
     norm = staticmethod(norm)
+    normalize = staticmethod(normalize)
+    matrix_transpose = staticmethod(matrix_transpose)
     matrix_multiply = staticmethod(matrix_multiply)
     solve_linear_system = staticmethod(solve_linear_system)
     sigmoid = staticmethod(sigmoid)
