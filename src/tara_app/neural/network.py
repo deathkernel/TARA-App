@@ -31,6 +31,10 @@ class SpikingNetwork:
     def synapse_count(self) -> int:
         return len(self._synapses)
 
+    @property
+    def synapses(self) -> tuple[Synapse, ...]:
+        return tuple(self._synapses)
+
     def add_neuron(self, neuron: LIFNeuron | None = None) -> int:
         """Add a neuron and return its stable index."""
         instance = neuron if neuron is not None else LIFNeuron()
@@ -49,6 +53,22 @@ class SpikingNetwork:
             raise ValueError("synapse endpoint does not exist")
         self._synapses.append(synapse)
         self._outgoing[synapse.pre].append(synapse)
+
+    def set_synapse_weight(self, index: int, weight: float) -> None:
+        """Replace one connection's weight without changing its topology."""
+        if isinstance(index, bool) or not isinstance(index, int) or not 0 <= index < len(self._synapses):
+            raise IndexError("synapse index is out of range")
+        if isinstance(weight, bool) or not isinstance(weight, (int, float)) or not math.isfinite(weight):
+            raise ValueError("weight must be a finite number")
+        previous = self._synapses[index]
+        if previous.weight > 0 and weight < 0 or previous.weight < 0 and weight > 0:
+            raise ValueError("weight update cannot reverse synapse polarity")
+        updated = Synapse(pre=previous.pre, post=previous.post, weight=float(weight))
+        self._synapses[index] = updated
+        self._outgoing[previous.pre] = [
+            updated if item is previous else item
+            for item in self._outgoing[previous.pre]
+        ]
 
     def reset(self) -> None:
         """Reset all neurons and clear pending spike events."""

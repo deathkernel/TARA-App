@@ -1,6 +1,6 @@
 # TN-86 Implementation Roadmap
 
-**Status:** Phase 2 implementation committed; execution and integration validation pending  
+**Status:** Phase 3 implementation committed; execution and integration validation pending  
 **Repository:** TARA-App  
 **Working branch:** `tn-86/architecture-alignment`
 
@@ -20,7 +20,7 @@ simulate 86 billion biological neurons.
 |---|---|---|
 | 1 | Neural processing foundation | LIF neuron, sparse synapse and deterministic network primitives with focused tests |
 | 2 | Memory architecture | Working, episodic and semantic memory with explicit storage and retrieval contracts |
-| 3 | Learning mechanisms | Bounded, testable plasticity rules; learning changes measured and persisted safely |
+| 3 | Learning mechanisms | Bounded, testable Hebbian/STDP plasticity with approved state persistence |
 | 4 | Cognitive engine | Attention, context integration, reasoning coordination and decision contracts |
 | 5 | Mathematical intelligence | Deterministic linear algebra, calculus, probability, statistics and optimization services |
 | 6 | Multimodal integration | Voice and vision observations enter the same typed cognitive request lifecycle |
@@ -45,6 +45,16 @@ simulate 86 billion biological neurons.
 - Persistent writes and deletes are denied by default and require an injected authorization callback. The existing TARA approval layer must supply that callback; TN-86 does not mint or validate approval tokens.
 - Added focused tests for capacity, retrieval, persistence, consolidation and denied writes.
 - The new engine is not yet wired into the live Orchestrator. Automated test execution remains pending.
+
+## Phase 3 — Learning mechanisms
+
+- Added bounded rate-based Hebbian learning and pair-based STDP.
+- Preserved excitatory/inhibitory synapse polarity and capped weight magnitude.
+- Added snapshots and explicit rollback/restore.
+- Added atomic JSON persistence gated by an injected approval callback; load validates exact topology and weight limits.
+- Added a bridge to apply learned weights to the sparse spiking network without changing topology.
+- Learning is explicit; it does not automatically train on user conversations or run in the live Orchestrator.
+- Focused tests were added; execution and numerical validation remain pending.
 
 ## Constraints
 
