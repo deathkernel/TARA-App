@@ -1,12 +1,12 @@
-# TN-86 — TARA Neural & Cognitive Architecture
+# TN-86B — TARA Neural & Cognitive Architecture
 
 > **Status:** Vision and architecture proposal — not an implementation claim.  
 > **Repository:** [deathkernel/TARA-App](https://github.com/deathkernel/TARA-App)  
 > **Core constraint:** OmniRoute remains the single gateway for all language-model inference.
 
-TN-86 is the proposed brain-inspired intelligence architecture for TARA. Its goal is to make TARA more than a user interface that forwards prompts to an AI model: TARA should own a structured cognitive runtime for processing information, maintaining context, retrieving and consolidating memory, coordinating reasoning, learning from approved experience, and making decisions.
+TN-86B is the proposed brain-inspired intelligence architecture for TARA. Its goal is to make TARA more than a user interface that forwards prompts to an AI model: TARA should own a structured cognitive runtime for processing information, maintaining context, retrieving and consolidating memory, coordinating reasoning, learning from approved experience, and making decisions.
 
-The name **TN-86** is inspired by the commonly cited estimate of roughly 86 billion neurons in the human brain. It is a design reference, not a claim that TARA will simulate 86 billion biological neurons.
+The name **TN-86B** is inspired by the commonly cited estimate of roughly 86 billion neurons in the human brain. It is a design reference, not a claim that TARA will simulate 86 billion biological neurons.
 
 ---
 
@@ -14,7 +14,7 @@ The name **TN-86** is inspired by the commonly cited estimate of roughly 86 bill
 
 Build a high-performance, modular, brain-inspired cognitive system inside the existing TARA-App repository.
 
-TN-86 should aim to provide:
+TN-86B should aim to provide:
 
 - **Neural processing:** configurable artificial-neuron and connection abstractions, signal/event processing, and measurable neural computation.
 - **Cognition:** attention, context integration, reasoning coordination, executive control, and decision support.
@@ -57,7 +57,7 @@ OmniRoute is a **model gateway**, not by itself a general-purpose neural-network
 
 Therefore, the intended separation is:
 
-- **TN-86 cognitive/neural runtime:** implemented and executed within TARA's own application/runtime boundary.
+- **TN-86B cognitive/neural runtime:** implemented and executed within TARA's own application/runtime boundary.
 - **Language-model inference:** accessed exclusively through OmniRoute.
 - **Mathematical and deterministic computation:** performed by verified local algorithms/libraries where appropriate.
 
@@ -116,7 +116,7 @@ Not every request should require an LLM call. Deterministic tasks should use ver
 
 ## 5. Scientific and engineering principles
 
-TN-86 must distinguish biological inspiration from biological equivalence.
+TN-86B must distinguish biological inspiration from biological equivalence.
 
 - A software neuron abstraction is not automatically a biologically realistic neuron.
 - A graph of nodes and edges is not automatically a functioning neural network.
@@ -137,11 +137,11 @@ The target is efficient cognitive capability, not a literal simulation of the hu
 - Support graceful operation when optional acceleration is unavailable.
 - Benchmark latency, throughput, memory use, CPU/GPU use, retrieval quality, numerical correctness, and task success.
 - Compare each optimization against a reproducible baseline.
-- Do not claim that TN-86 is faster or more intelligent without benchmark evidence.
+- Do not claim that TN-86B is faster or more intelligent without benchmark evidence.
 
 ## 7. Safety, permissions, and data boundaries
 
-TN-86 must preserve TARA's existing security and approval model.
+TN-86B must preserve TARA's existing security and approval model.
 
 - Neural or model output must never grant itself permission to execute an action.
 - External actions remain subject to TARA-Security and explicit approval.
@@ -190,18 +190,18 @@ A subsystem is complete only when:
 
 ## 11. Current status
 
-This document records the TN-86 vision and proposed architecture only. It does **not** mean that a new neural engine, SNN, STDP learning system, independent model, or biological-scale simulation currently exists in TARA.
+This document records the TN-86B vision and proposed architecture only. It does **not** mean that a new neural engine, SNN, STDP learning system, independent model, or biological-scale simulation currently exists in TARA.
 
 The existing project documentation remains authoritative for the current implementation status. Update this document as architecture decisions are approved and implementation evidence becomes available.
 
 ---
 
-**Guiding principle:** TARA owns the cognitive system. OmniRoute remains the single gateway for language-model inference. TN-86 should be scientifically grounded, resource-aware, testable, secure, and built incrementally.
+**Guiding principle:** TARA owns the cognitive system. OmniRoute remains the single gateway for language-model inference. TN-86B should be scientifically grounded, resource-aware, testable, secure, and built incrementally.
 
 
-## 12. Scientific disciplines and methods TN-86 will draw from
+## 12. Scientific disciplines and methods TN-86B will draw from
 
-TN-86 should be developed using established, relevant science—not by borrowing scientific terminology without implementing the underlying mathematics. The disciplines below define the knowledge base for architecture decisions. They are not a promise to simulate every biological process.
+TN-86B should be developed using established, relevant science—not by borrowing scientific terminology without implementing the underlying mathematics. The disciplines below define the knowledge base for architecture decisions. They are not a promise to simulate every biological process.
 
 ### 12.1 Neuroscience and computational neuroscience
 
@@ -248,7 +248,7 @@ All numerical functionality must have reference cases, tolerances, edge-case tes
 
 ### 12.4 Physics
 
-Physics should be used selectively where it gives TN-86 useful, mathematically grounded models:
+Physics should be used selectively where it gives TN-86B useful, mathematically grounded models:
 
 - **Dynamical systems:** state, time evolution, stability, attractors, oscillations, and feedback.
 - **Statistical mechanics:** population-level behavior and statistical descriptions of large interacting systems, only where the analogy is mathematically justified.
@@ -306,7 +306,7 @@ Prefer peer-reviewed research, textbooks, standards, and primary technical docum
 
 ### 12.9 Explicit non-goals
 
-Unless future evidence and a concrete requirement justify reconsideration, TN-86 will not:
+Unless future evidence and a concrete requirement justify reconsideration, TN-86B will not:
 
 - claim to reproduce the complete human brain or its 86-billion-neuron scale;
 - claim consciousness, sentience, or human-like subjective experience;

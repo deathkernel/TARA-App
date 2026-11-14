@@ -1,5 +1,9 @@
 # TARA-App
 
+## TN-86B — TARA Neural-86 Brain-inspired Architecture
+
+TN-86B is the brain-inspired neural and cognitive runtime workstream within TARA-App. It is an engineering architecture—not a literal simulation of 86 billion biological neurons. Start with the [TN-86B project guide](docs/TN-86B_README.md), [implementation roadmap](docs/tn86b/IMPLEMENTATION_ROADMAP.md), and machine-readable [project specification](docs/tn86b/PROJECT_SPEC.toml).
+
 **TARA-App is the user-facing AI assistant/application, not an AI model.** TARA owns conversations, specialist capabilities, memory, permissions, and local desktop actions. OmniRoute is the only language-model gateway: it selects the underlying provider/model and returns inference results to TARA.
 
 Chat, Code, Handler, Router, and the other specialist capabilities are maintained as components inside this `TARA-App` repository. The app must not depend on deleted sibling model repositories or private cross-repository imports. Chat is a conversation runtime, Code is a coding specialist, and Handler is a deterministic native developer-environment tool; these are not all individual AI models. Actual model inventory and runtime support must be discovered/configured explicitly.

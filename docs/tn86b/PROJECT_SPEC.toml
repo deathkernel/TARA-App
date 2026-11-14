@@ -1,0 +1,22 @@
+[project]
+name = "TN-86B"
+full_name = "TARA Neural-86 Brain-inspired Architecture"
+parent = "TARA-App"
+status = "active-development"
+branch = "tn-86/architecture-alignment"
+
+[principles]
+biological_equivalence_claim = false
+literal_86_billion_neuron_simulation = false
+llm_gateway = "OmniRoute (single configured gateway)"
+security_authority = "TARA-App existing approval and permission system"
+
+[modules]
+NPE = "Neural Processing Engine"
+ME = "Memory Engine"
+LE = "Learning Engine"
+CE = "Cognitive Engine"
+MIE = "Mathematical Intelligence Engine"
+MMI = "Multimodal Integration"
+NRT = "Neural Runtime"
+VBE = "Verification and Benchmarking"
