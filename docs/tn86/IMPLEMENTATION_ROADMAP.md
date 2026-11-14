@@ -1,6 +1,6 @@
 # TN-86 Implementation Roadmap
 
-**Status:** Phase 4 initial implementation committed; execution and integration validation pending  
+**Status:** Phase 5 initial implementation committed; execution and integration validation pending  
 **Repository:** TARA-App  
 **Working branch:** tn-86/architecture-alignment
 
@@ -54,6 +54,16 @@ TN-86 is a project name inspired by the approximate 86-billion-neuron scale ofte
 - Neural-to-symbolic activation mapping and automatic learning from conversation data are not claimed; they require validated mappings and controlled experiments.
 - Added focused tests in tests/test_tn86_cognition.py. They have been authored but not executed in this environment.
 - Research review and original technical note are stored under research/literature_reviews and research/original_papers; BibTeX metadata is stored under research/references.
+
+## Phase 5 — Mathematical intelligence
+- Added dependency-free vector/matrix operations and a Gaussian-elimination solver with partial pivoting.
+- Added descriptive statistics with explicit population/sample variance conventions.
+- Added stable probability transforms, Gaussian density/log-density, entropy and scalar Bayes updates.
+- Added finite-difference derivatives/gradients and trapezoid/Simpson quadrature.
+- Added bounded gradient descent with backtracking, convergence diagnostics and explicit failure reasons.
+- Numerical APIs reject non-finite values and invalid dimensions; no heavy numerical dependency was added.
+- Added focused tests in tests/test_tn86_mathematics.py. They are authored but not yet executed in this environment.
+- This layer is not yet wired into neural or cognitive runtime paths; no claims of mathematical reasoning or improved cognition are made.
 
 ## Research integrity
 - Research informs design choices; it does not prove biological equivalence.
