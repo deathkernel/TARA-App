@@ -6,6 +6,7 @@ import pytest
 
 from tara_app.mathematics import (
     MathematicalEngine,
+    RunningStatistics,
     bayes_update,
     correlation,
     covariance,
@@ -18,6 +19,7 @@ from tara_app.mathematics import (
     gradient_descent,
     integrate_simpson,
     integrate_trapezoid,
+    logsumexp,
     matrix_multiply,
     matrix_transpose,
     mean,
@@ -79,6 +81,29 @@ def test_descriptive_statistics():
     assert standard_deviation((1, 2, 3, 4)) == pytest.approx(math.sqrt(1.25))
 
 
+def test_running_statistics_match_batch_statistics_and_merge():
+    first = RunningStatistics()
+    second = RunningStatistics()
+    for value in (1, 2):
+        first.update(value)
+    for value in (3, 4):
+        second.update(value)
+    first.merge(second)
+    assert first.count == 4
+    assert first.average == pytest.approx(mean((1, 2, 3, 4)))
+    assert first.variance() == pytest.approx(variance((1, 2, 3, 4)))
+    assert first.variance(sample=True) == pytest.approx(variance((1, 2, 3, 4), sample=True))
+
+
+def test_running_statistics_reject_empty_and_invalid_updates():
+    with pytest.raises(ValueError):
+        RunningStatistics().variance()
+    with pytest.raises(ValueError):
+        RunningStatistics().update(math.inf)
+    with pytest.raises(ValueError):
+        RunningStatistics().variance(sample=True)
+
+
 def test_covariance_and_correlation():
     assert covariance((1, 2, 3), (2, 4, 6)) == pytest.approx(4 / 3)
     assert correlation((1, 2, 3), (2, 4, 6)) == pytest.approx(1.0)
@@ -100,6 +125,7 @@ def test_probability_transforms_are_stable():
     probabilities = softmax((1000, 1001, 1002))
     assert math.fsum(probabilities) == pytest.approx(1.0)
     assert probabilities[2] > probabilities[1] > probabilities[0]
+    assert logsumexp((1000, 1001, 1002)) == pytest.approx(1002 + math.log(1 + math.exp(-1) + math.exp(-2)))
 
 
 def test_probability_metrics_and_bayes_update():
@@ -112,6 +138,8 @@ def test_probability_metrics_and_bayes_update():
 def test_probability_inputs_are_checked():
     with pytest.raises(ValueError):
         softmax((1, 2), temperature=0)
+    with pytest.raises(ValueError):
+        softmax((1e308, 2), temperature=1e-308)
     with pytest.raises(ValueError):
         entropy((0.2, 0.2))
     with pytest.raises(ValueError):
@@ -155,6 +183,8 @@ def test_engine_facade_exposes_core_operations():
     engine = MathematicalEngine()
     assert engine.mean((2, 4)) == 3.0
     assert engine.sigmoid(0) == 0.5
+    assert engine.logsumexp((0, 0)) == pytest.approx(math.log(2))
+    assert engine.RunningStatistics().count == 0
 
 
 @pytest.mark.parametrize("bad", [math.nan, math.inf, -math.inf])

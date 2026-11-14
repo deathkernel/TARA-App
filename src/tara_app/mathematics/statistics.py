@@ -1,9 +1,10 @@
-"""Descriptive statistics with explicit population/sample conventions."""
+"""Descriptive and online statistics with explicit sample conventions."""
 
 from __future__ import annotations
 
 import math
 from collections.abc import Sequence
+from dataclasses import dataclass
 
 from ._validation import finite_number, vector_values
 
@@ -73,3 +74,64 @@ def correlation(left: Sequence[float], right: Sequence[float]) -> float:
         raise ValueError("correlation is undefined for a constant variable")
     result = covariance(a, b) / (std_a * std_b)
     return max(-1.0, min(1.0, result))
+
+
+@dataclass(slots=True)
+class RunningStatistics:
+    """Constant-memory online mean and variance using Welford's algorithm."""
+
+    count: int = 0
+    average: float = 0.0
+    _sum_squared_deviations: float = 0.0
+
+    def __post_init__(self) -> None:
+        if isinstance(self.count, bool) or not isinstance(self.count, int) or self.count < 0:
+            raise ValueError("count must be a non-negative integer")
+        self.average = finite_number(self.average, "average")
+        self._sum_squared_deviations = finite_number(
+            self._sum_squared_deviations, "sum_squared_deviations"
+        )
+        if self._sum_squared_deviations < 0:
+            raise ValueError("sum_squared_deviations cannot be negative")
+        if self.count == 0 and (self.average != 0.0 or self._sum_squared_deviations != 0.0):
+            raise ValueError("empty statistics must start at zero")
+
+    def update(self, value: float) -> None:
+        observation = finite_number(value, "value")
+        self.count += 1
+        delta = observation - self.average
+        self.average += delta / self.count
+        delta_after_update = observation - self.average
+        self._sum_squared_deviations += delta * delta_after_update
+
+    def merge(self, other: RunningStatistics) -> None:
+        if not isinstance(other, RunningStatistics):
+            raise TypeError("other must be RunningStatistics")
+        if other.count == 0:
+            return
+        if self.count == 0:
+            self.count = other.count
+            self.average = other.average
+            self._sum_squared_deviations = other._sum_squared_deviations
+            return
+        combined_count = self.count + other.count
+        delta = other.average - self.average
+        self._sum_squared_deviations += (
+            other._sum_squared_deviations
+            + delta * delta * self.count * other.count / combined_count
+        )
+        self.average += delta * other.count / combined_count
+        self.count = combined_count
+
+    def variance(self, sample: bool = False) -> float:
+        if not isinstance(sample, bool):
+            raise TypeError("sample must be a boolean")
+        if sample and self.count < 2:
+            raise ValueError("sample variance requires at least two observations")
+        if self.count == 0:
+            raise ValueError("variance is undefined for empty statistics")
+        denominator = self.count - 1 if sample else self.count
+        return self._sum_squared_deviations / denominator
+
+    def standard_deviation(self, sample: bool = False) -> float:
+        return math.sqrt(self.variance(sample))

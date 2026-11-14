@@ -17,12 +17,19 @@ def sigmoid(value: float) -> float:
     return z / (1.0 + z)
 
 
+def logsumexp(values: Sequence[float]) -> float:
+    """Compute log(sum(exp(values))) with a max-shift for stability."""
+    logits = vector_values(values)
+    maximum = max(logits)
+    return maximum + math.log(math.fsum(math.exp(value - maximum) for value in logits))
+
+
 def softmax(values: Sequence[float], temperature: float = 1.0) -> tuple[float, ...]:
     logits = vector_values(values)
     scale = finite_number(temperature, "temperature")
     if scale <= 0:
         raise ValueError("temperature must be positive")
-    scaled = tuple(value / scale for value in logits)
+    scaled = tuple(finite_number(value / scale, "scaled logit") for value in logits)
     maximum = max(scaled)
     exponentials = tuple(math.exp(value - maximum) for value in scaled)
     total = math.fsum(exponentials)

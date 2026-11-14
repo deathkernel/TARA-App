@@ -15,8 +15,16 @@ from .linear_algebra import (
     vector_subtract,
 )
 from .optimization import OptimizationResult, gradient_descent
-from .probability import bayes_update, entropy, sigmoid, softmax
-from .statistics import correlation, covariance, mean, median, quantile, variance
+from .probability import bayes_update, entropy, logsumexp, sigmoid, softmax
+from .statistics import (
+    RunningStatistics,
+    correlation,
+    covariance,
+    mean,
+    median,
+    quantile,
+    variance,
+)
 
 
 class MathematicalEngine:
@@ -44,6 +52,7 @@ class MathematicalEngine:
     solve_linear_system = staticmethod(solve_linear_system)
     sigmoid = staticmethod(sigmoid)
     softmax = staticmethod(softmax)
+    logsumexp = staticmethod(logsumexp)
     entropy = staticmethod(entropy)
     bayes_update = staticmethod(bayes_update)
     derivative = staticmethod(derivative)
@@ -51,6 +60,7 @@ class MathematicalEngine:
     integrate_trapezoid = staticmethod(integrate_trapezoid)
     integrate_simpson = staticmethod(integrate_simpson)
     gradient_descent = staticmethod(gradient_descent)
+    RunningStatistics = RunningStatistics
 
 
 __all__ = ["MathematicalEngine", "OptimizationResult", "gradient_descent"]

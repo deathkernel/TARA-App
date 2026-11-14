@@ -19,10 +19,12 @@ from .probability import (
     entropy,
     gaussian_pdf,
     gaussian_log_pdf,
+    logsumexp,
     sigmoid,
     softmax,
 )
 from .statistics import (
+    RunningStatistics,
     correlation,
     covariance,
     mean,
@@ -35,6 +37,7 @@ from .statistics import (
 __all__ = [
     "MathematicalEngine",
     "OptimizationResult",
+    "RunningStatistics",
     "bayes_update",
     "correlation",
     "covariance",
@@ -47,6 +50,7 @@ __all__ = [
     "gradient_descent",
     "integrate_simpson",
     "integrate_trapezoid",
+    "logsumexp",
     "matrix_multiply",
     "matrix_transpose",
     "mean",
