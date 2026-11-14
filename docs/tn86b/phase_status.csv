@@ -4,6 +4,6 @@ phase,module,status,validation
 3,LE,implemented,tests-authored-not-run
 4,CE,initial-implementation,tests-authored-not-run
 5,MIE,initial-implementation,tests-authored-not-run
-6,MMI,planned,not-started
+6,MMI,initial-implementation,tests-authored-not-run
 7,NRT,planned,not-started
 8,VBE,planned,not-started

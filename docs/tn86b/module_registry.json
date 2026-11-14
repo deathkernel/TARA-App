@@ -2,58 +2,20 @@
   "schema_version": "1.0.0",
   "project": "TN-86B",
   "modules": [
-    {
-      "id": "NPE",
-      "name": "Neural Processing Engine",
-      "path": "src/tara_app/neural",
-      "status": "implemented-unvalidated"
-    },
-    {
-      "id": "ME",
-      "name": "Memory Engine",
-      "path": "src/tara_app/memory",
-      "status": "implemented-unvalidated"
-    },
-    {
-      "id": "LE",
-      "name": "Learning Engine",
-      "path": "src/tara_app/learning",
-      "status": "implemented-unvalidated"
-    },
-    {
-      "id": "CE",
-      "name": "Cognitive Engine",
-      "path": "src/tara_app/cognition",
-      "status": "initial-implementation-unvalidated"
-    },
-    {
-      "id": "MIE",
-      "name": "Mathematical Intelligence Engine",
-      "path": "src/tara_app/mathematics",
-      "status": "initial-implementation-unvalidated"
-    },
-    {
-      "id": "MMI",
-      "name": "Multimodal Integration",
-      "path": null,
-      "status": "planned"
-    },
-    {
-      "id": "NRT",
-      "name": "Neural Runtime",
-      "path": null,
-      "status": "planned"
-    },
-    {
-      "id": "VBE",
-      "name": "Verification and Benchmarking",
-      "path": null,
-      "status": "planned"
-    }
+    {"id": "NPE", "name": "Neural Processing Engine", "path": "src/tara_app/neural", "status": "implemented-unvalidated"},
+    {"id": "ME", "name": "Memory Engine", "path": "src/tara_app/memory", "status": "implemented-unvalidated"},
+    {"id": "LE", "name": "Learning Engine", "path": "src/tara_app/learning", "status": "implemented-unvalidated"},
+    {"id": "CE", "name": "Cognitive Engine", "path": "src/tara_app/cognition", "status": "initial-implementation-unvalidated"},
+    {"id": "MIE", "name": "Mathematical Intelligence Engine", "path": "src/tara_app/mathematics", "status": "initial-implementation-unvalidated"},
+    {"id": "MMI", "name": "Multimodal Integration", "path": "src/tara_app/multimodal", "status": "initial-implementation-unvalidated"},
+    {"id": "NRT", "name": "Neural Runtime", "path": null, "status": "planned"},
+    {"id": "VBE", "name": "Verification and Benchmarking", "path": null, "status": "planned"}
   ],
   "notes": [
-    "Statuses describe repository implementation only; tests and runtime integration remain to be verified.",
+    "Statuses describe repository implementation only; tests and live runtime integration remain to be verified.",
     "OmniRoute remains the single configured LLM gateway.",
+    "Voice transcripts are accepted from the local TARA Voice specialist only.",
+    "Vision analysis is accepted from the existing OmniRoute-backed TARA Vision specialist.",
     "Existing TARA security and approval controls remain authoritative."
   ]
 }

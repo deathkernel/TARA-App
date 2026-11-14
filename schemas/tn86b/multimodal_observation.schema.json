@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tara-app.local/schemas/tn86b/multimodal_observation.schema.json",
+  "title": "TN-86B Multimodal Observation",
+  "description": "Text-only normalized observation. Raw audio and image bytes are not represented.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["observation_id", "modality", "content", "source", "confidence", "created_at", "attributes"],
+  "properties": {
+    "observation_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "modality": {"enum": ["text", "voice_transcript", "image_analysis"]},
+    "content": {"type": "string", "minLength": 1, "maxLength": 20000},
+    "source": {"type": "string", "minLength": 1, "maxLength": 64},
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "created_at": {"type": "number", "minimum": 0},
+    "attributes": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "array",
+        "prefixItems": [
+          {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,31}$"},
+          {"type": "string", "maxLength": 256}
+        ],
+        "minItems": 2,
+        "maxItems": 2
+      }
+    }
+  }
+}
