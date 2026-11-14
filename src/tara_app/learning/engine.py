@@ -110,8 +110,8 @@ class LearningEngine:
     ) -> float:
         """Apply all spike pairs; positive timing strengthens, negative weakens."""
         self._validate_index(synapse_index)
-        if len(pre_spike_times_ms) > 4096 or len(post_spike_times_ms) > 4096:
-            raise ValueError("at most 4096 spike times are accepted per neuron")
+        if len(pre_spike_times_ms) > 512 or len(post_spike_times_ms) > 512:
+            raise ValueError("at most 512 spike times are accepted per neuron")
         pre_times = self._validate_spike_times(pre_spike_times_ms)
         post_times = self._validate_spike_times(post_spike_times_ms)
         delta = 0.0
@@ -151,8 +151,16 @@ class LearningEngine:
     def apply_to_network(self, network: object) -> None:
         """Copy learned weights into a compatible SpikingNetwork instance."""
         setter = getattr(network, "set_synapse_weight", None)
-        if not callable(setter):
-            raise TypeError("network must support set_synapse_weight")
+        network_synapses = getattr(network, "synapses", None)
+        if not callable(setter) or network_synapses is None:
+            raise TypeError("network must expose synapses and set_synapse_weight")
+        if len(network_synapses) != len(self._topology):
+            raise ValueError("network topology does not match learning topology")
+        if any(
+            current.pre != expected.pre or current.post != expected.post
+            for current, expected in zip(network_synapses, self._topology)
+        ):
+            raise ValueError("network topology does not match learning topology")
         for index, weight in enumerate(self._weights):
             setter(index, weight)
 

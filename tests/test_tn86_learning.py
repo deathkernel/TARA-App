@@ -90,6 +90,20 @@ def test_network_receives_learned_weights_without_topology_change():
     assert network.synapse_count == 1
 
 
+def test_learning_rejects_mismatched_network_topology_without_mutation():
+    network = SpikingNetwork()
+    network.add_neuron(LIFNeuron())
+    network.add_neuron(LIFNeuron())
+    network.add_synapse(Synapse(pre=1, post=0, weight=0.4))
+    learner = LearningEngine([Synapse(pre=0, post=1, weight=0.5)])
+    before = network.synapses
+
+    with pytest.raises(ValueError, match="topology"):
+        learner.apply_to_network(network)
+
+    assert network.synapses == before
+
+
 def test_invalid_activity_and_unsorted_spike_times_are_rejected():
     engine = make_engine()
     with pytest.raises(ValueError, match="pre_activity"):
