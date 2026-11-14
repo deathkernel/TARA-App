@@ -31,7 +31,7 @@ if not exist ".venv\Scripts\python.exe" (
 
 ".venv\Scripts\python.exe" -m pip install -e .
 if errorlevel 1 (
-  echo TARA-App installation failed.
+  echo SITA installation failed.
   exit /b 1
 )
 
@@ -41,7 +41,7 @@ if errorlevel 1 (
 ) else (
   ".venv\Scripts\python.exe" -m pip install -e ".[voice]"
   if errorlevel 1 (
-    echo Voice transcription dependencies are unavailable; the rest of TARA-App will continue.
+    echo Voice transcription dependencies are unavailable; the rest of SITA will continue.
   )
 )
 
@@ -50,14 +50,14 @@ rem The Python app retains its static UI fallback if the optional build cannot r
 if exist "frontend\package.json" (
   where npm >nul 2>nul
   if errorlevel 1 (
-    echo Node.js/npm is unavailable; TARA will use the bundled static UI fallback.
+    echo Node.js/npm is unavailable; SITA will use the bundled static UI fallback.
   ) else (
     pushd frontend
     if not exist "node_modules\vite\bin\vite.js" (
       call npm install --no-audit --no-fund
     )
     if not errorlevel 1 call npm run build
-    if errorlevel 1 echo React workspace build failed; TARA will use the static UI fallback when no compiled build exists.
+    if errorlevel 1 echo React workspace build failed; SITA will use the static UI fallback when no compiled build exists.
     popd
   )
 )

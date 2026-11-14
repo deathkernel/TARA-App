@@ -1,1 +1,1 @@
-"""Local, user-controlled TARA memory."""
+"""Local, user-controlled SITA memory."""

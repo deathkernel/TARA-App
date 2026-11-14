@@ -1,2 +1,2 @@
-"""Free, local-first study utilities for TARA."""
+"""Free, local-first study utilities for SITA."""
 __version__ = "0.1.0"

@@ -1,4 +1,4 @@
-"""Composition entry point for the TARA application boundary."""
+"""Composition entry point for the SITA application boundary."""
 from __future__ import annotations
 
 from pathlib import Path

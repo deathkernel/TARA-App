@@ -1,4 +1,4 @@
-"""Load the optional [mcp] section from a TARA TOML config file."""
+"""Load the optional [mcp] section from a SITA TOML config file."""
 from __future__ import annotations
 
 from pathlib import Path

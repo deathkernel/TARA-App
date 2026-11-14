@@ -21,7 +21,7 @@ def _result(request_id: str, status: str, data: dict[str, Any] | None = None, er
 
 def _get_json(host: str, path: str, query: dict[str, str]) -> Any:
     url = "https://" + host + path + "?" + urlencode(query)
-    request = Request(url, headers={"Accept": "application/json", "User-Agent": "TARA-App/0.1 (https://github.com/deathkernel/TARA-App)"})
+    request = Request(url, headers={"Accept": "application/json", "User-Agent": "SITA/0.1 (https://github.com/deathkernel/TARA-App)"})
     with build_opener(ProxyHandler({})).open(request, timeout=10) as response:
         if response.geturl().split("/", 3)[:3] != ["https:", "", host]:
             raise ValueError("public research endpoint redirected unexpectedly")

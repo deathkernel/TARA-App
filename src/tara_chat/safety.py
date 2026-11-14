@@ -1,4 +1,4 @@
-"""Small safety boundaries for TARA's future agent execution layer.
+"""Small safety boundaries for SITA's future agent execution layer.
 
 The safety layer is intentionally separate from PC tools. It decides whether
 an action is permitted and records decisions, but does not execute anything.

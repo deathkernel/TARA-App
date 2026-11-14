@@ -1,4 +1,4 @@
-"""Shared HTTP primitives for TARA network clients."""
+"""Shared HTTP primitives for SITA network clients."""
 from __future__ import annotations
 
 from urllib.request import HTTPRedirectHandler

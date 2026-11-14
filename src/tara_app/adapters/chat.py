@@ -1,4 +1,4 @@
-"""Narrow adapter for an injected TARA-Chat callable; no sibling import or process launch."""
+"""Narrow adapter for an injected SITA Chat callable; no sibling import or process launch."""
 from __future__ import annotations
 
 from typing import Any, Callable

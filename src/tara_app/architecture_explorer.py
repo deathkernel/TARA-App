@@ -1,4 +1,4 @@
-"""Static source-code architecture extraction for TARA repositories.
+"""Static source-code architecture extraction for SITA repositories.
 
 The explorer is intentionally offline and read-only. It never imports or executes
 project code; it parses Python with the standard-library AST and uses bounded,

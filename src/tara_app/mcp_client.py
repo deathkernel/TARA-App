@@ -1,4 +1,4 @@
-"""Allowlisted MCP tool gateway for TARA-App.
+"""Allowlisted MCP tool gateway for SITA.
 
 Safety rules enforced here:
 

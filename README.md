@@ -1,10 +1,12 @@
-# TARA-App
+# SITA
 
-## TN-86B — TARA Neural-86 Brain-inspired Architecture
+## TN-86B — TARA Neural – 86 Billion Cognitive Architecture
 
-TN-86B is the brain-inspired neural and cognitive runtime workstream within TARA-App. It is an engineering architecture—not a literal simulation of 86 billion biological neurons. Start with the [TN-86B project guide](docs/TN-86B_README.md), [implementation roadmap](docs/tn86b/IMPLEMENTATION_ROADMAP.md), and machine-readable [project specification](docs/tn86b/PROJECT_SPEC.toml).
+**Brand identity:** [SITA — Smart Intelligence & Thinking Assistant](docs/BRAND_IDENTITY.md). The source repository is still named `TARA-App`; internal Python namespaces and legacy config/environment names remain unchanged for compatibility.
 
-**TARA-App is the user-facing AI assistant/application, not an AI model.** TARA owns conversations, specialist capabilities, memory, permissions, and local desktop actions. OmniRoute is the only language-model gateway: it selects the underlying provider/model and returns inference results to TARA.
+TN-86B is the brain-inspired neural and cognitive runtime powering SITA. It is an engineering architecture—not a literal simulation of 86 billion biological neurons. Start with the [TN-86B project guide](docs/TN-86B_README.md), [implementation roadmap](docs/tn86b/IMPLEMENTATION_ROADMAP.md), and machine-readable [project specification](docs/tn86b/PROJECT_SPEC.toml).
+
+**SITA (Smart Intelligence & Thinking Assistant) is the user-facing AI assistant/application, not an AI model.** SITA owns conversations, specialist capabilities, memory, permissions, and local desktop actions. OmniRoute is the only language-model gateway: it selects the underlying provider/model and returns inference results to SITA.
 
 Chat, Code, Handler, Router, and the other specialist capabilities are maintained as components inside this `TARA-App` repository. The app must not depend on deleted sibling model repositories or private cross-repository imports. Chat is a conversation runtime, Code is a coding specialist, and Handler is a deterministic native developer-environment tool; these are not all individual AI models. Actual model inventory and runtime support must be discovered/configured explicitly.
 
@@ -12,17 +14,17 @@ Chat, Code, Handler, Router, and the other specialist capabilities are maintaine
 
 ## Product vision
 
-- One app and unified UI for the TARA ecosystem.
+- One app and unified UI for SITA.
 - Multiple model profiles selectable by task, with model/runtime lifecycle management.
 - Chat, coding, and environment-management workflows integrated as specialist capabilities.
-- One consistent OmniRoute gateway for all language-model inference; TARA does not directly call Ollama, Gemini, or another model provider.
-- Provider selection, quotas, fallback, and model lifecycle are managed by OmniRoute; TARA handles local memory, permissions, desktop actions, and resource-aware orchestration.
+- One consistent OmniRoute gateway for all language-model inference; SITA does not directly call Ollama, Gemini, or another model provider.
+- Provider selection, quotas, fallback, and model lifecycle are managed by OmniRoute; SITA handles local memory, permissions, desktop actions, and resource-aware orchestration.
 - Clear distinction between an AI model, a model runtime/provider, and a tool/engine.
 - Safe defaults: no arbitrary host command execution, no hidden mutation, and no automatic Git merge.
 
 ## Current implementation state
 
-TARA-App is being consolidated as a single Python monorepo. The current integrated source packages, all maintained within this repository, are:
+SITA is maintained as a single Python monorepo in this repository. The current integrated source packages, all maintained within this repository, are:
 
 - `tara_app`: the local app, capability registry, approval flow, OmniRoute gateway configuration, conversation controls, and safe Markdown chat UI.
 - `tara_router`: a deterministic local router included in this repository; it requires no API key or paid inference.
@@ -33,7 +35,7 @@ TARA-App is being consolidated as a single Python monorepo. The current integrat
 - `tara_memory`: local SQLite memory; write and delete requests require Security review and per-request approval.
 - `tara_creative`: OmniRoute-routed writing.
 - `tara_security`: deterministic policy assessment for sensitive capabilities.
-- `tara_action`: local desktop and browser actions plus optional GitHub issue creation; every action is gated by TARA-Security and explicit approval, while GitHub writes also require credentials and a repository allowlist.
+- `tara_action`: local desktop and browser actions plus optional GitHub issue creation; every action is gated by SITA Security and explicit approval, while GitHub writes also require credentials and a repository allowlist.
 - `tara_voice`: optional faster-whisper transcription when compatible wheels are available; read-aloud uses installed local browser voices.
 - `tara_vision`: OmniRoute-routed image analysis; uploaded images are sent through the configured gateway.
 - `tara_data`: deterministic, read-only CSV summaries.
@@ -41,16 +43,16 @@ TARA-App is being consolidated as a single Python monorepo. The current integrat
 - `tara_weather`: public Open-Meteo geocoding and weather forecasts, with attribution.
 - `tara_models`: an OmniRoute model catalogue and inference adapter.
 
-TARA-Handler's C++17 source is included in TARA-App. The launchers explicitly prepare its optional native diagnostic before starting the app; only the environment-diagnosis command is exposed. If CMake or a C++ compiler is unavailable, the app uses read-only Python diagnostics. GitHub issue creation remains inactive until local credentials and a repository allowlist are configured.
+SITA Handler's C++17 source is included in TARA-App. The launchers explicitly prepare its optional native diagnostic before starting the app; only the environment-diagnosis command is exposed. If CMake or a C++ compiler is unavailable, the app uses read-only Python diagnostics. GitHub issue creation remains inactive until local credentials and a repository allowlist are configured.
 
 ### Personal desktop automation
 
-TARA can open Calculator, Notepad, and Paint, or open an HTTP(S) website in the default browser. Commands such as `Open Calculator`, `Notepad kholo`, and `Open https://example.com` are routed to TARA-Security and require a one-operation approval before launch. Each app maps to a fixed operating-system command; website addresses are validated and handed to the system browser. If an app or browser is unavailable, TARA reports that instead of claiming success.
+SITA can open Calculator, Notepad, and Paint, or open an HTTP(S) website in the default browser. Commands such as `Open Calculator`, `Notepad kholo`, and `Open https://example.com` are routed to SITA Security and require a one-operation approval before launch. Each app maps to a fixed operating-system command; website addresses are validated and handed to the system browser. If an app or browser is unavailable, SITA reports that instead of claiming success.
 
 ## Target architecture
 
 ```text
-TARA-App (one application)
+SITA (one application)
   |
   +-- UI / sessions / settings / model catalogue
   |
@@ -60,21 +62,21 @@ TARA-App (one application)
   |     +-- Provider selection, fallback, quotas and model lifecycle managed by OmniRoute
   |
   +-- Task Orchestrator / Capability Registry
-        +-- TARA-Chat adapter --> conversation + memory
-        +-- TARA-Code adapter --> coding plans + reviewed execution
-        +-- TARA-Handler adapter --> native environment tool
-        +-- Future TARA specialist models/tools
+        +-- SITA Chat adapter --> conversation + memory
+        +-- SITA Code adapter --> coding plans + reviewed execution
+        +-- SITA Handler adapter --> native environment tool
+        +-- Future SITA specialist models/tools
 ```
 
 The model catalogue is configured explicitly. Model weights, provider/runtime, and specialist tools are separate concepts.
 
 ## Core design rules
 
-1. TARA-App is the app shell and runtime manager; it is not itself a model.
+1. SITA is the app shell and runtime manager; it is not itself a model.
 2. Keep model, provider/runtime, and tool/engine as separate concepts in the data model and UI.
 3. Use versioned adapter contracts; do not rely on private cross-repository imports as permanent APIs.
 4. Fail closed when a model, module, executable, runtime, sandbox, or permission is unavailable.
-5. Never run model-generated shell text directly on the host. TARA-Code execution must use a real OS/container sandbox; path checks alone are not a sandbox.
+5. Never run model-generated shell text directly on the host. SITA Code execution must use a real OS/container sandbox; path checks alone are not a sandbox.
 6. Keep Handler's C++ executable behind a subprocess boundary with fixed argument vectors, `shell=False`, timeouts, bounded output, and an explicit command allowlist.
 7. Treat model, repository, tool, and diagnostic output as untrusted data, not as instructions or authorization.
 8. Default to read-only diagnostics. Mutations require a clear plan, scope, risk, expected effects, and explicit approval bound to that operation.
@@ -112,12 +114,12 @@ This layout is a target, not a claim that those modules are already implemented.
 
 ## Runtime and development options
 
-See [runtime and development option notes](docs/runtime-evaluation.md) for the current scope of Amp, GitHub Copilot sandboxing, GitHub Package Firewall, and AWS TorchNeuron. These are optional references, not built-in TARA runtimes. The [native Handler integration notes](docs/native-handler.md) describe its explicit build step and read-only app boundary.
+See [runtime and development option notes](docs/runtime-evaluation.md) for the current scope of Amp, GitHub Copilot sandboxing, GitHub Package Firewall, and AWS TorchNeuron. These are optional references, not built-in SITA runtimes. The [native Handler integration notes](docs/native-handler.md) describe its explicit build step and read-only app boundary.
 
 
 ## OmniRoute-only AI inference
 
-All TARA language-model requests use the local OmniRoute gateway. This includes Chat, Code, Vision, Creative, and Model Hub. TARA's own specialist router still decides which capability handles a task; OmniRoute chooses the underlying model/provider for that inference request.
+All SITA language-model requests use the local OmniRoute gateway. This includes Chat, Code, Vision, Creative, and Model Hub. SITA's own specialist router still decides which capability handles a task; OmniRoute chooses the underlying model/provider for that inference request.
 
 - **Gateway:** `http://127.0.0.1:20128/v1`
 - **Chat route:** `auto`
@@ -126,11 +128,11 @@ All TARA language-model requests use the local OmniRoute gateway. This includes 
 - **Creative route:** `auto/cheap`
 - **Model Hub route:** `auto`
 - **Authentication:** set `TARA_OMNIROUTE_API_KEY` in the process environment. Never commit the key or place it in frontend configuration.
-- **No local fallback:** if OmniRoute or its API key is unavailable, the affected inference request fails closed. TARA does not silently fall back to direct Ollama or Gemini calls.
+- **No local fallback:** if OmniRoute or its API key is unavailable, the affected inference request fails closed. SITA does not silently fall back to direct Ollama or Gemini calls.
 
 The route aliases are passed to OmniRoute; they are not concrete model IDs. Provider availability, model IDs, quotas, billing, and fallback behavior depend on the connected providers and routing policy configured inside OmniRoute.
 
-**Data handling:** Chat prompts, recent history and relevant saved-memory snippets, creative briefs, and any explicitly supplied code attachments or images are sent to OmniRoute and may be forwarded to a cloud provider configured there. Chat, Code, Vision, Creative, and Model Hub each require `allow_remote = true` in `tara-app.toml`; otherwise that specialist stays disabled. Do not send secrets or confidential workspace data unless you have reviewed the selected provider and consent to that transfer. Vision reports `images_sent_to_remote=true`. TARA keeps memory, permissions, capability routing, and desktop tool execution on the local machine; model output is never executed as a host command.
+**Data handling:** Chat prompts, recent history and relevant saved-memory snippets, creative briefs, and any explicitly supplied code attachments or images are sent to OmniRoute and may be forwarded to a cloud provider configured there. Chat, Code, Vision, Creative, and Model Hub each require `allow_remote = true` in `tara-app.toml`; otherwise that specialist stays disabled. Do not send secrets or confidential workspace data unless you have reviewed the selected provider and consent to that transfer. Vision reports `images_sent_to_remote=true`. SITA keeps memory, permissions, capability routing, and desktop tool execution on the local machine; model output is never executed as a host command.
 
 Local speech transcription via optional faster-whisper and browser read-aloud are separate speech features, not language-model fallback paths. They remain local when enabled.
 
@@ -138,7 +140,7 @@ See [OmniRoute integration setup](docs/OMNIROUTE_INTEGRATION.md) for Windows con
 
 ### Web UI selection
 
-The premium React + TypeScript workspace is the primary UI when compiled assets are available. The Windows and Unix launchers build `frontend/` when Node.js/npm is installed; without a successful build, TARA safely falls back to the bundled static UI. Set `TARA_ENABLE_REACT_UI=0` to force the static fallback.
+The premium React + TypeScript workspace is the primary UI when compiled assets are available. The Windows and Unix launchers build `frontend/` when Node.js/npm is installed; without a successful build, SITA safely falls back to the bundled static UI. Set `TARA_ENABLE_REACT_UI=0` to force the static fallback.
 
 The React workspace includes session navigation and search, specialist task starters, session export/delete, drag-and-drop and picker attachments, selected skill packs, scoped approval cards, message edit/regenerate/copy, local read-aloud, activity history, runtime/model status, and the read-only MCP integration catalogue. Its premium motion system uses restrained button sheen, hover elevation, status feedback and panel/message transitions; it respects the operating system's reduced-motion preference and adds no remote font or animation dependency. Its multi-pane layout is inspired by modern coding-agent workspaces; it does not pretend to provide shell execution, arbitrary file editing, diff application, or preview panes. Those remain unavailable until their backend and security boundaries exist.
 
@@ -146,13 +148,13 @@ See [Premium Developer Workspace](docs/PREMIUM_WORKSPACE_UI.md) for the design s
 
 ### Chat experience
 
-Assistant replies render safe Markdown for headings, lists, quotes, links, inline formatting, and code blocks. HTML in model output is treated as text; links are limited to HTTP or HTTPS. Replies and code blocks can be copied. Users can edit and resend a text-only prompt or regenerate its latest answer. TARA synchronizes the edited conversation context with its local chat runtime, including after the app restarts. Prompts with file attachments cannot be edited or regenerated because attachment bytes are not stored in the local chat history. Uploads support up to four files and a 10 MB combined attachment limit per message. Specialist-specific content limits still apply: image, audio, source-code and CSV inputs are capped at 512 KB where applicable; source-grounded Study documents can use the larger attachment allowance.
+Assistant replies render safe Markdown for headings, lists, quotes, links, inline formatting, and code blocks. HTML in model output is treated as text; links are limited to HTTP or HTTPS. Replies and code blocks can be copied. Users can edit and resend a text-only prompt or regenerate its latest answer. SITA synchronizes the edited conversation context with its local chat runtime, including after the app restarts. Prompts with file attachments cannot be edited or regenerated because attachment bytes are not stored in the local chat history. Uploads support up to four files and a 10 MB combined attachment limit per message. Specialist-specific content limits still apply: image, audio, source-code and CSV inputs are capped at 512 KB where applicable; source-grounded Study documents can use the larger attachment allowance.
 
 Research uses Crossref and Wikipedia public APIs for source records. No API key is required and no paid model is called. A research query is sent to those public services when Research is selected. Voice transcription uses the optional local faster-whisper package and weights; audio is processed on-device. The launcher skips that optional package on Python 3.15 or newer, so other app features still install. Read-aloud uses only browser voices marked local.
 
 ## Target integration contracts
 
-Adapters should expose health, capabilities, and a structured execute operation. TARA queries OmniRoute for the model catalogue and delegates provider/model selection and lifecycle to the gateway. TARA adapters still enforce request bounds, cancellation, timeouts, local permission checks, and audit reporting. Model identity and route should be recorded for each inference request.
+Adapters should expose health, capabilities, and a structured execute operation. SITA queries OmniRoute for the model catalogue and delegates provider/model selection and lifecycle to the gateway. SITA adapters still enforce request bounds, cancellation, timeouts, local permission checks, and audit reporting. Model identity and route should be recorded for each inference request.
 
 Use a versioned request with `schema_version`, `request_id`, `session_id`, `module`, `action`, structured `inputs`, `workspace_root` when applicable, `timeout_seconds`, and `approval_token` when a mutating operation requires approval.
 
@@ -160,9 +162,9 @@ A result should include `schema_version`, `request_id`, `ok`, `status`, structur
 
 ## Initial milestones
 
-1. **Define model inventory:** list every intended TARA model, artifact format, runtime, hardware needs, and licence/source.
+1. **Define model inventory:** list every intended SITA model, artifact format, runtime, hardware needs, and licence/source.
 2. **App/runtime foundation:** configuration, model catalogue, runtime lifecycle, resource limits, status reporting, and provider adapters.
-3. **Chat vertical slice:** integrate the existing TARA-CHAT runtime and preserve explicit memory controls.
+3. **Chat vertical slice:** integrate the existing SITA Chat runtime and preserve explicit memory controls.
 4. **Handler read-only slice:** reuse the existing narrow subprocess bridge pattern for environment diagnostics.
 5. **Code adapter:** integrate planning/review reports first; keep execution disabled until a real sandbox runner and isolation tests exist.
 6. **Security and reliability:** approvals, structured audit, model cancellation, timeouts, malformed outputs, resource exhaustion, and adapter version tests.
@@ -170,7 +172,7 @@ A result should include `schema_version`, `request_id`, `ok`, `status`, structur
 
 ## Local development
 
-TARA-App now includes the local Router, Chat, Code, Planner, Memory, Creative, Security, Action, Data, Vision, Voice, and Research packages in the same repository. Chat and Code remain distinct specialists. Code suggestions and plans are data only; the current module does not run commands or modify a workspace. Voice transcription uses the optional local faster-whisper package when the Python runtime supports its dependencies; read-aloud uses installed local browser voices. Vision and Creative use OmniRoute; Data performs bounded, read-only CSV analysis.
+SITA now includes the local Router, Chat, Code, Planner, Memory, Creative, Security, Action, Data, Vision, Voice, and Research packages in the same repository. Chat and Code remain distinct specialists. Code suggestions and plans are data only; the current module does not run commands or modify a workspace. Voice transcription uses the optional local faster-whisper package when the Python runtime supports its dependencies; read-aloud uses installed local browser voices. Vision and Creative use OmniRoute; Data performs bounded, read-only CSV analysis.
 
 ### Run on Windows
 
@@ -179,7 +181,7 @@ TARA-App now includes the local Router, Chat, Code, Planner, Memory, Creative, S
 3. Set `$env:TARA_OMNIROUTE_API_KEY = Read-Host 'OmniRoute API key'` in PowerShell.
 4. Run `.\run-tara.bat` in that same PowerShell window.
 
-The launcher creates a local virtual environment, installs this repository, creates `tara-app.toml` from the example when needed, prepares the optional native Handler diagnostic, and starts TARA-App. TARA does not install, start, or call Ollama for language-model inference; the configured OmniRoute gateway handles model routing.
+The launcher creates a local virtual environment, installs this repository, creates `tara-app.toml` from the example when needed, prepares the optional native Handler diagnostic, and starts SITA. SITA does not install, start, or call Ollama for language-model inference; the configured OmniRoute gateway handles model routing.
 
 
 ### Run on macOS or Linux
@@ -189,7 +191,7 @@ The launcher creates a local virtual environment, installs this repository, crea
 3. Export `TARA_OMNIROUTE_API_KEY` in the shell environment.
 4. Run `./run-tara.sh` from the repository folder.
 
-The script creates a virtual environment, installs TARA-App, initializes the local config, explicitly prepares the optional native Handler diagnostic, and starts the app. If a local CMake/C++ toolchain is missing, Handler keeps working through the read-only Python fallback. All language-model requests still go through OmniRoute.
+The script creates a virtual environment, installs SITA, initializes the local config, explicitly prepares the optional native Handler diagnostic, and starts the app. If a local CMake/C++ toolchain is missing, Handler keeps working through the read-only Python fallback. All language-model requests still go through OmniRoute.
 
 ### Run from a terminal
 
@@ -215,9 +217,9 @@ The consolidated Router, Chat, Code, Planner, Memory, Creative, Security, Action
 
 ## Study Mode (free and local-first)
 
-TARA-App includes an optional, read-only Study specialist for source-grounded notes, fill-in-the-blank practice quizzes, flashcards, and bounded revision plans. It uses no paid API and does not need a model for these deterministic learning aids. Study requests are routed only when the `study.create` capability is configured. Copy the updated `tara-app.example.toml` into your local config to enable it.
+SITA includes an optional, read-only Study specialist for source-grounded notes, fill-in-the-blank practice quizzes, flashcards, and bounded revision plans. It uses no paid API and does not need a model for these deterministic learning aids. Study requests are routed only when the `study.create` capability is configured. Copy the updated `tara-app.example.toml` into your local config to enable it.
 
-- Attach UTF-8 `.txt`, Markdown, or text-based PDF notes and ask TARA to make notes, a quiz, or flashcards from them.
+- Attach UTF-8 `.txt`, Markdown, or text-based PDF notes and ask SITA to make notes, a quiz, or flashcards from them.
 - Study answers derived from supplied material are marked source-grounded and include source-line hints for quiz/flashcard items. They are extracted from the source, not independently fact-checked.
 - Ask for a `7-day study plan for biology` to generate a bounded plan (1–30 days) without uploading a file.
 - PDF text extraction is optional: install `pip install -e '.[study]'` to add the free `pypdf` library. Scanned PDFs need OCR; OCR integration is a later batch.
@@ -228,45 +230,45 @@ The first release intentionally avoids pretending deterministic sentence extract
 
 ## OmniRoute Model Hub and Weather
 
-- **Model catalogue:** TARA Model Hub reads the available model list from OmniRoute's `GET /v1/models` endpoint.
+- **Model catalogue:** SITA Model Hub reads the available model list from OmniRoute's `GET /v1/models` endpoint.
 - **Model generation:** Model Hub prompts use OmniRoute's `POST /v1/chat/completions` endpoint. A selected model ID or configured route alias is sent through the gateway.
-- **No direct provider access:** TARA Model Hub no longer calls Gemini APIs or local Ollama endpoints. Model availability, cost, quotas, and access depend on OmniRoute's connected providers.
+- **No direct provider access:** SITA Model Hub no longer calls Gemini APIs or local Ollama endpoints. Model availability, cost, quotas, and access depend on OmniRoute's connected providers.
 - **Example prompts:** ask `List available models`, or `Use provider/model-id: explain photosynthesis`.
-- **Weather:** ask `weather in Pune` or `forecast for London for the next 7 days`. TARA uses Open-Meteo's public geocoding and forecast APIs without an API key, includes attribution, and limits response size and network timeouts. Its free endpoint is for non-commercial use and subject to provider rate limits.
-- **Readable answers:** TARA normalizes excessive whitespace and bullet glyphs and uses wider answer cards, consistent line spacing, and clearer heading hierarchy.
+- **Weather:** ask `weather in Pune` or `forecast for London for the next 7 days`. SITA uses Open-Meteo's public geocoding and forecast APIs without an API key, includes attribution, and limits response size and network timeouts. Its free endpoint is for non-commercial use and subject to provider rate limits.
+- **Readable answers:** SITA normalizes excessive whitespace and bullet glyphs and uses wider answer cards, consistent line spacing, and clearer heading hierarchy.
 
 ### Configure OmniRoute (PowerShell)
 
 1. Start OmniRoute and confirm its local gateway is reachable at `http://127.0.0.1:20128`.
-2. In the same PowerShell window used to start TARA, set `$env:TARA_OMNIROUTE_API_KEY = Read-Host "OmniRoute API key"`.
-3. Start TARA normally. The example config selects `auto` for Chat, `auto/coding:cheap` for Code, `auto` for Vision, and `auto/cheap` for Creative.
+2. In the same PowerShell window used to start SITA, set `$env:TARA_OMNIROUTE_API_KEY = Read-Host "OmniRoute API key"`.
+3. Start SITA normally. The example config selects `auto` for Chat, `auto/coding:cheap` for Code, `auto` for Vision, and `auto/cheap` for Creative.
 4. Check `GET /v1/models` through OmniRoute to inspect connected model IDs.
 
-Keep the key local and never commit it. If the gateway or key is unavailable, TARA fails closed and does not switch to Ollama or Gemini.
+Keep the key local and never commit it. If the gateway or key is unavailable, SITA fails closed and does not switch to Ollama or Gemini.
 
 ## Planned integrations: Anthropic ecosystem & MCP
 
-TARA remains a **local app shell**. Language-model inference stays on OmniRoute. The following official Anthropic and Model Context Protocol repositories are reference sources for making specialists more capable **without** giving the model unrestricted host control.
+SITA remains a **local app shell**. Language-model inference stays on OmniRoute. The following official Anthropic and Model Context Protocol repositories are reference sources for making specialists more capable **without** giving the model unrestricted host control.
 
-These are **not** vendored into TARA yet. Integration is planned in safety-first order. Patterns are adopted; full products (for example Claude Code on the host desktop) are not.
+These are **not** vendored into SITA yet. Integration is planned in safety-first order. Patterns are adopted; full products (for example Claude Code on the host desktop) are not.
 
 ### Priority order
 
-| Priority | Repository | Role in TARA |
+| Priority | Repository | Role in SITA |
 |----------|------------|--------------|
-| 1 | [modelcontextprotocol/python-sdk](https://github.com/modelcontextprotocol/python-sdk) | Official MCP Python client/server SDK. Basis for exposing TARA specialists as standard tools/resources behind the existing approval gate. |
+| 1 | [modelcontextprotocol/python-sdk](https://github.com/modelcontextprotocol/python-sdk) | Official MCP Python client/server SDK. Basis for exposing SITA specialists as standard tools/resources behind the existing approval gate. |
 | 1 | [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers) | Reference MCP servers: scoped **filesystem**, **git**, **fetch**, **memory**, **time**. Patterns for allowlisted, bounded tools only. |
 | 2 | [anthropics/anthropic-sdk-python](https://github.com/anthropics/anthropic-sdk-python) | Official Claude API client, tool runner, and MCP helpers. Optional Claude path remains through OmniRoute (or explicit config); never bypass local policy. |
 | 2 | [anthropics/claude-agent-sdk-python](https://github.com/anthropics/claude-agent-sdk-python) | Agent loop, in-process MCP tools, and hooks. Reference for multi-step Code/Planner flows; proposals stay data-only until approved. |
 | 3 | [anthropics/skills](https://github.com/anthropics/skills) | Agent Skills pack format (instructions + scripts). Reusable Study/Code/Planner skill folders. |
 | 3 | [anthropics/claude-cookbooks](https://github.com/anthropics/claude-cookbooks) | Prompt, tool-use, and evaluation recipes. |
-| 3 | [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) | Plugin packaging patterns for optional TARA modules. |
+| 3 | [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) | Plugin packaging patterns for optional SITA modules. |
 | 4 | [anthropics/claude-quickstarts](https://github.com/anthropics/claude-quickstarts) | Computer-use demo, computer toolset, agent loops. **Design reference only.** |
-| 4 | [anthropics/claude-code-action](https://github.com/anthropics/claude-code-action) | GitHub PR/issue agent patterns aligned with TARA Action + allowlist. |
+| 4 | [anthropics/claude-code-action](https://github.com/anthropics/claude-code-action) | GitHub PR/issue agent patterns aligned with SITA Action + allowlist. |
 
 ### What will be integrated (intent)
 
-1. **MCP tool layer** — TARA specialists and selected reference tools (scoped filesystem, git read, fetch) behind Security review and one-shot approval.
+1. **MCP tool layer** — SITA specialists and selected reference tools (scoped filesystem, git read, fetch) behind Security review and one-shot approval.
 2. **Agent tool loops** — structured multi-step planning for Code/Planner using agent-sdk patterns; still no host shell from model text.
 3. **Skills packs** — loadable skill folders for study notes, code review, and planning templates.
 4. **Computer use** — only after a real OS/container sandbox exists; never raw mouse/keyboard on the host.
@@ -300,18 +302,18 @@ python -m pip install -e .
 tara-app
 ```
 
-When `src/tara_app/web/react-dist/` exists, the local server serves the compiled React UI at `/` and its hashed assets from `/assets/`. Without a build, it serves the existing static UI. The Vite development server uses `127.0.0.1:5173` and proxies API requests to the local TARA-App server on `127.0.0.1:8765`.
+When `src/tara_app/web/react-dist/` exists, the local server serves the compiled React UI at `/` and its hashed assets from `/assets/`. Without a build, it serves the existing static UI. The Vite development server uses `127.0.0.1:5173` and proxies API requests to the local SITA server on `127.0.0.1:8765`.
 
 
 ## OmniRoute-only AI inference
 
-Chat, Code, Vision, Creative, and Model Hub all use the locally hosted OmniRoute gateway for language-model inference. OmniRoute chooses the underlying model/provider; TARA retains its own capability routing, conversation context, local memory, security policy, and desktop tool execution. See [OmniRoute integration setup](docs/OMNIROUTE_INTEGRATION.md) for Windows configuration. The API key is supplied through the app process environment and must never be committed to the repository or placed in frontend configuration.
+Chat, Code, Vision, Creative, and Model Hub all use the locally hosted OmniRoute gateway for language-model inference. OmniRoute chooses the underlying model/provider; SITA retains its own capability routing, conversation context, local memory, security policy, and desktop tool execution. See [OmniRoute integration setup](docs/OMNIROUTE_INTEGRATION.md) for Windows configuration. The API key is supplied through the app process environment and must never be committed to the repository or placed in frontend configuration.
 
 ## Local repository audit
 
-TARA-App exposes a read-only repository audit through its local Chat capability. In the app, ask **"Audit this repository"** or **"Check this project"**. The deterministic Router selects `chat.audit_repository`; the Chat adapter scans its configured working directory (the example configuration uses the repository root). The operation does not initialize an LLM, execute shell commands, accept file attachments, modify files, or upload repository content.
+SITA exposes a read-only repository audit through its local Chat capability. In the app, ask **"Audit this repository"** or **"Check this project"**. The deterministic Router selects `chat.audit_repository`; the Chat adapter scans its configured working directory (the example configuration uses the repository root). The operation does not initialize an LLM, execute shell commands, accept file attachments, modify files, or upload repository content.
 
-The interactive TARA-Chat CLI also supports an explicit local command. From the repository folder, start `python -m tara_chat` and enter `/audit`. This read-only command does not require an OmniRoute API key or initialize a model; ordinary chat replies still require a configured OmniRoute gateway.
+The interactive SITA Chat CLI also supports an explicit local command. From the repository folder, start `python -m tara_chat` and enter `/audit`. This read-only command does not require an OmniRoute API key or initialize a model; ordinary chat replies still require a configured OmniRoute gateway.
 
 ```text
 /audit
@@ -330,13 +332,13 @@ These Mermaid diagrams document the **current documented boundaries** and select
 
 ```mermaid
 flowchart LR
-  User[User] --> UI[TARA Web UI]
-  UI --> App[TARA-App / Orchestrator]
+  User[User] --> UI[SITA Web UI]
+  UI --> App[SITA / Orchestrator]
   App --> Specialists[Local specialist capabilities]
   App --> Gateway[OmniRoute gateway]
   Gateway --> Providers[Configured model providers]
   App --> SQLite[(Local SQLite memory)]
-  App --> Security[TARA-Security / approvals]
+  App --> Security[SITA Security / approvals]
   Security --> Tools[Allowlisted desktop and browser actions]
 ```
 
@@ -367,7 +369,7 @@ flowchart TB
 ```mermaid
 sequenceDiagram
   participant U as User
-  participant T as TARA specialist
+  participant T as SITA specialist
   participant O as OmniRoute
   participant P as Configured provider
   U->>T: Request
@@ -404,7 +406,7 @@ flowchart TD
 ```mermaid
 flowchart TD
   A[Requested local action] --> B[Validate operation and arguments]
-  B --> C[TARA-Security policy review]
+  B --> C[SITA Security policy review]
   C --> D{Allowed operation?}
   D -- No --> E[Reject]
   D -- Yes --> F[Explicit one-operation approval]
@@ -451,7 +453,7 @@ flowchart TD
   Launcher[Explicit launcher preparation] --> Toolchain{CMake / C++ compiler available?}
   Toolchain -- Yes --> Native[C++17 diagnostic executable]
   Toolchain -- No --> Fallback[Read-only Python diagnostics]
-  App[TARA-App] --> Bridge[Fixed-argument subprocess bridge]
+  App[SITA] --> Bridge[Fixed-argument subprocess bridge]
   Bridge --> Native
   App --> Fallback
   Native --> Report[Read-only environment report]
@@ -462,21 +464,21 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-  User[User and attachments] --> TARA[TARA local app]
-  TARA --> Local[(Local sessions / SQLite)]
-  TARA --> Research[Crossref / Wikipedia public APIs]
-  TARA --> Weather[Open-Meteo public API]
-  TARA --> Omni[OmniRoute]
+  User[User and attachments] --> SITA[SITA local app]
+  SITA --> Local[(Local sessions / SQLite)]
+  SITA --> Research[Crossref / Wikipedia public APIs]
+  SITA --> Weather[Open-Meteo public API]
+  SITA --> Omni[OmniRoute]
   Omni --> Cloud[Configured provider, possibly cloud]
-  TARA --> Speech[Optional on-device transcription]
-  TARA --> CSV[Read-only CSV summaries]
+  SITA --> Speech[Optional on-device transcription]
+  SITA --> CSV[Read-only CSV summaries]
 ```
 
 ### 10. Model, runtime and tool taxonomy
 
 ```mermaid
 flowchart TB
-  App[TARA-App: product and orchestration] --> Capability[Specialist capability / adapter]
+  App[SITA: product and orchestration] --> Capability[Specialist capability / adapter]
   Capability --> Inference[Model inference request]
   Inference --> Omni[OmniRoute: routing and provider lifecycle]
   Omni --> Runtime[Configured provider / runtime]
@@ -494,7 +496,7 @@ flowchart TD
   SH --> VENV
   VENV --> Config[Initialize local configuration]
   Config --> Handler[Prepare optional Handler diagnostic]
-  Handler --> App[Start loopback-bound TARA-App]
+  Handler --> App[Start loopback-bound SITA]
   App --> Gateway[Configured OmniRoute gateway]
 ```
 
@@ -502,7 +504,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  User[User coding request] --> Proposal[TARA-Code proposal and diff]
+  User[User coding request] --> Proposal[SITA Code proposal and diff]
   Proposal --> Review[Human review and approval]
   Review --> Decision{Approved?}
   Decision -- No --> End[Stop]
@@ -512,11 +514,11 @@ flowchart TD
   Diff --> Human[Human-controlled promotion; no automatic merge]
 ```
 
-> **Status note:** Diagram 12 is a **target architecture only**. The current TARA-Code module produces review-first proposals and does not execute code. All diagrams are explanatory representations, not a substitute for security tests or live integration verification.
+> **Status note:** Diagram 12 is a **target architecture only**. The current SITA Code module produces review-first proposals and does not execute code. All diagrams are explanatory representations, not a substitute for security tests or live integration verification.
 
 
 ## Complete feature and neural-network diagrams
 
 For the full feature-by-feature architecture reference—including specialist workflows, Chat and memory, Code safety boundary, Research, Planner, security and approvals, Handler, MCP and Skills, Windows floating pet, Voice, Vision, Study, Data, Weather, Model Hub, deployment, failure handling, and conceptual Transformer neural-network diagrams—see **[Feature & Neural-Network Diagrams](docs/FEATURE_AND_NEURAL_NETWORK_DIAGRAMS.md)**.
 
-> Neural-network diagrams are generic Transformer illustrations for the provider-hosted model behind OmniRoute. TARA-App does not claim to implement or train a neural network or own model weights. Feature status and verification gaps remain tracked in [Remaining Features](docs/REMAINING_FEATURES.md).
+> Neural-network diagrams are generic Transformer illustrations for the provider-hosted model behind OmniRoute. SITA does not claim to implement or train a neural network or own model weights. Feature status and verification gaps remain tracked in [Remaining Features](docs/REMAINING_FEATURES.md).

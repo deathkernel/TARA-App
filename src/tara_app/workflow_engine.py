@@ -1,4 +1,4 @@
-"""In-process workflow execution engine for TARA.
+"""In-process workflow execution engine for SITA.
 
 Runs a validated WorkflowPlan against an injected step executor. This engine
 owns step status, approval pauses, cancellation, and result aggregation. It does

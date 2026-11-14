@@ -34,8 +34,8 @@
       warning.className = "runtime-warning";
       warning.setAttribute("role", "alert");
       warning.textContent = chat.status === "disabled"
-        ? "Chat specialist is disabled. In tara-app.toml, set allow_remote = true in the [[modules]] entry with id = \"chat\" only if you approve sending Chat prompts through OmniRoute, then restart TARA. TARA will not change this privacy setting automatically."
-        : "Chat is configured, but its authenticated OmniRoute model-catalogue check failed. Verify that OmniRoute is running at the configured local /v1 address and that TARA_OMNIROUTE_API_KEY is valid, then restart TARA.";
+        ? "Chat specialist is disabled. In tara-app.toml, set allow_remote = true in the [[modules]] entry with id = \"chat\" only if you approve sending Chat prompts through OmniRoute, then restart SITA. SITA will not change this privacy setting automatically."
+        : "Chat is configured, but its authenticated OmniRoute model-catalogue check failed. Verify that OmniRoute is running at the configured local /v1 address and that TARA_OMNIROUTE_API_KEY is valid, then restart SITA.";
       const shell = document.querySelector(".shell");
       const modelPanel = document.querySelector("#model-panel");
       if (shell && modelPanel) shell.insertBefore(warning, modelPanel);
@@ -547,8 +547,8 @@
     if (data.operation === "desktop.url.open" && typeof data.url === "string") {
       return "Opened " + data.url + " in your browser.";
     }
-    if (data.stored === true) return 'Saved the note under "' + data.key + '" in TARA-Memory.';
-    if (typeof data.forgotten === "boolean") return data.forgotten ? 'Forgot "' + data.key + '" from TARA-Memory.' : 'No saved note matched "' + data.key + '".';
+    if (data.stored === true) return 'Saved the note under "' + data.key + '" in SITA Memory.';
+    if (typeof data.forgotten === "boolean") return data.forgotten ? 'Forgot "' + data.key + '" from SITA Memory.' : 'No saved note matched "' + data.key + '".';
     if (Array.isArray(data.memories)) {
       return data.memories.length ? data.memories.map(item => item.key + ": " + item.value).join("\n") : "No matching saved notes.";
     }
@@ -558,7 +558,7 @@
     }
     const steps = Array.isArray(data.steps) ? data.steps : (Array.isArray(data.plan?.steps) ? data.plan.steps : null);
     if (steps) {
-      const summary = data.plan?.summary || data.goal || "TARA-Code plan";
+      const summary = data.plan?.summary || data.goal || "SITA Code plan";
       const planText = summary + "\n" + steps.length + " reviewable step" + (steps.length === 1 ? "" : "s") + ".";
       const warnings = Array.isArray(data.plan?.warnings) ? data.plan.warnings.filter(item => typeof item === "string" && item) : [];
       return warnings.length ? planText + "\n\nNotes:\n" + warnings.join("\n") : planText;
@@ -567,7 +567,7 @@
       if (typeof data[key] === "string" && data[key]) return cleanAnswerText(data[key]);
     }
     if (payload?.result?.error) return payload.result.error;
-    if (payload?.status === "approval_required") return "TARA-Security reviewed this request. Nothing has run yet.";
+    if (payload?.status === "approval_required") return "SITA Security reviewed this request. Nothing has run yet.";
     if (payload?.status === "cancelled") return "Cancelled. No change was made.";
     return "The specialist returned a structured result. Open details to inspect it.";
   }
@@ -692,7 +692,7 @@
     const routeLine = document.createElement("div");
     routeLine.className = "route";
     const specialist = document.createElement("strong");
-    specialist.textContent = route.module ? `${route.module}${route.action ? ` | ${route.action}` : ""}` : (route.intended_module || "TARA-App");
+    specialist.textContent = route.module ? `${route.module}${route.action ? ` | ${route.action}` : ""}` : (route.intended_module || "SITA");
     const state = document.createElement("span");
     state.className = `status ${payload?.status || "failed"}`;
     state.textContent = payload?.status || "failed";
@@ -715,7 +715,7 @@
       const player = document.createElement("audio");
       player.controls = true;
       player.src = url;
-      player.setAttribute("aria-label", "TARA generated speech");
+      player.setAttribute("aria-label", "SITA generated speech");
       player.style.display = "block";
       player.style.maxWidth = "100%";
       player.style.marginTop = "12px";
@@ -1064,7 +1064,7 @@
     const indicator = document.createElement("div");
     indicator.className = "thinking-indicator";
     indicator.setAttribute("role", "status");
-    indicator.setAttribute("aria-label", "TARA is thinking");
+    indicator.setAttribute("aria-label", "SITA is thinking");
     indicator.setAttribute("aria-live", "polite");
     for (let index = 0; index < 3; index += 1) {
       const dot = document.createElement("span");
@@ -1098,12 +1098,12 @@
         })
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || "TARA could not accept this request");
+      if (!response.ok) throw new Error(payload.error || "SITA could not accept this request");
       waiting.remove();
       addResult(payload);
     } catch (error) {
       waiting.remove();
-      addMessage("answer", "TARA could not complete the request: " + (error.message || "local server unavailable"), true, { status: "unavailable" });
+      addMessage("answer", "SITA could not complete the request: " + (error.message || "local server unavailable"), true, { status: "unavailable" });
     } finally {
       send.disabled = false;
       setConversationNavigationDisabled(false);

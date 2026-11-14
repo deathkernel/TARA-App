@@ -1,37 +1,37 @@
-# TARA-App Architecture
+# SITA Architecture
 
 ## Purpose
 
-TARA-App is the user-facing AI assistant and specialist orchestrator. It is not itself an AI model. OmniRoute is its only language-model gateway; it owns underlying provider/model selection and lifecycle. TARA owns the UI, sessions, local memory, permissions, specialist routing, and desktop tools.
+SITA is the user-facing AI assistant and specialist orchestrator. It is not itself an AI model. OmniRoute is its only language-model gateway; it owns underlying provider/model selection and lifecycle. SITA owns the UI, sessions, local memory, permissions, specialist routing, and desktop tools.
 
 Keep these concepts distinct:
 - **Model:** learned weights/artifact that performs inference.
-- **Gateway/provider:** OmniRoute exposes an OpenAI-compatible API and routes requests to configured model providers. TARA does not directly invoke model runtimes.
+- **Gateway/provider:** OmniRoute exposes an OpenAI-compatible API and routes requests to configured model providers. SITA does not directly invoke model runtimes.
 - **Specialist engine/tool:** a system that provides a capability, such as conversation management, code-task workflows, or deterministic environment maintenance.
-- **TARA-App:** the application that brings them together.
+- **SITA:** the application that brings them together.
 
 ## Target runtime layout
 
 ```text
-TARA-App
+SITA
   +-- UI, sessions, settings, model catalogue
   +-- OmniRoute Gateway / Model Router
   |     +-- only language-model inference path
   |     +-- model/route catalogue via GET /v1/models
   |     +-- provider selection, fallback, quotas and lifecycle managed by OmniRoute
   +-- Orchestrator / Capability Registry
-        +-- TARA-Chat adapter
-        +-- TARA-Code adapter
-        +-- TARA-Handler adapter
-        +-- future TARA models and tools
+        +-- SITA Chat adapter
+        +-- SITA Code adapter
+        +-- SITA Handler adapter
+        +-- future SITA models and tools
 ```
 
-OmniRoute exposes the available model IDs and route aliases. Underlying model weights and provider lifecycle remain outside TARA; the current TARA-App launcher does not download or load LLM weights.
+OmniRoute exposes the available model IDs and route aliases. Underlying model weights and provider lifecycle remain outside SITA; the current SITA launcher does not download or load LLM weights.
 
 ## Runtime flow
 
 1. UI creates a request with request/session IDs and selects or requests a capability.
-2. The orchestrator validates the request and selects the needed TARA specialist; OmniRoute later selects the underlying model/provider.
+2. The orchestrator validates the request and selects the needed SITA specialist; OmniRoute later selects the underlying model/provider.
 3. Policy checks availability, permissions, resource limits, workspace scope, timeout, and approval requirements.
 4. For language-model inference, the specialist sends a bounded OpenAI-compatible request to the loopback OmniRoute gateway; if the gateway is unavailable, the request fails closed.
 5. A versioned adapter invokes the selected specialist or local tool; model inference is delegated to OmniRoute.
@@ -43,11 +43,11 @@ OmniRoute exposes the available model IDs and route aliases. Underlying model we
 
 | Component | Owns | Does not own |
 |---|---|---|
-| TARA-App | UX, OmniRoute model catalogue, sessions, orchestration, config, permissions, local tools and audit | Underlying model weights/provider lifecycle |
-| TARA-CHAT | Conversation, OmniRoute access, bounded context, explicit saved memory | Coding execution or global OS repair |
-| TARA-Code | Coding task model, plan, workspace boundary, review/test reports, sandbox runner contract | Chat UI, global OS repair, automatic Git merge |
-| TARA-Handler | Deterministic environment inspection and guarded maintenance/repair through native CLI | LLM inference or natural-language intent understanding |
-| OmniRoute | Provider/model routing, fallback, quotas and model catalogue | TARA's local permissions, memory and desktop actions |
+| SITA | UX, OmniRoute model catalogue, sessions, orchestration, config, permissions, local tools and audit | Underlying model weights/provider lifecycle |
+| SITA Chat | Conversation, OmniRoute access, bounded context, explicit saved memory | Coding execution or global OS repair |
+| SITA Code | Coding task model, plan, workspace boundary, review/test reports, sandbox runner contract | Chat UI, global OS repair, automatic Git merge |
+| SITA Handler | Deterministic environment inspection and guarded maintenance/repair through native CLI | LLM inference or natural-language intent understanding |
+| OmniRoute | Provider/model routing, fallback, quotas and model catalogue | SITA's local permissions, memory and desktop actions |
 
 ## Failure strategy
 
@@ -67,4 +67,4 @@ Only pass the minimum context necessary to each module. Chat history and relevan
 
 The current head now includes `PermissionPolicy`, versioned `CapabilityRequest`/`CapabilityResponse` contracts, `CapabilityOrchestrator`, and a redacting JSONL audit sink. Dispatch requires both an explicitly allowlisted capability and a registered handler. Approval-gated capabilities return `approval_required` until the request carries explicit approval. Unknown capabilities and dangerous default-deny capabilities do not invoke handlers. The policy decision must be persisted before dispatch; if that audit write fails, dispatch stops.
 
-This does not yet implement sandboxed execution, persistent permission UI, real TARA-Chat/TARA-Code/TARA-Handler adapters, or a full application UI. Those remain separate follow-up work.
+This does not yet implement sandboxed execution, persistent permission UI, real SITA Chat/SITA Code/SITA Handler adapters, or a full application UI. Those remain separate follow-up work.

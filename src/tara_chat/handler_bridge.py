@@ -1,6 +1,6 @@
-"""Safe, opt-in integration with the native TARA-Handler CLI.
+"""Safe, opt-in integration with the native SITA Handler CLI.
 
-TARA remains a conversational assistant. Handler performs deterministic inspection
+SITA remains a conversational assistant. Handler performs deterministic inspection
 and applies its own policy/confirmation checks. This bridge deliberately exposes
 only read-only diagnostic commands; repair and mutation commands are not available
 through natural-language tool dispatch.
@@ -73,7 +73,7 @@ class TARAHandler:
         # Optional local build layouts, then PATH. No silent download/install.
         root = Path(__file__).resolve().parent.parent
         names = ("handler.exe", "handler") if os.name == "nt" else ("handler", "handler.exe")
-        for relative in ("TARA-Handler/build/Release", "TARA-Handler/build", "../TARA-Handler/build/Release", "../TARA-Handler/build"):
+        for relative in ("SITA Handler/build/Release", "SITA Handler/build", "../SITA Handler/build/Release", "../SITA Handler/build"):
             for name in names:
                 candidates.append(str((root / relative / name).resolve()))
         for candidate in candidates:
@@ -89,7 +89,7 @@ class TARAHandler:
         if located:
             return str(Path(located).resolve())
         raise HandlerUnavailable(
-            "TARA-Handler executable not found. Build TARA-Handler with CMake, "
+            "SITA Handler executable not found. Build SITA Handler with CMake, "
             "then set TARA_HANDLER_EXECUTABLE to the handler executable path."
         )
 

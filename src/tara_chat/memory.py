@@ -1,4 +1,4 @@
-"""Small memory primitives for TARA.
+"""Small memory primitives for SITA.
 
 Research basis:
 - Graves et al. (2014), Neural Turing Machines: neural systems can be paired
@@ -8,7 +8,7 @@ Research basis:
 - Recent agent-memory work treats memory as a dynamic system: memories are
   formed, retrieved, updated, and forgotten over time.
 
-TARA keeps retrieval and memory dynamics deliberately small and inspectable:
+SITA keeps retrieval and memory dynamics deliberately small and inspectable:
 lexical relevance scoring, explicit updates, access tracking, and deterministic
 capacity-based forgetting. This is a foundation for later learned retrieval,
 not a claim to reproduce biological memory.

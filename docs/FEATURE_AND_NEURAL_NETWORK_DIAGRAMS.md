@@ -1,12 +1,12 @@
-# TARA-App — Feature & Neural-Network Diagrams
+# SITA — Feature & Neural-Network Diagrams
 
-> **Accuracy note:** These diagrams are architecture documentation, not a claim that every feature is fully integrated or production-verified. Status is governed by [REMAINING_FEATURES.md](REMAINING_FEATURES.md) and [Project Status & Roadmap](PROJECT_STATUS_AND_ROADMAP.md). The neural-network internals below describe a generic Transformer model behind OmniRoute; TARA-App does not implement, train, own, or load those model weights.
+> **Accuracy note:** These diagrams are architecture documentation, not a claim that every feature is fully integrated or production-verified. Status is governed by [REMAINING_FEATURES.md](REMAINING_FEATURES.md) and [Project Status & Roadmap](PROJECT_STATUS_AND_ROADMAP.md). The neural-network internals below describe a generic Transformer model behind OmniRoute; SITA does not implement, train, own, or load those model weights.
 
 ## 1. Complete feature map
 
 ```mermaid
 mindmap
-  root((TARA-App))
+  root((SITA))
     Core application
       Web UI and sessions
       Configuration and launchers
@@ -66,7 +66,7 @@ flowchart TD
   Router --> Voice[tara_voice]
   Router --> Weather[tara_weather]
   Router --> Action[tara_action]
-  Router --> Handler[TARA-Handler diagnostics]
+  Router --> Handler[SITA Handler diagnostics]
   Action --> Sec[tara_security]
   Memory --> Sec
   Chat --> Result[Structured capability result]
@@ -92,7 +92,7 @@ flowchart TD
 ```mermaid
 sequenceDiagram
   participant U as User
-  participant UI as TARA UI
+  participant UI as SITA UI
   participant C as Chat specialist
   participant M as Local memory
   participant O as OmniRoute
@@ -207,11 +207,11 @@ flowchart TD
   Browser --> Report
 ```
 
-## 9. TARA-Handler native diagnostics and maintenance boundary
+## 9. SITA Handler native diagnostics and maintenance boundary
 
 ```mermaid
 flowchart TB
-  App[TARA-App Handler adapter] --> Bridge[Fixed argv subprocess boundary]
+  App[SITA Handler adapter] --> Bridge[Fixed argv subprocess boundary]
   Bridge --> Doctor[Read-only doctor / diagnostics]
   Doctor --> Inspect[System, components, dependencies and health]
   Inspect --> Result[Bounded diagnostic report]
@@ -293,11 +293,11 @@ flowchart LR
   Weighted --> Out[Attention output projection]
 ```
 
-## 14. Neural-network training versus TARA inference
+## 14. Neural-network training versus SITA inference
 
 ```mermaid
 flowchart TB
-  subgraph Training[Model provider training pipeline — outside TARA]
+  subgraph Training[Model provider training pipeline — outside SITA]
     Data[Training data] --> Prep[Tokenize / prepare batches]
     Prep --> Forward[Forward pass]
     Forward --> Loss[Loss calculation]
@@ -305,11 +305,11 @@ flowchart TB
     Backprop --> Optimizer[Optimizer updates weights]
     Optimizer --> Weights[(Trained model weights)]
   end
-  subgraph TARA[TARA runtime — inference client]
+  subgraph SITA[SITA runtime — inference client]
     Prompt[User prompt] --> Gateway[OmniRoute gateway]
     Gateway --> Model[Provider-hosted model]
     Model --> Answer[Generated tokens]
-    Answer --> App[TARA validates and presents result]
+    Answer --> App[SITA validates and presents result]
   end
   Weights -. loaded/served by provider .-> Model
 ```
@@ -348,7 +348,7 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-  User[User task] --> App[TARA app]
+  User[User task] --> App[SITA app]
   App --> Skills[Skills loader]
   Skills --> Skill[Reviewed skill instructions]
   App --> MCP[MCP registry / client]
@@ -368,7 +368,7 @@ flowchart LR
   Pet[Windows floating pet UI] --> Input[User submits message]
   Input --> Validate[Validate loopback URL and bounded history]
   Validate --> HTTP[POST local /api/chat]
-  HTTP --> App[TARA local web app]
+  HTTP --> App[SITA local web app]
   App --> Chat[Chat capability]
   Chat --> Omni[OmniRoute, when configured]
   Omni --> Response[Response]
@@ -387,7 +387,7 @@ flowchart TD
   Unix --> Env
   Env --> Config[Local config initialization]
   Config --> Optional[Optional Handler preparation]
-  Optional --> App[Loopback TARA app]
+  Optional --> App[Loopback SITA app]
   App --> UI[Web UI / optional Windows pet]
   App --> Omni[Configured local OmniRoute gateway]
   Omni --> Provider[Configured model providers]

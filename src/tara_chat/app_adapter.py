@@ -1,4 +1,4 @@
-"""TARA-App boundary for the independent TARA-Chat conversation engine."""
+"""SITA boundary for the independent SITA Chat conversation engine."""
 from __future__ import annotations
 import json
 import os
@@ -118,7 +118,7 @@ def handle_request(request: Any) -> dict[str, Any]:
             duration_ms=max(0, int((time.monotonic() - start) * 1000)),
         )
     if action != "respond":
-        return _result(request_id, "permission_denied", error="unsupported TARA-Chat capability")
+        return _result(request_id, "permission_denied", error="unsupported SITA Chat capability")
     question = inputs.get("question")
     if not isinstance(question, str) or not question.strip() or len(question) > 20_000:
         return _result(request_id, "invalid_request", error="question must be non-empty bounded text")
@@ -132,13 +132,13 @@ def handle_request(request: Any) -> dict[str, Any]:
         role, content = item.get("role"), item.get("content")
         if role not in {"user", "assistant"} or not isinstance(content, str) or len(content) > 20_000:
             return _result(request_id, "invalid_request", error="history entry is invalid")
-        normalized.append(("User" if role == "user" else "TARA", content))
+        normalized.append(("User" if role == "user" else "SITA", content))
     try:
         provider = provider_from_env()
     except (OSError, RuntimeError, ValueError):
-        return _result(request_id, "unavailable", error="TARA-Chat provider configuration is unavailable")
+        return _result(request_id, "unavailable", error="SITA Chat provider configuration is unavailable")
     if provider is None:
-        return _result(request_id, "unavailable", error="TARA-Chat has no language provider configured")
+        return _result(request_id, "unavailable", error="SITA Chat has no language provider configured")
     memory_path = os.environ.get("TARA_CHAT_MEMORY_PATH", "").strip()
     skill_prompt = inputs.get("skill_prompt")
     if skill_prompt is not None and (
@@ -165,7 +165,7 @@ def handle_request(request: Any) -> dict[str, Any]:
         return _result(
             request_id,
             "unavailable",
-            error="TARA-Chat could not produce a response",
+            error="SITA Chat could not produce a response",
             duration_ms=max(0, int((time.monotonic() - start) * 1000)),
         )
     return _result(

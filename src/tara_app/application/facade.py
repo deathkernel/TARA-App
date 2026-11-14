@@ -1,4 +1,4 @@
-"""Application boundary shared by every TARA interface.
+"""Application boundary shared by every SITA interface.
  
 The facade hides the coordinator, registry, adapters and integration details
 from HTTP, desktop and CLI transports. It is intentionally thin in this first
@@ -14,7 +14,7 @@ from tara_app.contracts import AdapterHealth, ModuleRequest
 
 
 class ApplicationFacade:
-    """Stable use-case boundary for local TARA interfaces."""
+    """Stable use-case boundary for local SITA interfaces."""
 
     def __init__(self, coordinator: Any) -> None:
         self._coordinator = coordinator
@@ -64,7 +64,7 @@ class ApplicationFacade:
         gateway_status = gateway_health.status if gateway_health is not None else "unavailable"
         return {
             "status": "ok" if capabilities and health_results and all(item.status == "healthy" for item in health_results.values()) else "degraded",
-            "app": "TARA-App",
+            "app": "SITA",
             "api_version": "1.0",
             "capability_count": len(capabilities),
             "capabilities": list(capabilities),
@@ -157,13 +157,13 @@ class ApplicationFacade:
         catalogue.ensure_service_started()
         if "chat" not in catalogue.profiles:
             return None
-        print("Preparing TARA's local chat model before the app opens.", flush=True)
+        print("Preparing SITA's local chat model before the app opens.", flush=True)
         try:
             catalogue.ensure_model_installed("chat")
             catalogue.preload_model("chat", keep_alive="15m")
         except RuntimeError:
-            return "TARA-App will start, but the chat model could not be prepared. Check the Models panel."
-        print("TARA's chat model is ready.", flush=True)
+            return "SITA will start, but the chat model could not be prepared. Check the Models panel."
+        print("SITA's chat model is ready.", flush=True)
         return None
 
     def close(self) -> None:

@@ -1,8 +1,8 @@
-# TARA Premium Developer Workspace
+# SITA Premium Developer Workspace
 
 ## Product direction
 
-TARA's React frontend is the primary desktop workspace when its compiled assets
+SITA's React frontend is the primary desktop workspace when its compiled assets
 are available. The layout is inspired by the workflow patterns in Claude Code
 Desktop—session navigation, a focused task conversation, contextual side
 panels, and visible activity—not a copy of its branding or proprietary assets.
@@ -111,7 +111,7 @@ backend cannot safely perform.
 
 The Windows and Unix launchers attempt to install frontend dependencies and
 build `frontend/` when Node.js/npm is available. If the build is unavailable,
-TARA continues to serve the existing static UI. The React UI is selected by
+SITA continues to serve the existing static UI. The React UI is selected by
 default when compiled assets exist; set `TARA_ENABLE_REACT_UI=0` to force the
 static fallback.
 

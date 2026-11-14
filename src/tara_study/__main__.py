@@ -101,7 +101,7 @@ def handle_request(request: Any) -> dict[str, Any]:
     if request.get("schema_version")!="1.0" or request.get("module")!="study": return _result(rid,"invalid_request",error="module or schema version is invalid",started=started)
     action,inputs=request.get("action"),request.get("inputs",{})
     if action=="health": return _result(rid,"success",{"healthy":True,"offline":True},started=started)
-    if action!="create" or not isinstance(inputs,Mapping): return _result(rid,"permission_denied",error="unsupported TARA-Study capability",started=started)
+    if action!="create" or not isinstance(inputs,Mapping): return _result(rid,"permission_denied",error="unsupported SITA Study capability",started=started)
     question=inputs.get("question","")
     if not isinstance(question,str) or len(question)>20_000: return _result(rid,"invalid_request",error="question is invalid",started=started)
     try:

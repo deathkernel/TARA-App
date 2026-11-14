@@ -1,1 +1,1 @@
-"""Deterministic TARA security policy checks."""
+"""Deterministic SITA security policy checks."""

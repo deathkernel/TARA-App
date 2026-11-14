@@ -24,7 +24,7 @@ class OpenAIResponsesAdapter:
             try:
                 from openai import OpenAI
             except ImportError:
-                raise OpenAISDKUnavailable("install TARA-App with the optional 'openai' extra") from None
+                raise OpenAISDKUnavailable("install SITA with the optional 'openai' extra") from None
             # Official SDK reads OPENAI_API_KEY from the environment. Never log or persist it here.
             self._client = OpenAI()
         return self._client

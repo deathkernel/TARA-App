@@ -43,7 +43,7 @@ Otherwise it abstains. Scores are policy values, not calibrated probabilities.
 ## Reasoning coordination
 The coordinator performs request validation, context retrieval, attention
 allocation, candidate proposal (only with an injected provider), and decision
-scoring. A provider adapter may delegate to TARA's existing OmniRoute gateway.
+scoring. A provider adapter may delegate to SITA's existing OmniRoute gateway.
 The coordinator does not replace OmniRoute, fabricate reasoning, invoke tools,
 execute actions, or bypass approval controls.
 
@@ -53,7 +53,7 @@ execute actions, or bypass approval controls.
   unvalidated neural-to-symbolic mapping or automatic conversation training
   is introduced.
 - Tool execution, persistent writes and sensitive actions remain controlled
-  by TARA's existing authorization and approval system.
+  by SITA's existing authorization and approval system.
 - No mandatory runtime dependency is introduced.
 
 ## Tests

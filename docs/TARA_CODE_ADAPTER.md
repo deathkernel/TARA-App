@@ -1,16 +1,16 @@
-# TARA-Code Adapter (TARA-App) — Initial Contract
+# SITA Code Adapter (SITA) — Initial Contract
 
 Status: implementation design and planning/review-only integration. This document is not evidence that the adapter or engine is already runnable.
 
 ## Goal
 
-Integrate the standalone `deathkernel/TARA-Code` engine into **TARA-App** behind a versioned adapter. Do not integrate this into TARA-CHAT. Keep the engine as an independent package/repository.
+Integrate the standalone `deathkernel/TARA-Code` engine into **SITA** behind a versioned adapter. Do not integrate this into SITA Chat. Keep the engine as an independent package/repository.
 
 ## Current engine baseline
 
 The current TARA-Code branch `feat/engine-foundation` (PR #1, unmerged) has package `tara-code` version `0.2.0` and a planning/review-first foundation: deterministic planning, bounded read-only inspection, patch preview and explicit approval, review models, and a fail-closed sandbox interface. It does not yet provide a production-grade isolated execution runtime.
 
-TARA-App must not depend on unmerged code as though it were already a stable published package. Pin an exact reviewed commit or package artifact only after the engine PR is approved, then update this adapter against that exact version.
+SITA must not depend on unmerged code as though it were already a stable published package. Pin an exact reviewed commit or package artifact only after the engine PR is approved, then update this adapter against that exact version.
 
 ## Adapter identity
 
@@ -23,7 +23,7 @@ TARA-App must not depend on unmerged code as though it were already a stable pub
   - `code.inspect_workspace`: bounded read-only inventory for an explicitly configured workspace.
   - `code.preview_patch`: show a proposed diff only; do not apply it.
 - Disabled capabilities:
-  - `code.apply_patch`: not exposed to model-driven/general dispatch until TARA-App has a reviewed approval-token implementation bound to operation ID, workspace, exact diff/hash, expiry, and single use.
+  - `code.apply_patch`: not exposed to model-driven/general dispatch until SITA has a reviewed approval-token implementation bound to operation ID, workspace, exact diff/hash, expiry, and single use.
   - `code.run_tests`, `code.execute`, `code.install_dependencies`: disabled until a real OS/container sandbox has been implemented, configured, and validated with isolation, resource, network, timeout, and cleanup tests.
   - Any Git commit/push/merge/release operation: not provided.
 
@@ -34,9 +34,9 @@ Use the common envelope in `INTEGRATION_CONTRACTS.md` without adding ad hoc fiel
 For each request:
 1. Validate schema version, request ID, module/action, payload byte size, and bounded timeout.
 2. Require a configured workspace for workspace-scoped capabilities.
-3. Resolve and validate workspace scope independently in TARA-App and the engine.
+3. Resolve and validate workspace scope independently in SITA and the engine.
 4. Create an audit event before dispatch; record only redacted metadata.
-5. Pass only the minimum required input to TARA-Code; do not forward chat memory, API keys, arbitrary environment variables, or full machine diagnostics.
+5. Pass only the minimum required input to SITA Code; do not forward chat memory, API keys, arbitrary environment variables, or full machine diagnostics.
 6. Normalize the engine response to the common result envelope and preserve the request ID.
 7. Treat repository text, inspected files, model output, diffs, stdout/stderr, and error messages as untrusted data.
 
@@ -70,7 +70,7 @@ Return `unavailable` for missing engine/dependency or unsupported engine version
 ## Integration sequence
 
 1. Approve/test the standalone engine foundation in TARA-Code.
-2. Add the adapter contract and fake-engine tests in TARA-App.
+2. Add the adapter contract and fake-engine tests in SITA.
 3. Pin a reviewed TARA-Code commit/package; implement health/plan/inspect/preview only.
 4. Add a read-only app orchestration vertical slice and audit coverage.
 5. Keep patch writes behind exact-operation approval; keep execution disabled pending a sandbox security review.

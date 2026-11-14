@@ -4,7 +4,7 @@
 
 ## Objective
 
-Normalize existing TARA text, voice-transcription and vision-analysis outputs into bounded, typed observations that can enter the existing Cognitive Engine context pipeline.
+Normalize existing SITA text, voice-transcription and vision-analysis outputs into bounded, typed observations that can enter the existing Cognitive Engine context pipeline.
 
 ## Components
 
@@ -12,16 +12,16 @@ Normalize existing TARA text, voice-transcription and vision-analysis outputs in
 |---|---|---|
 | MMI | Multimodal Integration | Shared observation contracts and modality boundaries |
 | NIP | Normalized Input Pipeline | Validates and converts specialist outputs |
-| VPI | Voice Processing Integration | Accepts successful local TARA Voice transcripts |
-| VSI | Vision Signal Integration | Accepts successful TARA Vision analysis returned through OmniRoute |
+| VPI | Voice Processing Integration | Accepts successful local SITA Voice transcripts |
+| VSI | Vision Signal Integration | Accepts successful SITA Vision analysis returned through OmniRoute |
 | MCB | Multimodal Cognitive Bridge | Passes transient observations to the CognitiveCoordinator |
 
 ## Data flow
 
 ```text
-User audio -> TARA Voice (local Whisper) -> transcript ---+
+User audio -> SITA Voice (local Whisper) -> transcript ---+
                                                           |
-User image -> TARA Vision -> OmniRoute -> analysis -------+-> NIP -> typed observations
+User image -> SITA Vision -> OmniRoute -> analysis -------+-> NIP -> typed observations
                                                           |             |
 User text ------------------------------------------------+             v
                                                                MCB / Cognitive Engine
@@ -35,7 +35,7 @@ The bridge is an explicit integration boundary. It does not dispatch specialists
 
 - Voice transcripts are accepted only when the existing voice specialist reports `local: true`.
 - Vision analysis is accepted only when the existing vision specialist reports `provider: omniroute`.
-- Existing TARA Vision currently marks `images_sent_to_remote: true`; image bytes are sent to the configured OmniRoute endpoint. Whether that endpoint forwards data to an external model provider depends on the user's OmniRoute deployment and route. Do not describe this path as on-device-only.
+- Existing SITA Vision currently marks `images_sent_to_remote: true`; image bytes are sent to the configured OmniRoute endpoint. Whether that endpoint forwards data to an external model provider depends on the user's OmniRoute deployment and route. Do not describe this path as on-device-only.
 - Only bounded text and limited metadata enter the cognitive context. Raw audio/image payloads are not copied into TN-86B observations.
 - Observations are transient. The bridge does not persist them or consolidate them into episodic/semantic memory.
 - Specialist errors and unavailable results are rejected rather than converted into context.
@@ -52,7 +52,7 @@ The bridge is an explicit integration boundary. It does not dispatch specialists
 
 ## Implementation boundary
 
-The `MultimodalInputPipeline` adapts already-produced specialist result envelopes. The `MultimodalCognitiveBridge` converts observations to the existing `ContextItem` contract and calls `CognitiveCoordinator.process`. Existing TARA orchestration remains responsible for selecting and invoking voice/vision specialists. This phase does not silently modify the live Orchestrator dispatch path.
+The `MultimodalInputPipeline` adapts already-produced specialist result envelopes. The `MultimodalCognitiveBridge` converts observations to the existing `ContextItem` contract and calls `CognitiveCoordinator.process`. Existing SITA orchestration remains responsible for selecting and invoking voice/vision specialists. This phase does not silently modify the live Orchestrator dispatch path.
 
 ## Verification
 

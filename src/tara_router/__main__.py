@@ -1,4 +1,4 @@
-"""JSON-over-stdio entry point for TARA-App's local router."""
+"""JSON-over-stdio entry point for SITA's local router."""
 from __future__ import annotations
 
 import json

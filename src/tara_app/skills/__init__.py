@@ -1,4 +1,4 @@
-"""Loadable Agent Skills packs for TARA (instructions + metadata only).
+"""Loadable Agent Skills packs for SITA (instructions + metadata only).
 
 Skill packs never execute host scripts automatically. Script paths listed in a
 manifest are metadata for human review or future sandboxed runners.

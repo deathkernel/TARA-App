@@ -19,7 +19,7 @@ The stdio TARA-Chat app adapter also exposes a separate `chat.audit_repository` 
 ## Remaining integration work
 
 1. Bind the actual TARA-CHAT engine behind the injected chat callable.
-2. Bind TARA-Code planning/review behind the injected code callable, preserving workspace constraints and diff review.
+2. Bind SITA Code planning/review behind the injected code callable, preserving workspace constraints and diff review.
 3. Implement a separate, constrained TARA-Handler subprocess adapter after documenting its CLI protocol.
 4. Add cancellation, request timeouts, and bounded execution for injected callables before running untrusted/long-running engines.
 5. Connect these services to a UI/API entry point and then run the expanded test suite.

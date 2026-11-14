@@ -1,4 +1,4 @@
-"""Build and run TARA-Handler diagnostics on demand, with a local fallback."""
+"""Build and run SITA Handler diagnostics on demand, with a local fallback."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ def _cache_root() -> Path:
     if os.name == "nt":
         root = os.environ.get("LOCALAPPDATA")
         if root:
-            return Path(root) / "TARA" / "cache" / "handler"
+            return Path(root) / "SITA" / "cache" / "handler"
     root = os.environ.get("XDG_CACHE_HOME")
     return Path(root) / "tara" / "handler" if root else Path.home() / ".cache" / "tara" / "handler"
 
@@ -132,7 +132,7 @@ def _build_native() -> Path | None:
 
 
 def _python_diagnostic() -> int:
-    print("TARA-Handler read-only diagnosis (Python fallback)")
+    print("SITA Handler read-only diagnosis (Python fallback)")
     print(f"Operating system: {platform_name()}")
     print(f"Python: {sys.version.split()[0]}")
     print("\nToolchain:")
@@ -170,7 +170,7 @@ def main() -> int:
         print("available (native Handler when prepared; otherwise read-only Python fallback)")
         return 0
     if arguments[0] == "prepare":
-        print("Preparing the optional native TARA-Handler diagnostic...")
+        print("Preparing the optional native SITA Handler diagnostic...")
         binary = _build_native()
         print("Native Handler is ready." if binary else "Native Handler could not be prepared; read-only Python diagnosis remains available.")
         return 0

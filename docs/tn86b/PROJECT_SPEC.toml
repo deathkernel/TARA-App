@@ -2,7 +2,7 @@
 name = "TN-86B"
 full_name = "TARA Neural – 86 Billion"
 description = "Brain-inspired cognitive architecture"
-parent = "TARA-App"
+parent = "SITA"
 status = "active-development"
 branch = "tn-86/architecture-alignment"
 
@@ -10,7 +10,7 @@ branch = "tn-86/architecture-alignment"
 biological_equivalence_claim = false
 literal_86_billion_neuron_simulation = false
 llm_gateway = "OmniRoute (single configured gateway)"
-security_authority = "TARA-App existing approval and permission system"
+security_authority = "SITA existing approval and permission system"
 
 [modules]
 NPE = "Neural Processing Engine"

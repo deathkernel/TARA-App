@@ -1,1 +1,1 @@
-"""Local speech recognition and device-native read-aloud for TARA."""
+"""Local speech recognition and device-native read-aloud for SITA."""

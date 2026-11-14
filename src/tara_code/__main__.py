@@ -1,4 +1,4 @@
-"""Bounded JSON-over-stdio adapter for the OmniRoute-backed TARA-Code specialist."""
+"""Bounded JSON-over-stdio adapter for the OmniRoute-backed SITA Code specialist."""
 from __future__ import annotations
 
 import base64
@@ -49,7 +49,7 @@ def _omniroute_base_url() -> str:
         or parsed.fragment
         or (port is not None and not 1 <= port <= 65535)
     ):
-        raise ValueError("TARA-Code only accepts the local OmniRoute /v1 endpoint")
+        raise ValueError("SITA Code only accepts the local OmniRoute /v1 endpoint")
     return value
 
 
@@ -131,7 +131,7 @@ def handle_request(request: Any) -> dict[str, Any]:
             return _result(request_id, "unavailable", error="OmniRoute gateway is unavailable")
         return _result(request_id, "success", {"healthy": True, "provider": "omniroute"})
     if action != "plan":
-        return _result(request_id, "permission_denied", error="TARA-Code only supports review-first planning")
+        return _result(request_id, "permission_denied", error="SITA Code only supports review-first planning")
     question = inputs.get("question")
     if not isinstance(question, str) or not question.strip() or len(question) > 20_000:
         return _result(request_id, "invalid_request", error="question must be non-empty bounded text")
@@ -161,7 +161,7 @@ def handle_request(request: Any) -> dict[str, Any]:
         "model": model,
         "stream": False,
         "messages": [
-            {"role": "system", "content": "You are TARA-Code, an OmniRoute-backed review-first coding specialist. Produce careful, testable reasoning with explicit assumptions."},
+            {"role": "system", "content": "You are SITA Code, an OmniRoute-backed review-first coding specialist. Produce careful, testable reasoning with explicit assumptions."},
             {"role": "user", "content": prompt},
         ],
         "temperature": 0.15,

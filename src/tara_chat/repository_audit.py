@@ -1,4 +1,4 @@
-"""Static repository audit for the conversation-first TARA runtime."""
+"""Static repository audit for the conversation-first SITA runtime."""
 from __future__ import annotations
 
 import ast
@@ -254,12 +254,12 @@ class RepositoryAuditor:
 def main() -> int:
     import argparse
 
-    parser = argparse.ArgumentParser(description="Audit the TARA conversation runtime")
+    parser = argparse.ArgumentParser(description="Audit the SITA conversation runtime")
     parser.add_argument("root", nargs="?", default=".")
     args = parser.parse_args()
     report = RepositoryAuditor(args.root).audit()
     print(
-        f"TARA audit: healthy={report.healthy} "
+        f"SITA audit: healthy={report.healthy} "
         f"python_files={report.python_files} workflow_files={report.workflow_files} "
         f"issues={len(report.issues)} fingerprint={report.fingerprint}"
     )

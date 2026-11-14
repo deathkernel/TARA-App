@@ -1,4 +1,4 @@
-"""One-request JSON-over-stdio adapter for TARA."""
+"""One-request JSON-over-stdio adapter for SITA."""
 from __future__ import annotations
 
 from tara_app.stdio_runner import run_module

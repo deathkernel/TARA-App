@@ -8,7 +8,7 @@ from urllib.error import URLError, HTTPError
 
 MAX_REQUEST = 64_000
 _CITY = re.compile(r"\b(?:weather|forecast|temperature|rain|humidity|wind)\b", re.I)
-_HEADERS = {"User-Agent": "TARA-App/0.1 (weather lookup; Open-Meteo attribution)"}
+_HEADERS = {"User-Agent": "SITA/0.1 (weather lookup; Open-Meteo attribution)"}
 
 def _get_json(url: str) -> dict[str, Any]:
     request = Request(url, headers=_HEADERS, method="GET")

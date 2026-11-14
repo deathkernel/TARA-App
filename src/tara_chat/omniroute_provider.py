@@ -1,6 +1,6 @@
-"""OpenAI-compatible OmniRoute provider for TARA-Chat.
+"""OpenAI-compatible OmniRoute provider for SITA Chat.
 
-OmniRoute owns underlying model selection. TARA sends the configured auto-route
+OmniRoute owns underlying model selection. SITA sends the configured auto-route
 alias and retains conversation, memory, permissions, and tool execution locally.
 """
 from __future__ import annotations
@@ -51,7 +51,7 @@ def _request_json(url: str, payload: dict[str, Any], api_key: str, timeout: floa
 
 
 class OmniRouteProvider:
-    """TARA provider that delegates model selection to OmniRoute Auto Router."""
+    """SITA provider that delegates model selection to OmniRoute Auto Router."""
 
     def __init__(
         self,

@@ -1,4 +1,4 @@
-"""Restricted stdio adapter for the separate TARA-Router package."""
+"""Restricted stdio adapter for the separate SITA Router package."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from tara_app.contracts import MAX_PAYLOAD_BYTES, RouteDecision
 
 
 class RouterUnavailableError(RuntimeError):
-    """Raised when TARA-Router cannot safely return a route decision."""
+    """Raised when SITA Router cannot safely return a route decision."""
 
 
 class StdioRouterClient:
@@ -62,17 +62,17 @@ class StdioRouterClient:
                 check=False,
             )
         except (OSError, subprocess.TimeoutExpired) as exc:
-            raise RouterUnavailableError("TARA-Router process is unavailable or timed out") from exc
+            raise RouterUnavailableError("SITA Router process is unavailable or timed out") from exc
 
         if completed.returncode != 0:
-            raise RouterUnavailableError("TARA-Router returned a failure status")
+            raise RouterUnavailableError("SITA Router returned a failure status")
         if len(completed.stdout.encode("utf-8")) > self.max_response_bytes:
-            raise RouterUnavailableError("TARA-Router response exceeds the size limit")
+            raise RouterUnavailableError("SITA Router response exceeds the size limit")
         try:
             payload = json.loads(completed.stdout)
             return RouteDecision.from_payload(payload)
         except (json.JSONDecodeError, TypeError, ValueError) as exc:
-            raise RouterUnavailableError("TARA-Router returned an invalid response") from exc
+            raise RouterUnavailableError("SITA Router returned an invalid response") from exc
 
     @staticmethod
     def _safe_environment() -> dict[str, str]:

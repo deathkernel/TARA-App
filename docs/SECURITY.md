@@ -1,4 +1,4 @@
-# TARA-App Security Model
+# SITA Security Model
 
 ## Defaults
 
@@ -8,14 +8,14 @@
 - Mutations require an explicit approval tied to one concrete operation, scope and proposed effects. Approval tokens are short-lived and single-operation.
 - No automatic Git push or merge.
 - Desktop automation is limited to the fixed Calculator, Notepad, and Paint app allowlist and validated HTTP(S) browser URLs.
-- Every desktop action is assessed by TARA-Security and requires a short-lived, one-operation approval.
+- Every desktop action is assessed by SITA Security and requires a short-lived, one-operation approval.
 
 ## Adapter process boundary
 
 For subprocess adapters:
 - Use a trusted configured executable path; do not download binaries automatically.
 - Desktop app launches use fixed per-platform executable mappings and fixed arguments with shell execution disabled.
-- Browser actions accept HTTP(S) addresses only, reject credentials and invalid ports, and delegate opening to the system browser without fetching the page in TARA.
+- Browser actions accept HTTP(S) addresses only, reject credentials and invalid ports, and delegate opening to the system browser without fetching the page in SITA.
 - Invoke an argument vector with shell execution disabled.
 - Fix the command allowlist; reject unknown action names and extra arguments.
 - Bound timeout, standard output and standard error.

@@ -1,4 +1,4 @@
-"""MCP helpers mixed into the TARA Orchestrator."""
+"""MCP helpers mixed into the SITA Orchestrator."""
 from __future__ import annotations
 
 import hashlib

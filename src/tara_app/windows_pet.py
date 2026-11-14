@@ -72,9 +72,9 @@ def trim_transcript_text(text: str, max_chars: int = 100_000) -> str:
 
 
 def extract_answer(payload: Any) -> str:
-    """Extract the existing TARA response shape without trusting arbitrary types."""
+    """Extract the existing SITA response shape without trusting arbitrary types."""
     if not isinstance(payload, dict):
-        raise ValueError("TARA returned an invalid response")
+        raise ValueError("SITA returned an invalid response")
     result = payload.get("result")
     data = result.get("data") if isinstance(result, dict) else None
     candidates = [
@@ -118,14 +118,14 @@ def _post_chat(server_url: str, payload: dict[str, Any]) -> str:
         with opener.open(request, timeout=45) as response:
             raw = response.read(1_000_001)
             if len(raw) > 1_000_000:
-                raise RuntimeError("TARA response exceeded the 1 MB limit")
+                raise RuntimeError("SITA response exceeded the 1 MB limit")
             result = json.loads(raw.decode("utf-8"))
     except urllib.error.HTTPError as exc:
-        raise RuntimeError(f"TARA request failed (HTTP {exc.code})") from None
+        raise RuntimeError(f"SITA request failed (HTTP {exc.code})") from None
     except (urllib.error.URLError, TimeoutError, OSError):
-        raise RuntimeError("TARA is not reachable. Check that the local app is running.") from None
+        raise RuntimeError("SITA is not reachable. Check that the local app is running.") from None
     except (UnicodeDecodeError, json.JSONDecodeError):
-        raise RuntimeError("TARA returned an invalid response.") from None
+        raise RuntimeError("SITA returned an invalid response.") from None
     return extract_answer(result)
 
 
@@ -145,7 +145,7 @@ def _create_local_server(app: Any, port: int) -> tuple[Any, int]:
     try:
         server = _Server(("127.0.0.1", 0), app)
     except OSError as exc:
-        raise RuntimeError("TARA could not bind its local chat server. Check local network permissions and try again.") from exc
+        raise RuntimeError("SITA could not bind its local chat server. Check local network permissions and try again.") from exc
     return server, server.server_port
 
 def _pet_window_geometry(*, expanded: bool, pet_center_x: int, top_y: int) -> str:
@@ -162,7 +162,7 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
         import tkinter as tk
     except ImportError:
         from tara_app.webapp import serve
-        print("Windows floating pet needs Python with Tcl/Tk; opening TARA's local web interface instead.", file=sys.stderr)
+        print("Windows floating pet needs Python with Tcl/Tk; opening SITA's local web interface instead.", file=sys.stderr)
         serve(app, port=port)
         return
 
@@ -172,11 +172,11 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
         root = tk.Tk()
     except tk.TclError:
         from tara_app.webapp import serve
-        print("Windows floating pet could not initialize; opening TARA's local web interface instead.", file=sys.stderr)
+        print("Windows floating pet could not initialize; opening SITA's local web interface instead.", file=sys.stderr)
         serve(app, port=port)
         return
 
-    root.title("TARA Floating Pet")
+    root.title("SITA Floating Pet")
     root.geometry("180x204+120+120")
     root.overrideredirect(True)
     root.attributes("-topmost", True)
@@ -258,7 +258,7 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
         labels = {"ready": "Ready", "thinking": "Working", "needs_input": "Needs input", "blocked": "Blocked", "success": "Task completed"}
         status_button.configure(fg=colors.get(state, "#39d98a"), text="🔔")
         status_button.configure(command=lambda: show_status())
-        root.title(f"TARA Floating Pet — {labels.get(state, state.title())}")
+        root.title(f"SITA Floating Pet — {labels.get(state, state.title())}")
 
     def show_status() -> None:
         labels = {"ready": "Ready", "thinking": "Working on your request…", "needs_input": "Needs your input", "blocked": "Blocked — check the chat for details", "success": "Task completed successfully"}
@@ -358,7 +358,7 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
                 if entry.winfo_exists():
                     entry.configure(state="normal")
                     entry.focus_set()
-                append_transcript("TARA" if outcome[0] else "Notice", outcome[1])
+                append_transcript("SITA" if outcome[0] else "Notice", outcome[1])
                 set_pet_state("success" if outcome[0] else "blocked")
                 root.after(2400, lambda: set_pet_state("ready") if pet_state == "success" else None)
 
@@ -434,7 +434,7 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
             canvas.create_oval(center_x - 29, 76 + bob, center_x - 19, 82 + bob, fill="#e8a9e7", outline="")
             canvas.create_oval(center_x + 19, 76 + bob, center_x + 29, 82 + bob, fill="#e8a9e7", outline="")
             canvas.create_arc(center_x - 7, 75 + bob, center_x + 8, 87 + bob, start=205, extent=130, style="arc", outline="#2a1742", width=2)
-            canvas.create_text(center_x, 132 + bob, text="TARA", fill="#e6d8ff", font=("Segoe UI", 10, "bold"))
+            canvas.create_text(center_x, 132 + bob, text="SITA", fill="#e6d8ff", font=("Segoe UI", 10, "bold"))
             animation_tick += 1
             root.after(650, draw_pet)
         except tk.TclError:
@@ -458,7 +458,7 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
     menu.add_command(label="Hide chat", command=collapse_chat)
     menu.add_command(label="Toggle mini mode", command=toggle_mini_mode)
     menu.add_separator()
-    menu.add_command(label="Exit TARA", command=root.destroy)
+    menu.add_command(label="Exit SITA", command=root.destroy)
 
     canvas.bind("<ButtonPress-1>", on_press)
     canvas.bind("<B1-Motion>", on_drag)
@@ -522,7 +522,7 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
     root.bind("<Control-q>", lambda _event: root.destroy())
     root.protocol("WM_DELETE_WINDOW", root.destroy)
 
-    append_transcript("TARA", "Hey! I'm here. What can I help with?")
+    append_transcript("SITA", "Hey! I'm here. What can I help with?")
     try:
         server, actual_port = _create_local_server(app, port)
     except (OSError, RuntimeError):
@@ -531,7 +531,7 @@ def run_floating_pet(app: Any, *, port: int = 8765) -> None:
     server_url = validate_server_url(f"http://127.0.0.1:{actual_port}")
     if actual_port != port:
         print(
-            f"TARA's preferred port {port} is busy; using http://127.0.0.1:{actual_port} instead.",
+            f"SITA's preferred port {port} is busy; using http://127.0.0.1:{actual_port} instead.",
             flush=True,
         )
     server_thread = threading.Thread(target=server.serve_forever, name="tara-local-server", daemon=True)

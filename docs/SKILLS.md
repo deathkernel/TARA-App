@@ -1,6 +1,6 @@
 # Agent Skills packs
 
-TARA can load **skill packs** — folders of instructions inspired by the
+SITA can load **skill packs** — folders of instructions inspired by the
 [Anthropic skills](https://github.com/anthropics/skills) format.
 
 ## Format
@@ -42,7 +42,7 @@ or script metadata. The composer sends the selected pack name as the optional
 `skill` field in `POST /api/chat`. Omitting the field keeps the default chat
 behavior. Selecting a skill does not grant tool access or bypass approval.
 
-When set, TARA loads that pack from `TARA_SKILLS_ROOT` or `./skills` and appends
+When set, SITA loads that pack from `TARA_SKILLS_ROOT` or `./skills` and appends
 its instructions to the Chat system prompt for that request only. Skills are
 **user-selected**, never auto-chosen from model text alone.
 

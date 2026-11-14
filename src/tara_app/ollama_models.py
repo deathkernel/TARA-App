@@ -1,4 +1,4 @@
-"""Legacy local Ollama model catalogue; the current TARA-App launcher delegates model lifecycle to OmniRoute."""
+"""Legacy local Ollama model catalogue; the current SITA launcher delegates model lifecycle to OmniRoute."""
 
 from __future__ import annotations
 
@@ -77,7 +77,7 @@ class OllamaModelCatalog:
             raise ValueError("Ollama profile names are invalid")
 
     def ensure_service_started(self, *, timeout_seconds: float = 30.0) -> bool:
-        """Reuse local Ollama or start it for this TARA-App process.
+        """Reuse local Ollama or start it for this SITA process.
 
         Returns True only when this instance launched the service. The app
         never stops an Ollama process that was already running independently.
@@ -102,7 +102,7 @@ class OllamaModelCatalog:
                 start_new_session=os.name != "nt",
             )
         except OSError as exc:
-            raise RuntimeError("TARA-App could not start the local Ollama service") from exc
+            raise RuntimeError("SITA could not start the local Ollama service") from exc
 
         self._managed_server = process
         deadline = time.monotonic() + timeout_seconds
@@ -118,7 +118,7 @@ class OllamaModelCatalog:
         raise RuntimeError("Ollama did not become ready within the startup timeout")
 
     def close(self) -> None:
-        """Stop only an Ollama process that this TARA-App instance started."""
+        """Stop only an Ollama process that this SITA instance started."""
         process = self._managed_server
         self._managed_server = None
         if process is None or process.poll() is not None:

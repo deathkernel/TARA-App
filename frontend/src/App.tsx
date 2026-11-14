@@ -163,7 +163,7 @@ function approvalFromPayload(payload: any): Approval | undefined {
     id: data.approval_id,
     description: typeof data.approval_description === "string"
       ? data.approval_description
-      : "TARA-Security is requesting approval for this operation.",
+      : "SITA Security is requesting approval for this operation.",
     expiresInSeconds: typeof data.expires_in_seconds === "number" ? data.expires_in_seconds : undefined,
   };
 }
@@ -482,7 +482,7 @@ export default function App() {
       });
       const approval = approvalFromPayload(payload);
       const text = approval
-        ? "TARA-Security reviewed this request. Nothing has run yet. Review the operation and approve it explicitly if you want to continue."
+        ? "SITA Security reviewed this request. Nothing has run yet. Review the operation and approve it explicitly if you want to continue."
         : answerText(payload);
       const assistantMessage: Message = {
         role: "assistant",
@@ -653,7 +653,7 @@ export default function App() {
       <aside className="sidebar">
         <div className="sidebar-brand">
           <span className="brand-mark">T</span>
-          <div><strong>TARA</strong><span>DEVELOPER WORKSPACE</span></div>
+          <div><strong>SITA</strong><span>AI ASSISTANT</span></div>
           <button className="sidebar-collapse" type="button" onClick={() => setMobileSidebarOpen(false)} aria-label="Close sidebar">×</button>
         </div>
 
@@ -712,7 +712,7 @@ export default function App() {
             <div><strong>OmniRoute</strong><span>{statusLabel(gatewayStatus)}</span></div>
             <button type="button" onClick={() => void refreshWorkspace()} aria-label="Refresh workspace status">↻</button>
           </div>
-          <div className="profile-row"><span className="profile-avatar">T</span><div><strong>TARA Local</strong><span>Personal workspace</span></div><span className="profile-menu">•••</span></div>
+          <div className="profile-row"><span className="profile-avatar">S</span><div><strong>SITA</strong><span>Personal workspace</span></div><span className="profile-menu">•••</span></div>
         </div>
       </aside>
       {mobileSidebarOpen && (
@@ -758,7 +758,7 @@ export default function App() {
             <div className="welcome">
               <div className="welcome-eyebrow"><span className="welcome-spark">✳</span> YOUR LOCAL AI WORKSPACE</div>
               <h1>What are we <em>building</em> today?</h1>
-              <p>One workspace for thinking, coding, research and learning. TARA routes each request to the right specialist through OmniRoute.</p>
+              <p>One workspace for thinking, coding, research and learning. SITA routes each request to the right specialist through OmniRoute.</p>
               <div className="starter-grid">
                 <button type="button" onClick={() => selectSpecialist("Code", "Review this code and propose a safe fix. Explain the root cause and include tests. Do not execute commands or modify files.")}>
                   <span className="starter-icon code-icon">⌘</span><span><strong>Build with Code</strong><small>Debug, review and plan changes</small></span><b>↗</b>
@@ -783,7 +783,7 @@ export default function App() {
                 <div className="message-avatar">{message.role === "user" ? "Y" : "T"}</div>
                 <div className="message-content">
                   <div className="message-heading">
-                    <strong>{message.role === "user" ? "You" : "TARA"}</strong>
+                    <strong>{message.role === "user" ? "You" : "SITA"}</strong>
                     {message.status && message.status !== "success" && <span className={"message-status " + message.status}>{statusLabel(message.status)}</span>}
                     {message.hasAttachments && <span className="attachment-tag">ATTACHMENTS</span>}
                     <div className="message-actions">
@@ -814,7 +814,7 @@ export default function App() {
                 </div>
               </article>
             ))}
-            {sending && <div className="working-indicator"><span className="working-pulse" /><span>TARA is working on your request…</span></div>}
+            {sending && <div className="working-indicator"><span className="working-pulse" /><span>SITA is working on your request…</span></div>}
           </div>
         </section>
 
@@ -828,7 +828,7 @@ export default function App() {
                   <strong>{item.label}</strong><span>{item.detail}</span><time>{timeLabel(item.time)}</time>
                 </div>
               ))}
-              {!activity.length && <p className="empty-state">Activity will appear here when you use TARA.</p>}
+              {!activity.length && <p className="empty-state">Activity will appear here when you use SITA.</p>}
             </div>
           </section>
         )}
@@ -863,8 +863,8 @@ export default function App() {
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               onKeyDown={onComposerKeyDown}
-              placeholder="Ask TARA to explain, build, debug or research…"
-              aria-label="Message TARA"
+              placeholder="Ask SITA to explain, build, debug or research…"
+              aria-label="Message SITA"
               rows={1}
               maxLength={20000}
             />
@@ -883,7 +883,7 @@ export default function App() {
             <span className="privacy-hint">OmniRoute may send prompts to configured providers</span>
           </div>
         </form>
-        <footer className="workspace-footer"><span>●</span> TARA is in review-first mode <span className="footer-divider">·</span> Code execution is disabled until a real OS sandbox is available</footer>
+        <footer className="workspace-footer"><span>●</span> SITA is in review-first mode <span className="footer-divider">·</span> Code execution is disabled until a real OS sandbox is available</footer>
       </main>
 
       {inspectorOpen && (
@@ -923,7 +923,7 @@ export default function App() {
               </section>
               <section className="inspector-card terminal-locked">
                 <div className="card-title"><strong>Terminal</strong><span className="health-pill locked">Locked</span></div>
-                <div className="terminal-preview"><span>tara@local:~$</span> <i>command execution unavailable</i></div>
+                <div className="terminal-preview"><span>sita@local:~$</span> <i>command execution unavailable</i></div>
                 <p>Terminal execution stays disabled until an OS-level sandbox and isolation tests are in place.</p>
               </section>
             </div>
@@ -938,7 +938,7 @@ export default function App() {
                   <div className="model-row" key={model.specialist + model.model}><span><strong>{model.specialist}</strong><small>{model.model}</small></span><b>Route</b></div>
                 ))}
                 {modelStatus?.status !== "available" && <p className="empty-state">{modelStatus?.error ?? "Model catalogue is managed externally or unavailable."}</p>}
-                <button type="button" className="wide-secondary" onClick={() => { setDraft(FREE_MODELS_PROMPT); document.getElementById("message-composer")?.focus(); }}>Ask TARA to list models</button>
+                <button type="button" className="wide-secondary" onClick={() => { setDraft(FREE_MODELS_PROMPT); document.getElementById("message-composer")?.focus(); }}>Ask SITA to list models</button>
               </section>
             </div>
           )}

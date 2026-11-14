@@ -1,4 +1,4 @@
-"""Versioned, transport-neutral contracts for coordinated TARA workflows.
+"""Versioned, transport-neutral contracts for coordinated SITA workflows.
 
 These contracts define the data shape for a future coordinator. They do not
 change the current Orchestrator dispatch path by themselves.

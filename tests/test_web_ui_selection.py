@@ -1,4 +1,4 @@
-"""Tests for safe selection of the TARA web interface."""
+"""Tests for safe selection of the SITA web interface."""
 from __future__ import annotations
 
 import os

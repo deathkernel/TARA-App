@@ -1,4 +1,4 @@
-"""Interactive conversation-first TARA CLI."""
+"""Interactive conversation-first SITA CLI."""
 from __future__ import annotations
 
 import os
@@ -149,7 +149,7 @@ def _run_memory_command(command_text: str, brain) -> str | None:
 
 def chat_loop(brain, *, input_fn=input, output_fn=print) -> None:
     """Run an interactive chat with bounded in-session context."""
-    output_fn("TARA chat is ready. Type /help for commands, /exit to quit.")
+    output_fn("SITA chat is ready. Type /help for commands, /exit to quit.")
     while True:
         try:
             prompt = input_fn("You: ")
@@ -161,23 +161,23 @@ def chat_loop(brain, *, input_fn=input, output_fn=print) -> None:
             continue
         command = prompt.lower()
         if command in {"/exit", "/quit", "/bye"}:
-            output_fn("TARA: Bye, bhai!")
+            output_fn("SITA: Bye, bhai!")
             return
         if command == "/help":
             output_fn("Commands: /help, /exit, /audit [folder], /memory [query], /remember key=value, /forget key, /handler [action]")
             continue
         if command == "/audit" or command.startswith("/audit "):
             audit_result = _run_repository_audit_command(prompt)
-            output_fn(f"TARA: {audit_result or 'Repository audit command not recognized.'}")
+            output_fn(f"SITA: {audit_result or 'Repository audit command not recognized.'}")
             continue
         if command == "/handler" or command == "/diagnose" or command.startswith(("/handler ", "/diagnose ")):
             handler_result = _run_handler_command(prompt)
-            output_fn(f"TARA: {handler_result or 'Handler command not recognized.'}")
+            output_fn(f"SITA: {handler_result or 'Handler command not recognized.'}")
             continue
         if command in {"/memory", "/learn", "/remember", "/forget"} or command.startswith(("/memory ", "/learn ", "/remember ", "/forget ")):
             result = _run_memory_command(prompt, brain)
             if result is not None:
-                output_fn(f"TARA: {result}")
+                output_fn(f"SITA: {result}")
                 continue
         try:
             provider = getattr(brain, "llm_provider", None)
@@ -194,9 +194,9 @@ def chat_loop(brain, *, input_fn=input, output_fn=print) -> None:
                 max_tokens = default_tokens
             response = brain.respond(prompt, max_new_tokens=max_tokens, temperature=0.6)
         except (RuntimeError, TimeoutError, OSError, ValueError) as exc:
-            output_fn(f"TARA: I couldn't generate a response. Check the configured language provider. Details: {_display_text(exc)}")
+            output_fn(f"SITA: I couldn't generate a response. Check the configured language provider. Details: {_display_text(exc)}")
             continue
-        output_fn(f"TARA: {response.text}")
+        output_fn(f"SITA: {response.text}")
 
 
 def main() -> int:
@@ -211,13 +211,13 @@ def main() -> int:
             raise ValueError("TARA_MEMORY_PATH must not be empty")
         brain = TARABrain(llm_provider=provider, memory=LongTermMemory(memory_path))
     except (ValueError, OSError) as exc:
-        print(f"TARA could not start: {exc}")
+        print(f"SITA could not start: {exc}")
         return 2
     if provider is None:
         print("OmniRoute is not configured; local /audit commands remain available, but chat replies are disabled.")
     else:
         print(
-            "TARA resource profile: "
+            "SITA resource profile: "
             f"{getattr(provider, 'power_mode', 'custom')} "
             f"(context={getattr(provider, 'num_ctx', 'default')}, "
             f"CPU threads={getattr(provider, 'num_thread', 'auto')}, "

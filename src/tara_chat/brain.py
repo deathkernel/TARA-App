@@ -1,4 +1,4 @@
-"""Conversation-only runtime for TARA."""
+"""Conversation-only runtime for SITA."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -10,7 +10,7 @@ from .memory import LongTermMemory
 # lead with the answer, compress reasoning, prefer clarity over length,
 # and separate verified claims from uncertainty (no invented sources).
 DEFAULT_SYSTEM_PROMPT = (
-    "You are TARA, a precise conversational assistant. "
+    "You are SITA, a precise conversational assistant. "
     "Goal: answers that are simple, polished, and correct—not long or showy.\n\n"
     "Core rules:\n"
     "1. Lead with the direct answer or takeaway in the first sentence or two.\n"
@@ -130,7 +130,7 @@ class TARABrain:
         if not isinstance(text, str) or not text.strip():
             raise RuntimeError("The language provider returned an empty response")
 
-        self.conversation_history.extend((("User", prompt.strip()), ("TARA", text.strip())))
+        self.conversation_history.extend((("User", prompt.strip()), ("SITA", text.strip())))
         self.conversation_history = self.conversation_history[-self.max_history_turns * 2:]
         if remember_key is not None:
             self.memory.remember(remember_key, prompt.strip(), importance=importance)

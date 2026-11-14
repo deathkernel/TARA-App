@@ -1,1 +1,1 @@
-"""TARA-Chat: a conversation-only specialist inside the TARA monorepo."""
+"""SITA Chat: a conversation-only specialist inside the SITA monorepo."""

@@ -1,4 +1,4 @@
-"""Legacy Ollama adapter retained for compatibility/tests; not registered by the current TARA-App launcher."""
+"""Legacy Ollama adapter retained for compatibility/tests; not registered by the current SITA launcher."""
 from __future__ import annotations
 
 import http.client

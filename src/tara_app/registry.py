@@ -1,4 +1,4 @@
-"""Capability registry for independently versioned TARA modules."""
+"""Capability registry for independently versioned SITA modules."""
 
 from __future__ import annotations
 

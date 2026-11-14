@@ -1,1 +1,1 @@
-"""Local model-backed creative writing for TARA."""
+"""Local model-backed creative writing for SITA."""

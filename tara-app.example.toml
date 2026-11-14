@@ -1,5 +1,7 @@
+# SITA (Smart Intelligence & Thinking Assistant) example configuration.
 # Copy to tara-app.toml and adjust only the local settings you need.
-# All TARA language-model inference is routed through the local OmniRoute gateway.
+# The legacy filename and TARA_* environment-variable prefix remain for compatibility.
+# All SITA language-model inference is routed through the local OmniRoute gateway.
 # Keep the API key in TARA_OMNIROUTE_API_KEY (environment variable), never here.
 
 [omniroute]
@@ -40,7 +42,7 @@ enable = false
 # timeout_seconds = 30
 #
 # Scoped filesystem (read-only). Set TARA_MCP_FS_ROOTS to a semicolon-separated
-# list of absolute directories before starting TARA.
+# list of absolute directories before starting SITA.
 # [[mcp.servers]]
 # name = "scoped_fs"
 # command = ["{python}", "-m", "tara_app.mcp_servers.scoped_fs_server"]

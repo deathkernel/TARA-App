@@ -82,7 +82,7 @@ class ApplicationFacadeTests(unittest.TestCase):
 
         payload = app.health_status()
 
-        self.assertEqual(payload["app"], "TARA-App")
+        self.assertEqual(payload["app"], "SITA")
         self.assertEqual(payload["status"], "degraded")
         self.assertEqual(payload["capabilities"], [])
         self.assertEqual(payload["model_runtime"], "omniroute")

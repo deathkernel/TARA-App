@@ -1,4 +1,4 @@
-# TARA-App: Project History, Current Status & Roadmap
+# SITA: Project History, Current Status & Roadmap
 
 > **Purpose:** This is the handover document and working source of truth for anyone joining TARA-App—including a new developer, a reviewer, or the daily scheduled development task.
 >
@@ -93,15 +93,15 @@ performance and screen-reader behavior still require browser validation.
 
 ### Repository boundary
 
-`deathkernel/TARA-App` is the only active development repository for TARA. The user has deleted the other TARA model repositories. All remaining specialist/model integrations, adapters, runtime code, tests, and documentation must be implemented and maintained inside this repository. Do not plan work that requires cloning, importing, or coordinating with deleted sibling repositories. Any legacy references to sibling repositories are historical/contextual only unless the user explicitly restores one.
+`deathkernel/TARA-App` is the only active development repository for SITA. The repository name remains unchanged for now. The user has deleted the other TARA model repositories. All remaining specialist/model integrations, adapters, runtime code, tests, and documentation must be implemented and maintained inside this repository. Do not plan work that requires cloning, importing, or coordinating with deleted sibling repositories. Any legacy references to sibling repositories are historical/contextual only unless the user explicitly restores one.
 
-TARA-App is the **user-facing host application and integration layer** for the TARA ecosystem. It is not itself an AI model. Its job is to provide one interface for chatting, using specialist capabilities, reviewing proposed code changes, and managing approved local actions. OmniRoute is the only language-model gateway; it owns underlying provider/model selection.
+SITA is the **user-facing host application and integration layer**. Its source currently lives in the `deathkernel/TARA-App` repository. It is not itself an AI model. Its job is to provide one interface for chatting, using specialist capabilities, reviewing proposed code changes, and managing approved local actions. OmniRoute is the only language-model gateway; it owns underlying provider/model selection.
 
 The intended design keeps these concepts separate:
 
-- **App:** TARA-App, the UI, settings, sessions, and orchestration.
+- **App:** SITA, the UI, settings, sessions, and orchestration.
 - **Model:** model weights or a remotely hosted model, with its own identity and version.
-- **Gateway/provider:** OmniRoute exposes an OpenAI-compatible API and routes requests to configured model providers. TARA does not directly invoke Ollama or Gemini for language-model inference.
+- **Gateway/provider:** OmniRoute exposes an OpenAI-compatible API and routes requests to configured model providers. SITA does not directly invoke Ollama or Gemini for language-model inference.
 - **Specialist/module:** a task-specific capability such as Chat, Code, Research, Study, Vision, or Handler.
 - **Tool/action:** a bounded operation a specialist may request; it is not automatically authorized just because a model requested it.
 

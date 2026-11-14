@@ -1,4 +1,4 @@
-"""Built-in MCP reference servers shipped with TARA-App.
+"""Built-in MCP reference servers shipped with SITA.
 
 These servers are **opt-in**. They must be listed under ``[mcp]`` with a fixed
 ``command`` argv and ``enable = true``. They never run unless the operator

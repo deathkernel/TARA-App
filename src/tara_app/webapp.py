@@ -1,4 +1,4 @@
-"""Loopback-only local web interface for TARA-App."""
+"""Loopback-only local web interface for SITA."""
 
 from __future__ import annotations
 
@@ -259,9 +259,9 @@ def serve(app: ApplicationFacade, *, port: int = 8765) -> None:
         raise ValueError("port must be between 1024 and 65535")
     server = _Server(("127.0.0.1", port), app)
     try:
-        print(f"TARA-App is ready at http://127.0.0.1:{port}")
+        print(f"SITA is ready at http://127.0.0.1:{port}")
         server.serve_forever()
     except KeyboardInterrupt:
-        print("\nTARA-App stopped")
+        print("\nSITA stopped")
     finally:
         server.server_close()

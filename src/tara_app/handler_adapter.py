@@ -1,4 +1,4 @@
-"""Narrow wrapper for TARA-Handler's read-only doctor command."""
+"""Narrow wrapper for SITA Handler's read-only doctor command."""
 
 from __future__ import annotations
 
@@ -81,14 +81,14 @@ class HandlerProcessAdapter:
                 check=False,
             )
         except subprocess.TimeoutExpired:
-            return ModuleResult("timeout", error="TARA-Handler diagnostic timed out")
+            return ModuleResult("timeout", error="SITA Handler diagnostic timed out")
         except OSError:
-            return ModuleResult("unavailable", error="configured TARA-Handler command could not start")
+            return ModuleResult("unavailable", error="configured SITA Handler command could not start")
         output = (completed.stdout + completed.stderr).strip()
         if len(output.encode("utf-8")) > self.max_response_bytes:
-            return ModuleResult("failed", error="TARA-Handler output exceeds the configured size limit")
+            return ModuleResult("failed", error="SITA Handler output exceeds the configured size limit")
         if completed.returncode != 0:
-            return ModuleResult("failed", {"text": output[:20_000], "exit_code": completed.returncode}, "TARA-Handler diagnostic returned a failure status")
+            return ModuleResult("failed", {"text": output[:20_000], "exit_code": completed.returncode}, "SITA Handler diagnostic returned a failure status")
         return ModuleResult("success", {"text": output[:20_000], "exit_code": 0})
 
     def _safe_environment(self) -> dict[str, str]:

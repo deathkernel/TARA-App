@@ -1,4 +1,4 @@
-"""Format TARA-Code proposed_changes as a read-only unified-diff style preview.
+"""Format SITA Code proposed_changes as a read-only unified-diff style preview.
 
 This module never writes files, never applies patches, and never executes code.
 It only turns structured proposal data into bounded text for UI review.

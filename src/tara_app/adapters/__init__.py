@@ -1,4 +1,4 @@
-"""Protocols shared by the TARA-App runtime and specialist adapters."""
+"""Protocols shared by the SITA runtime and specialist adapters."""
 from __future__ import annotations
 
 from typing import Any, Mapping, Protocol, Sequence
@@ -7,7 +7,7 @@ from tara_app.contracts import Capability, ModuleRequest, ModuleResult, RouteDec
 
 
 class RouterClient(Protocol):
-    """Minimal contract required from the configured TARA-Router client."""
+    """Minimal contract required from the configured SITA Router client."""
 
     def route(self, request_payload: Mapping[str, object]) -> RouteDecision: ...
 

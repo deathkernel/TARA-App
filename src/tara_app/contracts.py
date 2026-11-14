@@ -1,4 +1,4 @@
-"""Versioned, bounded contracts for TARA-App and specialist adapters."""
+"""Versioned, bounded contracts for SITA and specialist adapters."""
 
 from __future__ import annotations
 
@@ -44,7 +44,7 @@ class Capability:
 
 @dataclass(frozen=True, slots=True)
 class ModuleRequest:
-    """A validated call from TARA-App to one specialist adapter."""
+    """A validated call from SITA to one specialist adapter."""
 
     request_id: str
     session_id: str
@@ -174,7 +174,7 @@ class RouteDecision:
         if self.action is not None and not _NAME_PATTERN.fullmatch(self.action):
             raise ContractError("route action is invalid")
         if self.requires_approval and self.status == "routed" and self.module != "security":
-            raise ContractError("approval-gated routes must first select TARA-Security")
+            raise ContractError("approval-gated routes must first select SITA Security")
         if len(self.policy_tags) > 32 or any(not isinstance(tag, str) or len(tag) > 100 for tag in self.policy_tags):
             raise ContractError("route policy tags are invalid")
 
@@ -214,7 +214,7 @@ class RouteDecision:
         )
 
 
-# Provider and specialist adapter contracts retained from the TARA runtime foundation.
+# Provider and specialist adapter contracts retained from the SITA runtime foundation.
 
 CONTRACT_VERSION = 1
 
@@ -255,7 +255,7 @@ SPECIALIST_CONTRACT_VERSION = 1
 
 @dataclass(frozen=True)
 class SpecialistRequest:
-    """Minimal versioned request sent to a TARA specialist adapter."""
+    """Minimal versioned request sent to a SITA specialist adapter."""
 
     request_id: str
     capability: str
@@ -276,7 +276,7 @@ class SpecialistResult:
 
 
 class SpecialistAdapter(Protocol):
-    """Common boundary for TARA-Chat, TARA-Code, and TARA-Handler adapters."""
+    """Common boundary for SITA Chat, SITA Code, and TARA-Handler adapters."""
 
     specialist_id: str
 

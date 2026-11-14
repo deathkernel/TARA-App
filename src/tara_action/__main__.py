@@ -1,4 +1,4 @@
-"""One-request JSON-over-stdio adapter for TARA-App."""
+"""One-request JSON-over-stdio adapter for SITA."""
 
 from __future__ import annotations
 

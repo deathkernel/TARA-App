@@ -1,6 +1,6 @@
-# TARA-Code Adapter Test Matrix
+# SITA Code Adapter Test Matrix
 
-This matrix applies to the TARA-Code adapter in **TARA-App**. Contract tests should start with a fake engine; integration tests can use a pinned TARA-Code artifact after its standalone review.
+This matrix applies to the SITA Code adapter in **SITA**. Contract tests should start with a fake engine; integration tests can use a pinned SITA Code artifact after its standalone review.
 
 | Area | Test | Expected outcome |
 |---|---|---|

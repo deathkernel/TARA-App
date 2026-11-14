@@ -93,7 +93,7 @@ class BuiltinRouter:
             if "security.assess" not in available:
                 return RouteDecision(
                     request_id, "unavailable", None, None, "security_unavailable",
-                    "Local memory changes need TARA-Security and your explicit approval.",
+                    "Local memory changes need SITA Security and your explicit approval.",
                     intended_module="memory", intended_action=memory_write_action,
                     policy_tags=("memory_write", "consent_required"),
                 )
@@ -114,7 +114,7 @@ class BuiltinRouter:
             if "security.assess" not in available or "action.execute" not in available:
                 return RouteDecision(
                     request_id, "unavailable", None, None, "desktop_automation_unavailable",
-                    "TARA's approved desktop automation is not installed or enabled.",
+                    "SITA's approved desktop automation is not installed or enabled.",
                     intended_module="action", intended_action="execute",
                     policy_tags=("desktop_automation",),
                 )
@@ -134,7 +134,7 @@ class BuiltinRouter:
                 )
             return RouteDecision(
                 request_id, "unavailable", None, None, "side_effects_disabled",
-                "TARA requires the Security and approval workflow before it can perform changes.",
+                "SITA requires the Security and approval workflow before it can perform changes.",
                 intended_module="action", intended_action="execute", policy_tags=("side_effect",),
             )
 
@@ -152,7 +152,7 @@ class BuiltinRouter:
             target = ("code", "plan", "source_attachment", "Source files were attached.")
 
         # Explicit study intent must take precedence over the generic text-attachment
-        # route so uploaded notes are passed to TARA-Study rather than TARA-Code.
+        # route so uploaded notes are passed to TARA-Study rather than SITA Code.
         if _STUDY.search(normalized):
             target = ("study", "create", "study_intent", "The request asks for study notes, a quiz, flashcards, or a revision plan.")
 

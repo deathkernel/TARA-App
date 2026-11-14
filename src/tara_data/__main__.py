@@ -94,7 +94,7 @@ def handle_request(request: Any) -> dict[str, Any]:
     if action == "health":
         return _result(request_id, "success", {"healthy": True})
     if action != "analyze" or not isinstance(inputs, Mapping):
-        return _result(request_id, "permission_denied", error="unsupported TARA-Data capability")
+        return _result(request_id, "permission_denied", error="unsupported SITA Data capability")
     try:
         data = _analyze(inputs.get("csv_text"))
     except ValueError as exc:

@@ -1,4 +1,4 @@
-# TARA — Remaining Features Status
+# SITA — Remaining Features Status
 
 > **Source of truth for status labels:** inspect current `main` code and CI evidence.
 > **Last reviewed:** 2026-11-12

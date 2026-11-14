@@ -1,1 +1,1 @@
-"""Approval-gated allowlisted TARA actions."""
+"""Approval-gated allowlisted SITA actions."""

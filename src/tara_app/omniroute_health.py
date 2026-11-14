@@ -15,7 +15,7 @@ _MAX_RESPONSE_BYTES = 1_000_000
 def diagnose_gateway(base_url: str, api_key: str, *, timeout: float = 5.0) -> str | None:
     """Return None when the authenticated model catalogue is healthy, else a safe diagnostic."""
     if not isinstance(api_key, str) or not api_key.strip():
-        return "TARA_OMNIROUTE_API_KEY is not set. Add a valid OmniRoute API key to the terminal environment used to launch TARA."
+        return "TARA_OMNIROUTE_API_KEY is not set. Add a valid OmniRoute API key to the terminal environment used to launch SITA."
     request = Request(
         base_url.rstrip("/") + "/models",
         headers={
@@ -39,7 +39,7 @@ def diagnose_gateway(base_url: str, api_key: str, *, timeout: float = 5.0) -> st
     except (URLError, TimeoutError, OSError):
         return "Cannot connect to OmniRoute. Start the local gateway and verify TARA_OMNIROUTE_BASE_URL."
     if len(raw) > _MAX_RESPONSE_BYTES:
-        return "OmniRoute model catalogue exceeded TARA's 1 MB response limit."
+        return "OmniRoute model catalogue exceeded SITA's 1 MB response limit."
     try:
         payload = json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError):

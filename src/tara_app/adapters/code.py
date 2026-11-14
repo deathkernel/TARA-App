@@ -1,4 +1,4 @@
-"""Review-only TARA-Code adapter; never executes or applies proposed changes."""
+"""Review-only SITA Code adapter; never executes or applies proposed changes."""
 from __future__ import annotations
 
 from typing import Any, Callable

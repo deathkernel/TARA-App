@@ -5,7 +5,7 @@
 **Working branch:** tn-86/architecture-alignment
 
 ## Engineering objective
-Build a measurable, brain-inspired cognitive runtime inside TARA while preserving the existing Windows application, interfaces, security boundaries, approval workflow, specialist capabilities, and OmniRoute inference gateway.
+Build a measurable, brain-inspired cognitive runtime inside SITA while preserving the existing Windows application, interfaces, security boundaries, approval workflow, specialist capabilities, and OmniRoute inference gateway.
 
 TN-86B stands for TARA Neural – 86 Billion. The `B` means Billion, not Brain, and references the approximate 86-billion-neuron scale often cited for the human brain. This is not a claim that the application will simulate 86 billion biological neurons.
 
@@ -50,7 +50,7 @@ TN-86B stands for TARA Neural – 86 Billion. The `B` means Billion, not Brain, 
 - Added bounded goal scheduling with deadline pressure and dependency gating.
 - Added evidence-adjusted action scoring and explicit abstention for weak scores or close alternatives.
 - Added a staged coordinator requiring an injected proposal provider. It can be adapted to the existing OmniRoute gateway; no second LLM gateway is introduced.
-- The coordinator does not execute tools or actions. Existing TARA approval and security controls remain authoritative.
+- The coordinator does not execute tools or actions. Existing SITA approval and security controls remain authoritative.
 - Neural-to-symbolic activation mapping and automatic learning from conversation data are not claimed; they require validated mappings and controlled experiments.
 - Added focused tests in tests/test_tn86b_cognition.py. They have been authored but not executed in this environment.
 - Research review and original technical note are stored under research/literature_reviews and research/original_papers; BibTeX metadata is stored under research/references.
@@ -81,4 +81,4 @@ TN-86B stands for TARA Neural – 86 Billion. The `B` means Billion, not Brain, 
 - Keep each phase independently reviewable and regression-tested.
 
 ## Definition of done
-A subsystem is complete only when its contracts and assumptions are documented, its implementation is connected to the real TARA runtime, tests pass, security behavior is verified, and reproducible benchmarks are recorded.
+A subsystem is complete only when its contracts and assumptions are documented, its implementation is connected to the real SITA runtime, tests pass, security behavior is verified, and reproducible benchmarks are recorded.

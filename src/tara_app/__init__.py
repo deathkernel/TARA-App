@@ -1,4 +1,4 @@
-"""TARA-App runtime foundation."""
+"""SITA runtime foundation."""
 
 from tara_app.contracts import AdapterHealth, Capability, ModuleRequest, ModuleResult, RouteDecision
 from tara_app.orchestrator import DispatchOutcome, Orchestrator

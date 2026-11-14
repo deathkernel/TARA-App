@@ -1,4 +1,4 @@
-"""Bounded multi-step tool-loop plans for TARA specialists.
+"""Bounded multi-step tool-loop plans for SITA specialists.
 
 Plans are **data**. This module validates structure and can run steps only through
 an injected executor. It never interprets model text as a shell command and never

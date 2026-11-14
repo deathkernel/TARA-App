@@ -15,7 +15,7 @@ from urllib.parse import urlsplit
 _MAX_URL_LEN = 2048
 _MAX_BODY_BYTES = 256_000
 _DEFAULT_TIMEOUT = 15.0
-_USER_AGENT = "TARA-App-MCP-Fetch/1.0 (+local; read-only)"
+_USER_AGENT = "SITA-MCP-Fetch/1.0 (+local; read-only)"
 
 
 class FetchError(ValueError):
