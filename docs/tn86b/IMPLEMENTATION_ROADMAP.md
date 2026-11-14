@@ -2,7 +2,7 @@
 
 **Status:** Phase 5 initial implementation committed; execution and integration validation pending  
 **Repository:** TARA-App  
-**Working branch:** tn-86b/architecture-alignment
+**Working branch:** tn-86/architecture-alignment
 
 ## Engineering objective
 Build a measurable, brain-inspired cognitive runtime inside TARA while preserving the existing Windows application, interfaces, security boundaries, approval workflow, specialist capabilities, and OmniRoute inference gateway.
